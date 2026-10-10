@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101b35">
+  <title>EXAM JUNCTION</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f5fa;
+      color: #172033;
+      padding-bottom: 80px;
+    }
+
+    header {
+      background: #101b35;
+      color: white;
+      padding: 18px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand {
+      font-size: 21px;
+      font-weight: 800;
+    }
+
+    .brand span {
+      color: #56d6c0;
+    }
+
+    .notify {
+      background: #263554;
+      color: white;
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 19px;
+    }
+
+    .welcome {
+      padding: 24px 16px;
+      background: linear-gradient(135deg, #101b35, #234d75);
+      color: white;
+      border-radius: 0 0 24px 24px;
+    }
+
+    .welcome h1 {
+      font-size: 25px;
+      margin-bottom: 8px;
+    }
+
+    .welcome p {
+      color: #d8e5f3;
+      line-height: 1.5;
+    }
+
+    main {
+      padding: 18px 14px;
+    }
+
+    .search {
+      width: 100%;
+      padding: 14px;
+      border: 1px solid #dce2ed;
+      border-radius: 12px;
+      font-size: 15px;
+      margin-bottom: 22px;
+      background: white;
+    }
+
+    .section-title {
+      font-size: 20px;
+      margin-bottom: 14px;
+    }
+
+    .empty-card {
+      background: white;
+      padding: 24px 16px;
+      border-radius: 16px;
+      text-align: center;
+      border: 1px solid #e6eaf1;
+    }
+
+    .empty-card .icon {
+      font-size: 38px;
+      margin-bottom: 12px;
+    }
+
+    .empty-card h3 {
+      margin-bottom: 8px;
+    }
+
+    .empty-card p {
+      color: #68748a;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      background: white;
+      border-top: 1px solid #e1e6ef;
+      padding: 8px 2px calc(8px + env(safe-area-inset-bottom));
+      z-index: 10;
+    }
+
+    .nav-item {
+      text-align: center;
+      color: #6c7587;
+      font-size: 11px;
+      padding: 5px 0;
+      text-decoration: none;
+    }
+
+    .nav-item .nav-icon {
+      display: block;
+      font-size: 21px;
+      margin-bottom: 4px;
+    }
+
+    .nav-item.active {
+      color: #1769d2;
+      font-weight: bold;
+    }
+
+    @media (min-width: 700px) {
+      body {
+        max-width: 700px;
+        margin: auto;
+        box-shadow: 0 0 25px #dce2ed;
+      }
+
+      .bottom-nav {
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: 700px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="topbar">
+      <div class="brand">EXAM <span>JUNCTION</span></div>
+      <button class="notify" aria-label="Notifications" onclick="showNotice()">
+        🔔
+      </button>
+    </div>
+  </header>
+
+  <section class="welcome">
+    <h1>Welcome to EXAM JUNCTION</h1>
+    <p>आपकी पढ़ाई, आपके लक्ष्य और आपकी सफलता — सब एक जगह।</p>
+  </section>
+
+  <main>
+    <input
+      class="search"
+      type="search"
+      placeholder="बैच या कोर्स खोजें..."
+      aria-label="बैच या कोर्स खोजें"
+      oninput="searchBatch(this.value)"
+    >
+
+    <h2 class="section-title">📚 Courses & Batches</h2>
+
+    <div class="empty-card" id="batch-area">
+      <div class="icon">🎓</div>
+      <h3>आपकी सफलता की शुरुआत</h3>
+      <p>नए कोर्स और बैच जल्द यहाँ दिखाई देंगे।</p>
+    </div>
+  </main>
+
+  <nav class="bottom-nav" aria-label="मुख्य मेन्यू">
+    <a class="nav-item active" href="index.html">
+      <span class="nav-icon">🏠</span>Home
+    </a>
+    <a class="nav-item" href="batch.html">
+      <span class="nav-icon">📚</span>Batch
+    </a>
+    <a class="nav-item" href="books.html">
+      <span class="nav-icon">📖</span>Books
+    </a>
+    <a class="nav-item" href="leaderboard.html">
+      <span class="nav-icon">🏆</span>Leaderboard
+    </a>
+    <a class="nav-item" href="profile.html">
+      <span class="nav-icon">👤</span>Profile
+    </a>
+  </nav>
+
+  <script>
+    function showNotice() {
+      alert("Notifications जल्द उपलब्ध होंगे।");
+    }
+
+    function searchBatch(value) {
+      const area = document.getElementById("batch-area");
+      const text = value.trim();
+
+      if (text) {
+        area.innerHTML =
+          '<div class="icon">🔎</div>' +
+          '<h3>बैच खोज</h3>' +
+          '<p>“' + escapeText(text) +
+          '” के लिए अभी कोई बैच उपलब्ध नहीं है।</p>';
+      } else {
+        area.innerHTML =
+          '<div class="icon">🎓</div>' +
+          '<h3>आपकी सफलता की शुरुआत</h3>' +
+          '<p>नए कोर्स और बैच जल्द यहाँ दिखाई देंगे।</p>';
+      }
+    }
+
+    function escapeText(value) {
+      return value.replace(/[&<>"']/g, function(char) {
+        return {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        }[char];
+      });
+    }
+  </script>
+
+</body>
+        </html>
