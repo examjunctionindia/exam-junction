@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101b35">
+  <title>Books | EXAM JUNCTION</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f5fa;
+      color: #172033;
+      padding-bottom: 85px;
+    }
+
+    header {
+      background: #101b35;
+      color: white;
+      padding: 17px 15px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .brand span {
+      color: #56d6c0;
+    }
+
+    .notify {
+      border: none;
+      border-radius: 10px;
+      padding: 9px 12px;
+      background: #263554;
+      color: white;
+      font-size: 19px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #101b35, #234d75);
+      color: white;
+      padding: 24px 16px;
+      border-radius: 0 0 22px 22px;
+    }
+
+    .hero h1 {
+      font-size: 25px;
+      margin-bottom: 8px;
+    }
+
+    .hero p {
+      color: #d8e5f3;
+      line-height: 1.5;
+    }
+
+    main {
+      padding: 18px 14px;
+    }
+
+    .search {
+      width: 100%;
+      padding: 14px;
+      border: 1px solid #dce2ed;
+      border-radius: 12px;
+      font-size: 15px;
+      margin-bottom: 22px;
+      background: white;
+    }
+
+    .section-title {
+      font-size: 19px;
+      margin: 22px 0 14px;
+    }
+
+    .book-card {
+      display: flex;
+      gap: 13px;
+      background: white;
+      border: 1px solid #e3e8f0;
+      padding: 14px;
+      border-radius: 14px;
+      margin-bottom: 13px;
+    }
+
+    .cover {
+      width: 82px;
+      min-width: 82px;
+      height: 110px;
+      border-radius: 9px;
+      background: #e7edf8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+    }
+
+    .book-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .book-info h3 {
+      font-size: 16px;
+      margin: 3px 0 7px;
+      overflow-wrap: anywhere;
+    }
+
+    .book-info p {
+      font-size: 13px;
+      color: #68748a;
+      line-height: 1.5;
+      margin-bottom: 8px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 5px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: bold;
+      margin-bottom: 9px;
+    }
+
+    .free {
+      background: #def7e9;
+      color: #16734c;
+    }
+
+    .restricted {
+      background: #fff0d9;
+      color: #95580c;
+    }
+
+    .open-btn {
+      display: inline-block;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 12px;
+      background: #1769d2;
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .empty {
+      display: none;
+      padding: 22px 12px;
+      background: white;
+      color: #68748a;
+      border-radius: 12px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      background: white;
+      border-top: 1px solid #e1e6ef;
+      padding: 8px 2px calc(8px + env(safe-area-inset-bottom));
+      z-index: 10;
+    }
+
+    .nav-item {
+      text-align: center;
+      color: #6c7587;
+      font-size: 11px;
+      padding: 5px 0;
+      text-decoration: none;
+    }
+
+    .nav-icon {
+      display: block;
+      font-size: 21px;
+      margin-bottom: 4px;
+    }
+
+    .nav-item.active {
+      color: #1769d2;
+      font-weight: bold;
+    }
+
+    @media (min-width: 700px) {
+      body {
+        max-width: 700px;
+        margin: auto;
+        box-shadow: 0 0 25px #dce2ed;
+      }
+
+      .bottom-nav {
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: 700px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="topbar">
+      <div class="brand">EXAM <span>JUNCTION</span></div>
+      <button class="notify"
+              aria-label="Notifications"
+              onclick="showNotifications()">
+        🔔
+      </button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <h1>📚 Study Books</h1>
+    <p>अपनी पढ़ाई के लिए किताबें और स्टडी मटेरियल खोजें।</p>
+  </section>
+
+  <main>
+
+    <input
+      id="bookSearch"
+      class="search"
+      type="search"
+      placeholder="Book का नाम या लेखक खोजें..."
+      aria-label="किताब खोजें"
+    >
+
+    <h2 class="section-title">🟢 Free Books</h2>
+    <section id="freeBooks">
+
+      <article class="book-card" data-title="sample free book">
+        <div class="cover">📗</div>
+        <div class="book-info">
+          <span class="badge free">FREE</span>
+          <h3>Free Book का उदाहरण</h3>
+          <p>लेखक: Admin द्वारा जोड़ा जाएगा</p>
+          <button class="open-btn" onclick="showMessage()">
+            Open Book
+          </button>
+        </div>
+      </article>
+
+    </section>
+
+    <h2 class="section-title">🔒 Restricted Books</h2>
+    <section id="restrictedBooks">
+
+      <article class="book-card" data-title="sample restricted book">
+        <div class="cover">📙</div>
+        <div class="book-info">
+          <span class="badge restricted">RESTRICTED</span>
+          <h3>Restricted Book का उदाहरण</h3>
+          <p>इस पुस्तक के लिए अनुमति आवश्यक होगी।</p>
+          <button class="open-btn" onclick="showMessage()">
+            Check Access
+          </button>
+        </div>
+      </article>
+
+    </section>
+
+    <div class="empty" id="emptyMessage">
+      कोई किताब नहीं मिली। दूसरे नाम से खोजें।
+    </div>
+
+  </main>
+
+  <nav class="bottom-nav" aria-label="मुख्य मेन्यू">
+
+    <a class="nav-item" href="index.html">
+      <span class="nav-icon">🏠</span>Home
+    </a>
+
+    <a class="nav-item" href="batch.html">
+      <span class="nav-icon">📚</span>Batch
+    </a>
+
+    <a class="nav-item active" href="books.html">
+      <span class="nav-icon">📖</span>Books
+    </a>
+
+    <a class="nav-item" href="leaderboard.html">
+      <span class="nav-icon">🏆</span>Leaderboard
+    </a>
+
+    <a class="nav-item" href="profile.html">
+      <span class="nav-icon">👤</span>Profile
+    </a>
+
+  </nav>
+
+  <script>
+    const searchInput = document.getElementById("bookSearch");
+
+    searchInput.addEventListener("input", function () {
+      const query = this.value.trim().toLowerCase();
+      const cards = document.querySelectorAll(".book-card");
+      let visibleCount = 0;
+
+      cards.forEach(function (card) {
+        const matches = card.innerText.toLowerCase().includes(query);
+
+        card.style.display = matches ? "flex" : "none";
+
+        if (matches) {
+          visibleCount++;
+        }
+      });
+
+      document.getElementById("emptyMessage").style.display =
+        visibleCount === 0 ? "block" : "none";
+    });
+
+    function showNotifications() {
+      alert("Notifications सिस्टम आगे जोड़ा जाएगा।");
+    }
+
+    function showMessage() {
+      alert(
+        "यह अभी उदाहरण है। वास्तविक Book लिंक और Access Control " +
+        "Database तथा Admin Panel से जोड़े जाएँगे।"
+      );
+    }
+  </script>
+
+</body>
+        </html>
