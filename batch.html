@@ -1,333 +1,110 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#101b35">
+  <meta name="theme-color" content="#102b55">
   <title>Batches | EXAM JUNCTION</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: Arial, sans-serif;
-      background: #f3f5fa;
-      color: #172033;
-      padding-bottom: 85px;
-    }
-
-    header {
-      background: #101b35;
-      color: white;
-      padding: 17px 15px;
-    }
-
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .brand {
-      font-size: 20px;
-      font-weight: 800;
-    }
-
-    .brand span {
-      color: #56d6c0;
-    }
-
-    .notify {
-      border: none;
-      border-radius: 10px;
-      padding: 9px 12px;
-      background: #263554;
-      color: white;
-      font-size: 19px;
-    }
-
-    .hero {
-      background: linear-gradient(135deg, #101b35, #234d75);
-      color: white;
-      padding: 23px 16px;
-      border-radius: 0 0 22px 22px;
-    }
-
-    .hero h1 {
-      font-size: 25px;
-      margin-bottom: 8px;
-    }
-
-    .hero p {
-      color: #d8e5f3;
-      line-height: 1.5;
-    }
-
-    main {
-      padding: 18px 14px;
-    }
-
-    .search {
-      width: 100%;
-      padding: 13px;
-      border: 1px solid #dce2ed;
-      border-radius: 12px;
-      font-size: 15px;
-      margin-bottom: 18px;
-    }
-
-    .batch-card {
-      background: white;
-      padding: 17px;
-      border-radius: 15px;
-      margin-bottom: 16px;
-      border: 1px solid #e3e8f0;
-    }
-
-    .batch-card h2 {
-      font-size: 19px;
-      margin-bottom: 8px;
-    }
-
-    .batch-card p {
-      color: #667085;
-      font-size: 14px;
-      line-height: 1.6;
-      margin-bottom: 12px;
-    }
-
-    .tag {
-      display: inline-block;
-      background: #e0f7ed;
-      color: #13754f;
-      padding: 5px 9px;
-      border-radius: 20px;
-      font-size: 12px;
-      margin-bottom: 12px;
-    }
-
-    .chapter {
-      background: white;
-      border: 1px solid #e0e6ef;
-      border-radius: 14px;
-      margin-bottom: 13px;
-      overflow: hidden;
-    }
-
-    .chapter summary {
-      cursor: pointer;
-      padding: 16px;
-      font-weight: bold;
-      font-size: 16px;
-      background: #fff;
-      list-style-position: inside;
-    }
-
-    .chapter-content {
-      padding: 0 14px 14px;
-    }
-
-    .lecture {
-      display: block;
-      padding: 13px 10px;
-      margin-top: 8px;
-      border-radius: 9px;
-      background: #f3f6fb;
-      color: #244b80;
-      text-decoration: none;
-      font-size: 14px;
-    }
-
-    .notes {
-      display: block;
-      margin-top: 13px;
-      padding: 13px;
-      border-radius: 10px;
-      background: #fff4e5;
-      color: #8a4c0f;
-      text-decoration: none;
-      font-weight: bold;
-      font-size: 14px;
-    }
-
-    .notice {
-      background: #fff;
-      padding: 16px;
-      border-radius: 12px;
-      color: #667085;
-      line-height: 1.6;
-      font-size: 13px;
-      margin-top: 18px;
-    }
-
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      background: white;
-      border-top: 1px solid #e1e6ef;
-      padding: 8px 2px calc(8px + env(safe-area-inset-bottom));
-      z-index: 10;
-    }
-
-    .nav-item {
-      text-align: center;
-      color: #6c7587;
-      font-size: 11px;
-      padding: 5px 0;
-      text-decoration: none;
-    }
-
-    .nav-icon {
-      display: block;
-      font-size: 21px;
-      margin-bottom: 4px;
-    }
-
-    .nav-item.active {
-      color: #1769d2;
-      font-weight: bold;
-    }
-
-    @media (min-width: 700px) {
-      body {
-        max-width: 700px;
-        margin: auto;
-        box-shadow: 0 0 25px #dce2ed;
-      }
-
-      .bottom-nav {
-        left: 50%;
-        transform: translateX(-50%);
-        max-width: 700px;
-      }
-    }
+    *{box-sizing:border-box}
+    body{margin:0;background:#f5f7fb;color:#17243a;font-family:Arial,sans-serif}
+    a{text-decoration:none;color:inherit}
+    .app{max-width:760px;min-height:100vh;margin:auto;padding-bottom:95px}
+    header{display:flex;align-items:center;justify-content:space-between;padding:17px;background:white;border-bottom:1px solid #e6ebf2}
+    .brand{font-weight:800;color:#173b73;font-size:18px}
+    .header-link{padding:10px 13px;border:1px solid #e6ebf2;border-radius:11px;font-size:13px}
+    main{padding:22px 17px}
+    .eyebrow{color:#376bc0;font-size:11px;font-weight:bold;letter-spacing:1.5px}
+    h1{margin:8px 0;color:#10274c;font-size:29px}
+    .subtitle{color:#718096;font-size:14px;line-height:1.6}
+    .search{width:100%;margin:20px 0 14px;padding:15px;border:1px solid #e0e6ef;border-radius:13px;background:white;font-size:15px}
+    .filters{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:20px}
+    .filter{padding:9px 14px;border:1px solid #dfe6f0;border-radius:30px;background:white;color:#52627a;font-size:12px;font-weight:bold;cursor:pointer}
+    .filter.active{background:#173b73;color:white;border-color:#173b73}
+    .batch-list{display:grid;gap:14px}
+    .card{overflow:hidden;border:1px solid #e6ebf2;border-radius:17px;background:white}
+    .cover{padding:20px;background:linear-gradient(120deg,#eaf1ff,#f4f7ff)}
+    .tag{display:inline-block;padding:6px 9px;border-radius:7px;background:#dbe7ff;color:#214f9b;font-size:10px;font-weight:bold}
+    .cover h2{margin:13px 0 4px;font-size:20px;color:#10274c}
+    .body{padding:17px}
+    .description{color:#718096;font-size:13px;line-height:1.7}
+    .footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid #e6ebf2}
+    .status{font-size:12px;font-weight:bold;color:#16855d}
+    .open{padding:12px 15px;border:0;border-radius:10px;background:#173b73;color:white;font-weight:bold;font-size:12px}
+    .empty{padding:32px 20px;text-align:center;background:white;border:1px dashed #cbd6e5;border-radius:16px}
+    .empty h2{font-size:17px;color:#10274c}
+    .empty p{font-size:13px;line-height:1.7;color:#718096}
+    nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));width:100%;max-width:760px;padding:10px 4px calc(10px + env(safe-area-inset-bottom));background:white;border-top:1px solid #e6ebf2}
+    nav a{text-align:center;font-size:10px;font-weight:bold;color:#8793a5;padding:7px 0}
+    nav a.active{color:#173b73}
+    @media(min-width:600px){.batch-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
   </style>
 </head>
 <body>
-
+<div class="app">
   <header>
-    <div class="topbar">
-      <div class="brand">EXAM <span>JUNCTION</span></div>
-      <button class="notify" onclick="showNotice()" aria-label="Notifications">
-        🔔
-      </button>
-    </div>
+    <a class="brand" href="index.html">EXAM JUNCTION</a>
+    <a class="header-link" href="notifications.html">🔔 Alerts</a>
   </header>
 
-  <section class="hero">
-    <h1>📚 My Batches</h1>
-    <p>अपने बैच, लेक्चर और नोट्स एक ही जगह पर देखें।</p>
-  </section>
-
   <main>
-    <input
-      class="search"
-      type="search"
-      placeholder="बैच का नाम खोजें..."
-      oninput="searchBatches(this.value)"
-      aria-label="बैच खोजें"
-    >
+    <div class="eyebrow">YOUR PREPARATION</div>
+    <h1>Explore Batches</h1>
+    <p class="subtitle">Find your course, explore batch details and continue your preparation.</p>
 
-    <section id="batch-list">
+    <input class="search" id="search" type="search" placeholder="Search batches..." aria-label="Search batches">
 
-      <article class="batch-card">
-        <h2>SSC Foundation Batch</h2>
-        <p>यह उदाहरण बैच है। वास्तविक बैच Admin Panel से जोड़े जाएँगे।</p>
-        <span class="tag">DEMO CONTENT</span>
-      </article>
+    <div class="filters" aria-label="Batch filters">
+      <button class="filter active" data-filter="all">All Batches</button>
+      <button class="filter" data-filter="free">Free</button>
+      <button class="filter" data-filter="restricted">Restricted</button>
+    </div>
 
-      <details class="chapter" open>
-        <summary>CHAPTER 1 — Number System</summary>
-        <div class="chapter-content">
-          <a class="lecture" href="#" onclick="demoLecture(event)">
-            ▶ Lecture 1
-          </a>
-          <a class="lecture" href="#" onclick="demoLecture(event)">
-            ▶ Lecture 2
-          </a>
-          <a class="lecture" href="#" onclick="demoLecture(event)">
-            ▶ Lecture 3
-          </a>
-          <a class="notes" href="#" onclick="demoNotes(event)">
-            📄 Notes PDF
-          </a>
-        </div>
-      </details>
-
-      <details class="chapter">
-        <summary>CHAPTER 2 — Percentage</summary>
-        <div class="chapter-content">
-          <a class="lecture" href="#" onclick="demoLecture(event)">
-            ▶ Lecture 1
-          </a>
-          <a class="lecture" href="#" onclick="demoLecture(event)">
-            ▶ Lecture 2
-          </a>
-          <a class="notes" href="#" onclick="demoNotes(event)">
-            📄 Notes PDF
-          </a>
-        </div>
-      </details>
-
-      <div class="notice">
-        ℹ️ अभी ये केवल डिजाइन दिखाने वाला उदाहरण है।
-        वास्तविक YouTube वीडियो और PDF लिंक जोड़ने के लिए
-        आगे Database तथा Admin Panel जोड़े जाएँगे।
+    <section class="batch-list" id="batch-list">
+      <div class="empty" style="grid-column:1/-1">
+        <h2>Batches will appear here</h2>
+        <p>Published batches will appear here when the database and admin panel are connected.</p>
       </div>
-
     </section>
   </main>
 
-  <nav class="bottom-nav" aria-label="मुख्य मेन्यू">
-    <a class="nav-item" href="index.html">
-      <span class="nav-icon">🏠</span>Home
-    </a>
-    <a class="nav-item active" href="batch.html">
-      <span class="nav-icon">📚</span>Batch
-    </a>
-    <a class="nav-item" href="books.html">
-      <span class="nav-icon">📖</span>Books
-    </a>
-    <a class="nav-item" href="leaderboard.html">
-      <span class="nav-icon">🏆</span>Leaderboard
-    </a>
-    <a class="nav-item" href="profile.html">
-      <span class="nav-icon">👤</span>Profile
-    </a>
+  <nav aria-label="Main navigation">
+    <a href="index.html">⌂<br>Home</a>
+    <a class="active" href="batch.html">▤<br>Batch</a>
+    <a href="books.html">▣<br>Books</a>
+    <a href="leaderboard.html">♛<br>Leaderboard</a>
+    <a href="about.html">ⓘ<br>About</a>
   </nav>
+</div>
 
-  <script>
-    function showNotice() {
-      alert("Notifications आगे जोड़े जाएँगे।");
-    }
+<script>
+  let selectedFilter = "all";
 
-    function demoLecture(event) {
-      event.preventDefault();
-      alert("यह उदाहरण लेक्चर है। वास्तविक वीडियो लिंक Admin Panel से जोड़ा जाएगा।");
-    }
+  document.querySelectorAll(".filter").forEach(button => {
+    button.addEventListener("click", () => {
+      document.querySelectorAll(".filter").forEach(item =>
+        item.classList.remove("active")
+      );
+      button.classList.add("active");
+      selectedFilter = button.dataset.filter;
+      filterBatches();
+    });
+  });
 
-    function demoNotes(event) {
-      event.preventDefault();
-      alert("यह उदाहरण PDF है। वास्तविक Notes लिंक आगे जोड़ा जाएगा।");
-    }
+  document.getElementById("search").addEventListener("input", filterBatches);
 
-    function searchBatches(value) {
-      const cards = document.querySelectorAll(".batch-card");
-      const query = value.trim().toLowerCase();
-
-      cards.forEach(function(card) {
-        card.style.display =
-          card.innerText.toLowerCase().includes(query) ? "" : "none";
-      });
-    }
-  </script>
-
+  function filterBatches() {
+    document.querySelectorAll("#batch-list .card").forEach(card => {
+      const matchesText = card.textContent.toLowerCase().includes(
+        document.getElementById("search").value.toLowerCase()
+      );
+      const matchesType = selectedFilter === "all" ||
+        card.dataset.type === selectedFilter;
+      card.hidden = !(matchesText && matchesType);
+    });
+  }
+</script>
 </body>
 </html>
