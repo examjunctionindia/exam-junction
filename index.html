@@ -1,251 +1,814 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#101b35">
-  <title>EXAM JUNCTION</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    body {
-      font-family: Arial, sans-serif;
-      background: #f3f5fa;
-      color: #172033;
-      padding-bottom: 80px;
-    }
+    <meta name="theme-color" content="#102b55">
+    <meta name="description" content="EXAM JUNCTION - Your destination for exam preparation, courses, batches, lectures and study material.">
 
-    header {
-      background: #101b35;
-      color: white;
-      padding: 18px 16px;
-      position: sticky;
-      top: 0;
-      z-index: 5;
-    }
+    <title>EXAM JUNCTION | Learn. Practice. Succeed.</title>
 
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-    }
+    <link rel="stylesheet" href="assets/css/style.css">
 
-    .brand {
-      font-size: 21px;
-      font-weight: 800;
-    }
+    <style>
+        :root {
+            --primary: #173b73;
+            --primary-dark: #10274c;
+            --accent: #f5a623;
+            --background: #f5f7fb;
+            --surface: #ffffff;
+            --text: #17243a;
+            --muted: #718096;
+            --border: #e6ebf2;
+            --radius: 18px;
+        }
 
-    .brand span {
-      color: #56d6c0;
-    }
+        * {
+            box-sizing: border-box;
+        }
 
-    .notify {
-      background: #263554;
-      color: white;
-      border: 0;
-      border-radius: 12px;
-      padding: 10px 12px;
-      font-size: 19px;
-    }
+        html {
+            scroll-behavior: smooth;
+        }
 
-    .welcome {
-      padding: 24px 16px;
-      background: linear-gradient(135deg, #101b35, #234d75);
-      color: white;
-      border-radius: 0 0 24px 24px;
-    }
+        body {
+            margin: 0;
+            background: var(--background);
+            color: var(--text);
+            font-family: Inter, -apple-system, BlinkMacSystemFont,
+                         "Segoe UI", Roboto, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
 
-    .welcome h1 {
-      font-size: 25px;
-      margin-bottom: 8px;
-    }
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
 
-    .welcome p {
-      color: #d8e5f3;
-      line-height: 1.5;
-    }
+        button {
+            font: inherit;
+        }
 
-    main {
-      padding: 18px 14px;
-    }
+        .app {
+            max-width: 760px;
+            min-height: 100vh;
+            margin: 0 auto;
+            padding-bottom: 100px;
+            background: var(--background);
+        }
 
-    .search {
-      width: 100%;
-      padding: 14px;
-      border: 1px solid #dce2ed;
-      border-radius: 12px;
-      font-size: 15px;
-      margin-bottom: 22px;
-      background: white;
-    }
+        /* HEADER */
 
-    .section-title {
-      font-size: 20px;
-      margin-bottom: 14px;
-    }
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 15px 18px;
+            background: rgba(255, 255, 255, 0.97);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+        }
 
-    .empty-card {
-      background: white;
-      padding: 24px 16px;
-      border-radius: 16px;
-      text-align: center;
-      border: 1px solid #e6eaf1;
-    }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            min-width: 0;
+        }
 
-    .empty-card .icon {
-      font-size: 38px;
-      margin-bottom: 12px;
-    }
+        .brand-logo {
+            display: grid;
+            place-items: center;
+            width: 45px;
+            height: 45px;
+            flex-shrink: 0;
+            border-radius: 14px;
+            background: var(--primary);
+            color: white;
+            font-size: 17px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            box-shadow: 0 5px 14px rgba(23, 59, 115, 0.18);
+        }
 
-    .empty-card h3 {
-      margin-bottom: 8px;
-    }
+        .brand-name {
+            margin: 0;
+            color: var(--primary-dark);
+            font-size: 18px;
+            font-weight: 850;
+            letter-spacing: -0.5px;
+        }
 
-    .empty-card p {
-      color: #68748a;
-      line-height: 1.6;
-      font-size: 14px;
-    }
+        .brand-tagline {
+            margin: 3px 0 0;
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 500;
+        }
 
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      background: white;
-      border-top: 1px solid #e1e6ef;
-      padding: 8px 2px calc(8px + env(safe-area-inset-bottom));
-      z-index: 10;
-    }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
 
-    .nav-item {
-      text-align: center;
-      color: #6c7587;
-      font-size: 11px;
-      padding: 5px 0;
-      text-decoration: none;
-    }
+        .icon-button {
+            display: grid;
+            place-items: center;
+            width: 42px;
+            height: 42px;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: white;
+            color: var(--primary);
+            cursor: pointer;
+        }
 
-    .nav-item .nav-icon {
-      display: block;
-      font-size: 21px;
-      margin-bottom: 4px;
-    }
+        .icon-button svg {
+            width: 21px;
+            height: 21px;
+        }
 
-    .nav-item.active {
-      color: #1769d2;
-      font-weight: bold;
-    }
+        /* WELCOME */
 
-    @media (min-width: 700px) {
-      body {
-        max-width: 700px;
-        margin: auto;
-        box-shadow: 0 0 25px #dce2ed;
-      }
+        .welcome {
+            padding: 23px 18px 8px;
+        }
 
-      .bottom-nav {
-        left: 50%;
-        transform: translateX(-50%);
-        max-width: 700px;
-      }
-    }
-  </style>
+        .welcome-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 11px;
+            color: var(--primary);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1.4px;
+            text-transform: uppercase;
+        }
+
+        .welcome-label::before {
+            content: "";
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #26b47e;
+        }
+
+        .welcome h1 {
+            max-width: 520px;
+            margin: 0;
+            color: var(--primary-dark);
+            font-size: clamp(28px, 7vw, 39px);
+            line-height: 1.18;
+            letter-spacing: -1.3px;
+        }
+
+        .welcome h1 span {
+            color: #376bc0;
+        }
+
+        .welcome-description {
+            max-width: 470px;
+            margin: 12px 0 0;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        /* HERO */
+
+        .hero {
+            position: relative;
+            overflow: hidden;
+            margin: 20px 18px 26px;
+            padding: 25px 21px;
+            border-radius: 23px;
+            background: linear-gradient(135deg, #173b73 0%, #10274c 100%);
+            color: white;
+            box-shadow: 0 12px 28px rgba(16, 39, 76, 0.15);
+        }
+
+        .hero::before {
+            position: absolute;
+            top: -65px;
+            right: -45px;
+            width: 190px;
+            height: 190px;
+            border: 28px solid rgba(255,255,255,0.06);
+            border-radius: 50%;
+            content: "";
+        }
+
+        .hero::after {
+            position: absolute;
+            right: 35px;
+            bottom: -65px;
+            width: 125px;
+            height: 125px;
+            border-radius: 50%;
+            background: rgba(245, 166, 35, 0.12);
+            content: "";
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            padding: 7px 11px;
+            border: 1px solid rgba(255,255,255,0.19);
+            border-radius: 30px;
+            background: rgba(255,255,255,0.09);
+            color: #ffcf78;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .hero h2 {
+            max-width: 380px;
+            margin: 17px 0 9px;
+            font-size: 25px;
+            line-height: 1.3;
+            letter-spacing: -0.6px;
+        }
+
+        .hero p {
+            max-width: 340px;
+            margin: 0;
+            color: #d9e5f8;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .hero-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 19px;
+            padding: 12px 17px;
+            border: 0;
+            border-radius: 12px;
+            background: var(--accent);
+            color: #192943;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .hero-button svg {
+            width: 17px;
+            height: 17px;
+        }
+
+        /* COURSE SECTION */
+
+        .section {
+            padding: 0 18px;
+            scroll-margin-top: 85px;
+        }
+
+        .section-heading {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .section-eyebrow {
+            margin: 0 0 5px;
+            color: #376bc0;
+            font-size: 10px;
+            font-weight: 850;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .section-heading h2 {
+            margin: 0;
+            color: var(--primary-dark);
+            font-size: 22px;
+            font-weight: 850;
+            letter-spacing: -0.6px;
+        }
+
+        .section-subtitle {
+            margin: 7px 0 0;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .batch-count {
+            flex-shrink: 0;
+            padding: 7px 10px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: white;
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        /* BATCH CARD */
+
+        .batch-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+        }
+
+        .batch-card {
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface);
+            box-shadow: 0 4px 15px rgba(22, 42, 72, 0.035);
+        }
+
+        .batch-cover {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            min-height: 112px;
+            padding: 20px;
+            background: linear-gradient(120deg, #eaf1ff, #f4f7ff);
+        }
+
+        .batch-cover-content {
+            min-width: 0;
+        }
+
+        .batch-category {
+            display: inline-block;
+            padding: 5px 8px;
+            border-radius: 6px;
+            background: #dbe7ff;
+            color: #214f9b;
+            font-size: 9px;
+            font-weight: 850;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+        }
+
+        .batch-cover h3 {
+            margin: 10px 0 0;
+            color: var(--primary-dark);
+            font-size: 19px;
+            line-height: 1.35;
+        }
+
+        .batch-symbol {
+            display: grid;
+            place-items: center;
+            width: 59px;
+            height: 59px;
+            flex-shrink: 0;
+            border: 1px solid rgba(255,255,255,0.8);
+            border-radius: 18px;
+            background: rgba(255,255,255,0.8);
+            color: #376bc0;
+            font-size: 26px;
+            font-weight: 900;
+        }
+
+        .batch-body {
+            padding: 17px;
+        }
+
+        .batch-description {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .batch-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .meta-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 7px 9px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: #53647c;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .batch-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 17px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+        }
+
+        .access-label {
+            color: #16855d;
+            font-size: 12px;
+            font-weight: 850;
+        }
+
+        .batch-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            min-height: 42px;
+            padding: 0 14px;
+            border: 0;
+            border-radius: 11px;
+            background: var(--primary);
+            color: white;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .batch-button svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* EMPTY STATE */
+
+        .empty-state {
+            padding: 30px 18px;
+            border: 1px dashed #cbd6e5;
+            border-radius: var(--radius);
+            background: white;
+            text-align: center;
+        }
+
+        .empty-icon {
+            display: grid;
+            place-items: center;
+            width: 54px;
+            height: 54px;
+            margin: 0 auto 13px;
+            border-radius: 16px;
+            background: #edf3ff;
+            color: var(--primary);
+            font-size: 25px;
+        }
+
+        .empty-state h3 {
+            margin: 0;
+            color: var(--primary-dark);
+            font-size: 16px;
+        }
+
+        .empty-state p {
+            max-width: 300px;
+            margin: 9px auto 0;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.7;
+        }
+
+        /* BOTTOM NAVIGATION */
+
+        .bottom-nav {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 30;
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            width: 100%;
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 9px 5px calc(9px + env(safe-area-inset-bottom));
+            border-top: 1px solid var(--border);
+            background: rgba(255,255,255,0.98);
+            backdrop-filter: blur(15px);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            min-width: 0;
+            padding: 6px 1px;
+            border-radius: 11px;
+            color: #8793a5;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .nav-item svg {
+            width: 21px;
+            height: 21px;
+            stroke: currentColor;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .nav-item.active svg {
+            stroke-width: 2.5;
+        }
+
+        @media (min-width: 600px) {
+            .welcome {
+                padding-top: 34px;
+            }
+
+            .hero {
+                padding: 32px;
+            }
+
+            .batch-list {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 360px) {
+            .brand-name {
+                font-size: 15px;
+            }
+
+            .brand-tagline {
+                font-size: 10px;
+            }
+
+            .brand-logo {
+                width: 39px;
+                height: 39px;
+            }
+
+            .topbar {
+                padding-right: 12px;
+                padding-left: 12px;
+            }
+
+            .section-heading h2 {
+                font-size: 20px;
+            }
+
+            .batch-button {
+                padding: 0 10px;
+            }
+
+            .nav-item {
+                font-size: 9px;
+            }
+        }
+    </style>
 </head>
+
 <body>
 
-  <header>
-    <div class="topbar">
-      <div class="brand">EXAM <span>JUNCTION</span></div>
-      <button class="notify" aria-label="Notifications" onclick="showNotice()">
-        🔔
-      </button>
-    </div>
-  </header>
+<div class="app">
 
-  <section class="welcome">
-    <h1>Welcome to EXAM JUNCTION</h1>
-    <p>आपकी पढ़ाई, आपके लक्ष्य और आपकी सफलता — सब एक जगह।</p>
-  </section>
+    <!-- TOP HEADER -->
+    <header class="topbar">
 
-  <main>
-    <input
-      class="search"
-      type="search"
-      placeholder="बैच या कोर्स खोजें..."
-      aria-label="बैच या कोर्स खोजें"
-      oninput="searchBatch(this.value)"
-    >
+        <a class="brand" href="index.html" aria-label="EXAM JUNCTION Home">
+            <div class="brand-logo">EJ</div>
 
-    <h2 class="section-title">📚 Courses & Batches</h2>
+            <div>
+                <p class="brand-name">EXAM JUNCTION</p>
+                <p class="brand-tagline">Learn. Practice. Succeed.</p>
+            </div>
+        </a>
 
-    <div class="empty-card" id="batch-area">
-      <div class="icon">🎓</div>
-      <h3>आपकी सफलता की शुरुआत</h3>
-      <p>नए कोर्स और बैच जल्द यहाँ दिखाई देंगे।</p>
-    </div>
-  </main>
+        <div class="header-actions">
 
-  <nav class="bottom-nav" aria-label="मुख्य मेन्यू">
-    <a class="nav-item active" href="index.html">
-      <span class="nav-icon">🏠</span>Home
-    </a>
-    <a class="nav-item" href="batch.html">
-      <span class="nav-icon">📚</span>Batch
-    </a>
-    <a class="nav-item" href="books.html">
-      <span class="nav-icon">📖</span>Books
-    </a>
-    <a class="nav-item" href="leaderboard.html">
-      <span class="nav-icon">🏆</span>Leaderboard
-    </a>
-    <a class="nav-item" href="profile.html">
-      <span class="nav-icon">👤</span>Profile
-    </a>
-  </nav>
+            <a class="icon-button"
+               href="notifications.html"
+               aria-label="Notifications"
+               title="Notifications">
 
-  <script>
-    function showNotice() {
-      alert("Notifications जल्द उपलब्ध होंगे।");
-    }
+                <svg viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/>
+                    <path d="M10 21h4"/>
+                </svg>
 
-    function searchBatch(value) {
-      const area = document.getElementById("batch-area");
-      const text = value.trim();
+            </a>
 
-      if (text) {
-        area.innerHTML =
-          '<div class="icon">🔎</div>' +
-          '<h3>बैच खोज</h3>' +
-          '<p>“' + escapeText(text) +
-          '” के लिए अभी कोई बैच उपलब्ध नहीं है।</p>';
-      } else {
-        area.innerHTML =
-          '<div class="icon">🎓</div>' +
-          '<h3>आपकी सफलता की शुरुआत</h3>' +
-          '<p>नए कोर्स और बैच जल्द यहाँ दिखाई देंगे।</p>';
-      }
-    }
+            <a class="icon-button"
+               href="login.html"
+               aria-label="My account"
+               title="My account">
 
-    function escapeText(value) {
-      return value.replace(/[&<>"']/g, function(char) {
-        return {
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          '"': "&quot;",
-          "'": "&#39;"
-        }[char];
-      });
-    }
-  </script>
+                <svg viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="8" r="4"/>
+                    <path d="M4 21v-2a8 8 0 0 1 16 0v2z"/>
+                </svg>
+
+            </a>
+
+        </div>
+
+    </header>
+
+
+    <!-- WELCOME SECTION -->
+    <section class="welcome">
+
+        <div class="welcome-label">YOUR LEARNING JOURNEY</div>
+
+        <h1>
+            Prepare Today.<br>
+            <span>Succeed Tomorrow.</span>
+        </h1>
+
+        <p class="welcome-description">
+            Discover your courses, explore batches and take the next
+            step towards your examination goals with EXAM JUNCTION.
+        </p>
+
+    </section>
+
+
+    <!-- HERO BANNER -->
+    <section class="hero">
+
+        <div class="hero-content">
+
+            <span class="hero-badge">WELCOME TO EXAM JUNCTION</span>
+
+            <h2>Your Goals.<br>Your Preparation. Your Success.</h2>
+
+            <p>
+                Find your batch, follow your lectures and access
+                your study material in one place.
+            </p>
+
+            <a class="hero-button" href="#courses">
+                Explore Courses
+
+                <svg viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14"/>
+                    <path d="m12 5 7 7-7 7"/>
+                </svg>
+
+            </a>
+
+        </div>
+
+    </section>
+
+
+    <!-- HOME: COURSES AND BATCHES ONLY -->
+    <main>
+
+        <section class="section" id="courses">
+
+            <div class="section-heading">
+
+                <div>
+                    <p class="section-eyebrow">FIND YOUR COURSE</p>
+                    <h2>Courses & Batches</h2>
+
+                    <p class="section-subtitle">
+                        Choose your batch and start your preparation.
+                    </p>
+                </div>
+
+                <span class="batch-count" id="batch-count">
+                    0 Batches
+                </span>
+
+            </div>
+
+
+            <!--
+                REAL BATCHES WILL BE LOADED FROM SUPABASE LATER.
+                Do not add fake course data here.
+            -->
+
+            <div class="batch-list" id="batch-list">
+
+                <div class="empty-state" id="empty-state"
+                     style="grid-column: 1 / -1;">
+
+                    <div class="empty-icon">▤</div>
+
+                    <h3>Your batches will appear here</h3>
+
+                    <p>
+                        Courses and batches published by EXAM JUNCTION
+                        will appear in this section.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- FIXED BOTTOM NAVIGATION: EXACTLY FIVE ITEMS -->
+    <nav class="bottom-nav" aria-label="Main navigation">
+
+        <a class="nav-item active"
+           href="index.html"
+           aria-current="page">
+
+            <svg viewBox="0 0 24 24" fill="none"
+                 stroke-width="1.8" stroke-linecap="round"
+                 stroke-linejoin="round">
+                <path d="m3 10 9-7 9 7"/>
+                <path d="M5 9v11h14V9"/>
+                <path d="M9 20v-7h6v7"/>
+            </svg>
+
+            <span>Home</span>
+        </a>
+
+
+        <a class="nav-item" href="batch.html">
+
+            <svg viewBox="0 0 24 24" fill="none"
+                 stroke-width="1.8" stroke-linecap="round"
+                 stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="16" rx="2"/>
+                <path d="M8 4v16M3 9h5M3 15h5"/>
+                <path d="M12 9h5M12 13h5"/>
+            </svg>
+
+            <span>Batch</span>
+        </a>
+
+
+        <a class="nav-item" href="books.html">
+
+            <svg viewBox="0 0 24 24" fill="none"
+                 stroke-width="1.8" stroke-linecap="round"
+                 stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                <path d="M8 7h8M8 11h6"/>
+            </svg>
+
+            <span>Books</span>
+        </a>
+
+
+        <a class="nav-item" href="leaderboard.html">
+
+            <svg viewBox="0 0 24 24" fill="none"
+                 stroke-width="1.8" stroke-linecap="round"
+                 stroke-linejoin="round">
+                <path d="M8 21h8M12 17v4"/>
+                <path d="M7 4H4v3a5 5 0 0 0 5 5"/>
+                <path d="M17 4h3v3a5 5 0 0 1-5 5"/>
+                <path d="M7 2h10v8a5 5 0 0 1-10 0z"/>
+            </svg>
+
+            <span>Leaderboard</span>
+        </a>
+
+
+        <a class="nav-item" href="about.html">
+
+            <svg viewBox="0 0 24 24" fill="none"
+                 stroke-width="1.8" stroke-linecap="round"
+                 stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"/>
+                <path d="M12 11v6"/>
+                <path d="M12 7h.01"/>
+            </svg>
+
+            <span>About</span>
+        </a>
+
+    </nav>
+
+</div>
 
 </body>
-        </html>
+  </html>
