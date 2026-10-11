@@ -4,13 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#102b55">
-
     <title>Login | EXAM JUNCTION</title>
 
     <style>
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
@@ -24,10 +21,7 @@
             font-family: Arial, sans-serif;
         }
 
-        .container {
-            width: 100%;
-            max-width: 410px;
-        }
+        .container { width: 100%; max-width: 410px; }
 
         .brand {
             margin-bottom: 25px;
@@ -82,9 +76,34 @@
             line-height: 1.6;
         }
 
-        .field {
-            margin-bottom: 17px;
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            padding: 5px;
+            border-radius: 11px;
+            background: #edf2f9;
         }
+
+        .tab {
+            flex: 1;
+            min-height: 42px;
+            margin: 0;
+            border: 0;
+            border-radius: 8px;
+            background: transparent;
+            color: #52627a;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .tab.active {
+            background: #173b73;
+            color: white;
+        }
+
+        .field { margin-bottom: 17px; }
 
         label {
             display: block;
@@ -101,7 +120,7 @@
             border: 1px solid #dce3ee;
             border-radius: 11px;
             outline: none;
-            background: #fff;
+            background: white;
             color: #17243a;
             font-size: 15px;
         }
@@ -111,7 +130,7 @@
             box-shadow: 0 0 0 3px #376bc018;
         }
 
-        button {
+        .submit {
             width: 100%;
             min-height: 49px;
             margin-top: 4px;
@@ -139,19 +158,9 @@
             overflow-wrap: anywhere;
         }
 
-        .message.show {
-            display: block;
-        }
-
-        .message.error {
-            background: #fff0f0;
-            color: #a12727;
-        }
-
-        .message.success {
-            background: #eaf8f0;
-            color: #176b43;
-        }
+        .message.show { display: block; }
+        .message.error { background: #fff0f0; color: #a12727; }
+        .message.success { background: #eaf8f0; color: #176b43; }
 
         .back {
             display: block;
@@ -170,11 +179,12 @@
             line-height: 1.6;
             text-align: center;
         }
+
+        [hidden] { display: none !important; }
     </style>
 </head>
 
 <body>
-
 <div class="container">
 
     <header class="brand">
@@ -184,49 +194,55 @@
     </header>
 
     <main class="card">
-        <h2>Welcome back!</h2>
+        <h2 id="heading">Welcome back!</h2>
 
-        <p class="subtitle">
+        <p class="subtitle" id="subtitle">
             Login with your registered email and password to access your account.
         </p>
 
-        <form id="login-form">
+        <div class="tabs">
+            <button class="tab active" id="login-tab"
+                    type="button" aria-pressed="true">Login</button>
+            <button class="tab" id="signup-tab"
+                    type="button" aria-pressed="false">Sign Up</button>
+        </div>
+
+        <div id="message" class="message"
+             role="status" aria-live="polite"></div>
+
+        <form id="auth-form">
+            <div class="field" id="name-field" hidden>
+                <label for="full-name">Full name</label>
+                <input id="full-name" type="text"
+                       autocomplete="name" maxlength="100"
+                       placeholder="Enter your full name">
+            </div>
 
             <div class="field">
                 <label for="email">Email address</label>
-                <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autocomplete="email"
-                    placeholder="Enter your email"
-                    required
-                >
+                <input id="email" name="email" type="email"
+                       autocomplete="email" required
+                       placeholder="Enter your email">
             </div>
 
             <div class="field">
                 <label for="password">Password</label>
-                <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autocomplete="current-password"
-                    placeholder="Enter your password"
-                    required
-                >
+                <input id="password" name="password" type="password"
+                       autocomplete="current-password"
+                       minlength="8" required
+                       placeholder="At least 8 characters">
             </div>
 
-            <button id="login-button" type="submit">
+            <div class="field" id="confirm-field" hidden>
+                <label for="confirm-password">Confirm password</label>
+                <input id="confirm-password" type="password"
+                       autocomplete="new-password" minlength="8"
+                       placeholder="Enter password again">
+            </div>
+
+            <button class="submit" id="submit-button" type="submit">
                 Login to Your Account
             </button>
-
-            <div
-                id="message"
-                class="message"
-                role="status"
-                aria-live="polite"
-            ></div>
-
         </form>
     </main>
 
@@ -235,7 +251,6 @@
     <p class="security-note">
         Your account access is subject to EXAM JUNCTION's security permissions.
     </p>
-
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -246,72 +261,186 @@
 (function () {
     "use strict";
 
-    const form = document.getElementById("login-form");
-    const button = document.getElementById("login-button");
-    const message = document.getElementById("message");
+    const $ = id => document.getElementById(id);
+
+    const form = $("auth-form");
+    const loginTab = $("login-tab");
+    const signupTab = $("signup-tab");
+    const nameField = $("name-field");
+    const confirmField = $("confirm-field");
+    const fullName = $("full-name");
+    const email = $("email");
+    const password = $("password");
+    const confirmPassword = $("confirm-password");
+    const button = $("submit-button");
+    const message = $("message");
+
+    let mode = "login";
+    let busy = false;
 
     function showMessage(text, type) {
         message.textContent = text;
         message.className = "message show " + type;
     }
 
-    form.addEventListener("submit", async function (event) {
-        event.preventDefault();
+    function clearMessage() {
+        message.textContent = "";
+        message.className = "message";
+    }
 
-        const email = document.getElementById("email").value.trim();
-        const password = document.getElementById("password").value;
+    function setMode(nextMode) {
+        mode = nextMode;
+        const signup = mode === "signup";
 
+        loginTab.classList.toggle("active", !signup);
+        signupTab.classList.toggle("active", signup);
+
+        loginTab.setAttribute("aria-pressed", String(!signup));
+        signupTab.setAttribute("aria-pressed", String(signup));
+
+        nameField.hidden = !signup;
+        confirmField.hidden = !signup;
+        fullName.required = signup;
+        confirmPassword.required = signup;
+
+        $("heading").textContent =
+            signup ? "Create your account" : "Welcome back!";
+
+        $("subtitle").textContent = signup
+            ? "Register to start your EXAM JUNCTION learning journey."
+            : "Login with your registered email and password to access your account.";
+
+        button.textContent =
+            signup ? "Create Account" : "Login to Your Account";
+
+        password.autocomplete =
+            signup ? "new-password" : "current-password";
+
+        clearMessage();
+    }
+
+    loginTab.addEventListener("click", () => setMode("login"));
+    signupTab.addEventListener("click", () => setMode("signup"));
+
+    async function getClient() {
         if (!window.EXAM_JUNCTION) {
-            showMessage("Website system load nahi hua. Page reload karke try karein.", "error");
-            return;
+            throw new Error("Website system load nahi hua. Page reload karein.");
         }
 
+        const ready = await window.EXAM_JUNCTION.init();
+
+        if (!ready || !window.EXAM_JUNCTION.supabase) {
+            throw new Error(
+                "Supabase load nahi hua. Configuration aur internet check karein."
+            );
+        }
+
+        return window.EXAM_JUNCTION.supabase;
+    }
+
+    form.addEventListener("submit", async event => {
+        event.preventDefault();
+
+        if (busy) return;
+        clearMessage();
+
+        const userEmail = email.value.trim();
+        const userPassword = password.value;
+
+        if (mode === "signup") {
+            if (fullName.value.trim().length < 2) {
+                showMessage("Apna poora naam likhein.", "error");
+                return;
+            }
+
+            if (userPassword.length < 8) {
+                showMessage(
+                    "Password kam se kam 8 characters ka hona chahiye.",
+                    "error"
+                );
+                return;
+            }
+
+            if (userPassword !== confirmPassword.value) {
+                showMessage("Dono passwords match nahi karte.", "error");
+                return;
+            }
+        }
+
+        busy = true;
         button.disabled = true;
         button.textContent = "Please wait...";
 
         try {
-            const ready = await window.EXAM_JUNCTION.init();
+            const client = await getClient();
 
-            if (!ready) {
-                showMessage(
-                    "Login abhi configure nahi hua hai. Supabase Project URL aur Publishable Key set karni baaki hai.",
-                    "error"
-                );
-                return;
-            }
-
-            const { data, error } =
-                await window.EXAM_JUNCTION.supabase.auth.signInWithPassword({
-                    email: email,
-                    password: password
+            if (mode === "signup") {
+                const { data, error } = await client.auth.signUp({
+                    email: userEmail,
+                    password: userPassword,
+                    options: {
+                        data: { full_name: fullName.value.trim() },
+                        emailRedirectTo: window.location.origin +
+                            window.location.pathname.replace(
+                                /[^/]*$/, "login.html"
+                            )
+                    }
                 });
 
-            if (error) {
+                if (error) throw error;
+
+                if (data.session) {
+                    showMessage(
+                        "Account ban gaya! Profile khol rahe hain.",
+                        "success"
+                    );
+
+                    window.setTimeout(() => {
+                        window.location.replace("profile.html");
+                    }, 900);
+                } else {
+                    showMessage(
+                        "Signup request ho gayi. Agar email confirmation enabled hai, inbox mein verification link check karein. Verify hone ke baad Login karein.",
+                        "success"
+                    );
+                }
+            } else {
+                const { data, error } =
+                    await client.auth.signInWithPassword({
+                        email: userEmail,
+                        password: userPassword
+                    });
+
+                if (error) throw error;
+
+                if (!data.user) {
+                    throw new Error("Login complete nahi hua. Dobara try karein.");
+                }
+
                 showMessage(
-                    "Login nahi ho saka. Email aur password check karein. Agar account nahi bana hai, pehle account registration configure karna hoga.",
-                    "error"
+                    "Login successful. Profile khol rahe hain...",
+                    "success"
                 );
-                return;
+
+                window.setTimeout(() => {
+                    window.location.replace("profile.html");
+                }, 500);
             }
-
-            if (data.user) {
-                showMessage("Login successful. Opening your account...", "success");
-
-                window.location.replace("profile.html");
-            }
-
         } catch (error) {
+            console.error("EXAM JUNCTION authentication error:", error);
+
             showMessage(
-                "Connection mein dikkat hai. Internet aur Supabase configuration check karein.",
+                error.message || "Kuchh galat hua. Dobara try karein.",
                 "error"
             );
         } finally {
+            busy = false;
             button.disabled = false;
-            button.textContent = "Login to Your Account";
+            button.textContent =
+                mode === "signup" ? "Create Account" : "Login to Your Account";
         }
     });
 })();
 </script>
-
 </body>
-  </html>
+</html>
