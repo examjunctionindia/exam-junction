@@ -32,6 +32,29 @@
       align-items: center;
     }
 
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .back-arrow {
+      width: 38px;
+      height: 38px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #43516d;
+      border-radius: 10px;
+      background: #263554;
+      color: white;
+      font-size: 25px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
     .brand {
       font-size: 20px;
       font-weight: 800;
@@ -48,6 +71,7 @@
       background: #263554;
       color: white;
       font-size: 19px;
+      flex-shrink: 0;
     }
 
     .hero {
@@ -219,12 +243,24 @@
 
   <header>
     <div class="topbar">
-      <div class="brand">EXAM <span>JUNCTION</span></div>
-      <button class="notify"
-              aria-label="Notifications"
-              onclick="showNotifications()">
-        🔔
-      </button>
+
+      <div class="header-left">
+        <button
+          type="button"
+          class="back-arrow"
+          id="back-button"
+          aria-label="Pichhle page par jaayein"
+        >←</button>
+
+        <div class="brand">EXAM <span>JUNCTION</span></div>
+      </div>
+
+      <button
+        class="notify"
+        aria-label="Notifications"
+        onclick="showNotifications()"
+      >🔔</button>
+
     </div>
   </header>
 
@@ -244,14 +280,17 @@
     >
 
     <h2 class="section-title">🟢 Free Books</h2>
+
     <section id="freeBooks">
 
       <article class="book-card" data-title="sample free book">
         <div class="cover">📗</div>
+
         <div class="book-info">
           <span class="badge free">FREE</span>
           <h3>Free Book का उदाहरण</h3>
           <p>लेखक: Admin द्वारा जोड़ा जाएगा</p>
+
           <button class="open-btn" onclick="showMessage()">
             Open Book
           </button>
@@ -261,14 +300,17 @@
     </section>
 
     <h2 class="section-title">🔒 Restricted Books</h2>
+
     <section id="restrictedBooks">
 
       <article class="book-card" data-title="sample restricted book">
         <div class="cover">📙</div>
+
         <div class="book-info">
           <span class="badge restricted">RESTRICTED</span>
           <h3>Restricted Book का उदाहरण</h3>
           <p>इस पुस्तक के लिए अनुमति आवश्यक होगी।</p>
+
           <button class="open-btn" onclick="showMessage()">
             Check Access
           </button>
@@ -308,6 +350,14 @@
   </nav>
 
   <script>
+    document.getElementById("back-button").addEventListener("click", function () {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.href = "index.html";
+      }
+    });
+
     const searchInput = document.getElementById("bookSearch");
 
     searchInput.addEventListener("input", function () {
@@ -342,4 +392,4 @@
   </script>
 
 </body>
-        </html>
+</html>
