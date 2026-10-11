@@ -138,8 +138,15 @@
 
     if (profileError) {
       recordError("profiles.select", profileError, user.id);
+
+      // CHANGE: Actual Supabase error page par dikhayenge,
+      // taaki profile load failure ka reason pata chal sake.
       showMessage(
-        "Aapki profile abhi load nahi ho rahi. Kripya baad mein try karein."
+        "Profile error: " +
+        (profileError.code || "NO_CODE") +
+        " — " +
+        profileError.message +
+        (profileError.details ? " — " + profileError.details : "")
       );
       return;
     }
