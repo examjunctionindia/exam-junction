@@ -1,1 +1,413 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#102b55">
+<title>Admin Panel | EXAM JUNCTION</title>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f6fb;color:#17243a;font-family:Arial,sans-serif}
+header{background:#102b55;color:white;padding:20px 16px}
+header h1{font-size:21px;margin:0 0 6px}
+header p{font-size:13px;margin:0;color:#d9e5ff}
+main{max-width:800px;margin:auto;padding:16px 12px 40px}
+.card{background:white;border:1px solid #e2e8f0;border-radius:15px;padding:17px;margin-bottom:15px}
+h2{font-size:18px;margin:0 0 15px}
+label{display:block;font-size:13px;font-weight:bold;margin:12px 0 6px}
+input,textarea,select{width:100%;padding:12px;border:1px solid #d5deeb;border-radius:9px;font:14px Arial;background:white}
+textarea{min-height:85px;resize:vertical}
+button,.button{display:inline-block;border:0;border-radius:9px;background:#17458a;color:white;padding:12px 15px;font-size:14px;font-weight:bold;cursor:pointer;text-decoration:none}
+button:disabled{opacity:.6}
+.secondary{background:#e8eef8;color:#173b73}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}
+.status{padding:12px;border-radius:9px;background:#edf3ff;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+.hidden{display:none!important}
+.item{padding:12px 0;border-bottom:1px solid #e5eaf2;overflow-wrap:anywhere}
+.item:last-child{border-bottom:0}
+.small{font-size:12px;color:#64748b;line-height:1.5}
+</style>
+</head>
+
+<body>
+<header>
+  <h1>EXAM JUNCTION</h1>
+  <p>Admin Control Panel</p>
+</header>
+
+<main>
+  <div id="status" class="card status">Checking login and admin permissions...</div>
+
+  <section id="loginSection" class="card hidden">
+    <h2>Admin Login</h2>
+    <p class="small">Apne registered admin email aur password se login karein.</p>
+    <form id="loginForm">
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="username" required>
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" required>
+      <div class="actions">
+        <button id="loginButton" type="submit">Login</button>
+      </div>
+    </form>
+  </section>
+
+  <div id="dashboard" class="hidden">
+    <section class="card">
+      <h2>Admin Account</h2>
+      <div id="adminEmail" class="small"></div>
+      <div class="actions">
+        <button id="refreshButton" class="secondary" type="button">Refresh Data</button>
+        <button id="logoutButton" type="button">Logout</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>➕ Add Batch</h2>
+      <form id="batchForm">
+        <label for="batchTitle">Batch Name *</label>
+        <input id="batchTitle" maxlength="150" required placeholder="SSC Maths Foundation">
+
+        <label for="batchDescription">Batch Description</label>
+        <textarea id="batchDescription" maxlength="5000" placeholder="Course ki details"></textarea>
+
+        <label for="batchTeacher">Teacher / Platform Name</label>
+        <input id="batchTeacher" maxlength="150" placeholder="Rahul Sir">
+
+        <label for="batchAccess">Access</label>
+        <select id="batchAccess">
+          <option value="free">Free</option>
+          <option value="restricted">Restricted — selected students</option>
+        </select>
+
+        <label for="batchPublished">Publish</label>
+        <select id="batchPublished">
+          <option value="false">Draft — website par nahi dikhega</option>
+          <option value="true">Published</option>
+        </select>
+
+        <div class="actions">
+          <button id="batchSave" type="submit">Save Batch</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>📚 Add Book / Notes</h2>
+      <form id="bookForm">
+        <label for="bookTitle">Book / Notes Title *</label>
+        <input id="bookTitle" maxlength="200" required placeholder="SSC Maths Notes">
+
+        <label for="bookAuthor">Teacher / Author</label>
+        <input id="bookAuthor" maxlength="150" placeholder="Teacher name">
+
+        <label for="bookDescription">Description</label>
+        <textarea id="bookDescription" maxlength="5000"></textarea>
+
+        <label for="bookUrl">PDF / Google Drive Link</label>
+        <input id="bookUrl" type="url" placeholder="https://...">
+
+        <label for="bookAccess">Access</label>
+        <select id="bookAccess">
+          <option value="free">Free</option>
+          <option value="restricted">Restricted — selected students</option>
+        </select>
+
+        <label for="bookPublished">Publish</label>
+        <select id="bookPublished">
+          <option value="false">Draft</option>
+          <option value="true">Published</option>
+        </select>
+
+        <div class="actions">
+          <button id="bookSave" type="submit">Save Book</button>
+        </div>
+        <p class="small">Restricted PDF ko public Google Drive link se protect nahi kiya ja sakta. Private files ke liye secure storage setup alag se zaroori hai.</p>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>🔔 Publish Notification</h2>
+      <form id="notificationForm">
+        <label for="noticeTitle">Title *</label>
+        <input id="noticeTitle" maxlength="200" required>
+
+        <label for="noticeMessage">Message *</label>
+        <textarea id="noticeMessage" maxlength="5000" required></textarea>
+
+        <label for="noticeUrl">Optional Link</label>
+        <input id="noticeUrl" type="url" placeholder="https://...">
+
+        <label for="noticePublished">Publish</label>
+        <select id="noticePublished">
+          <option value="false">Draft</option>
+          <option value="true">Published</option>
+        </select>
+
+        <div class="actions">
+          <button id="noticeSave" type="submit">Save Notification</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Existing Batches</h2>
+      <div id="batchList" class="small">Loading...</div>
+    </section>
+
+    <section class="card">
+      <h2>Existing Books</h2>
+      <div id="bookList" class="small">Loading...</div>
+    </section>
+
+    <section class="card">
+      <h2>Recent Notifications</h2>
+      <div id="noticeList" class="small">Loading...</div>
+    </section>
+  </div>
+
+  <p class="small">EXAM JUNCTION · Admin access is controlled by Supabase permissions.</p>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/common.js"></script>
+
+<script>
+(function(){
+"use strict";
+
+const $ = id => document.getElementById(id);
+let db = null;
+let busy = false;
+
+function message(text, isError=false){
+  $("status").textContent = text;
+  $("status").style.background = isError ? "#fff0f0" : "#edf3ff";
+  $("status").style.color = isError ? "#a12727" : "#173b73";
+  $("status").classList.remove("hidden");
+}
+
+function safe(value){
+  return window.EXAM_JUNCTION.escapeHTML(value ?? "");
+}
+
+function showItems(id, rows, fields, emptyText){
+  const root = $(id);
+  if(!rows || !rows.length){
+    root.textContent = emptyText;
+    return;
+  }
+
+  root.replaceChildren();
+
+  rows.forEach(row => {
+    const item = document.createElement("div");
+    item.className = "item";
+
+    fields.forEach(field => {
+      const line = document.createElement("div");
+      line.textContent = field.label + ": " + (row[field.key] ?? "—");
+      item.appendChild(line);
+    });
+
+    root.appendChild(item);
+  });
+}
+
+async function loadLists(){
+  const jobs = [
+    {
+      table:"batches",
+      element:"batchList",
+      fields:[{key:"title",label:"Batch"},{key:"platform_name",label:"Teacher"},{key:"access_type",label:"Access"},{key:"is_published",label:"Published"}],
+      empty:"Abhi koi batch nahi hai."
+    },
+    {
+      table:"books",
+      element:"bookList",
+      fields:[{key:"title",label:"Book"},{key:"author",label:"Author"},{key:"access_type",label:"Access"},{key:"is_published",label:"Published"}],
+      empty:"Abhi koi book nahi hai."
+    },
+    {
+      table:"notifications",
+      element:"noticeList",
+      fields:[{key:"title",label:"Title"},{key:"created_at",label:"Created"}],
+      empty:"Abhi koi notification nahi hai."
+    }
+  ];
+
+  for(const job of jobs){
+    const result = await db.from(job.table)
+      .select("*")
+      .order("created_at",{ascending:false})
+      .limit(20);
+
+    if(result.error){
+      $(job.element).textContent =
+        "Load nahi hua. Database policy ya permissions check karni hongi.";
+      console.error(job.table,result.error.message);
+    }else{
+      showItems(job.element,result.data,job.fields,job.empty);
+    }
+  }
+}
+
+async function checkSession(){
+  $("dashboard").classList.add("hidden");
+  $("loginSection").classList.add("hidden");
+
+  const ready = await window.EXAM_JUNCTION.init();
+  if(!ready){
+    message("Supabase configuration ya library load nahi hui. config.js aur internet check karein.",true);
+    return;
+  }
+
+  db = window.EXAM_JUNCTION.supabase;
+
+  const {data,error} = await db.auth.getUser();
+  if(error || !data.user){
+    $("loginSection").classList.remove("hidden");
+    message("Admin account se login karein.");
+    return;
+  }
+
+  const {data:profile,error:profileError} = await db
+    .from("profiles")
+    .select("id,full_name,role")
+    .eq("id",data.user.id)
+    .maybeSingle();
+
+  if(profileError){
+    message("Admin role verify nahi hua. Profiles ki SELECT policy check karni hogi.",true);
+    console.error(profileError.message);
+    return;
+  }
+
+  if(!profile || profile.role !== "admin"){
+    message("Access denied: is account ko admin role nahi mila hai.",true);
+    await db.auth.signOut();
+    $("loginSection").classList.remove("hidden");
+    return;
+  }
+
+  $("adminEmail").textContent =
+    (profile.full_name || "Admin") + " · " + data.user.email;
+
+  $("dashboard").classList.remove("hidden");
+  message("Admin verified. Database se data load ho raha hai.");
+  await loadLists();
+}
+
+async function saveForm(formId,buttonId,table,payload){
+  if(busy)return;
+  busy=true;
+  const button=$(buttonId);
+  button.disabled=true;
+  const oldText=button.textContent;
+  button.textContent="Saving...";
+
+  try{
+    const {error}=await db.from(table).insert(payload);
+    if(error){
+      console.error(table,error.message);
+      message("Save nahi hua: " + error.message,true);
+      return;
+    }
+
+    $(formId).reset();
+    message("Successfully saved.");
+    await loadLists();
+  }catch(error){
+    console.error(error);
+    message("Connection error. Internet check karke try karein.",true);
+  }finally{
+    busy=false;
+    button.disabled=false;
+    button.textContent=oldText;
+  }
+}
+
+$("loginForm").addEventListener("submit",async function(e){
+  e.preventDefault();
+  const button=$("loginButton");
+  button.disabled=true;
+  try{
+    const ready=await window.EXAM_JUNCTION.init();
+    if(!ready)throw new Error("Supabase configuration missing.");
+
+    db=window.EXAM_JUNCTION.supabase;
+    const {error}=await db.auth.signInWithPassword({
+      email:$("email").value.trim(),
+      password:$("password").value
+    });
+
+    if(error)throw error;
+    await checkSession();
+  }catch(error){
+    message("Login nahi hua. Email/password aur configuration check karein. " + (error.message || ""),true);
+  }finally{
+    button.disabled=false;
+  }
+});
+
+$("batchForm").addEventListener("submit",async function(e){
+  e.preventDefault();
+  await saveForm("batchForm","batchSave","batches",{
+    title:$("batchTitle").value.trim(),
+    description:$("batchDescription").value.trim() || null,
+    platform_name:$("batchTeacher").value.trim() || null,
+    access_type:$("batchAccess").value,
+    is_published:$("batchPublished").value === "true"
+  });
+});
+
+$("bookForm").addEventListener("submit",async function(e){
+  e.preventDefault();
+  const url=$("bookUrl").value.trim();
+
+  if(url && !/^https:\/\//i.test(url)){
+    message("Book link HTTPS se shuru hona chahiye.",true);
+    return;
+  }
+
+  await saveForm("bookForm","bookSave","books",{
+    title:$("bookTitle").value.trim(),
+    author:$("bookAuthor").value.trim() || null,
+    description:$("bookDescription").value.trim() || null,
+    external_url:url || null,
+    access_type:$("bookAccess").value,
+    is_published:$("bookPublished").value === "true"
+  });
+});
+
+$("notificationForm").addEventListener("submit",async function(e){
+  e.preventDefault();
+  const url=$("noticeUrl").value.trim();
+
+  if(url && !/^https:\/\//i.test(url)){
+    message("Notification link HTTPS se shuru hona chahiye.",true);
+    return;
+  }
+
+  await saveForm("notificationForm","noticeSave","notifications",{
+    title:$("noticeTitle").value.trim(),
+    message:$("noticeMessage").value.trim(),
+    target_url:url || null,
+    is_published:$("noticePublished").value === "true"
+  });
+});
+
+$("refreshButton").addEventListener("click",loadLists);
+
+$("logoutButton").addEventListener("click",async function(){
+  await window.EXAM_JUNCTION.signOut();
+});
+
+checkSession();
+})();
+</script>
+</body>
+          </html>
