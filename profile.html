@@ -1,1 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102b55">
+  <title>My Profile | EXAM JUNCTION</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#f4f7fc;color:#17243a;font-family:Arial,sans-serif}
+    header{background:#102b55;color:white;padding:22px 18px}
+    header h1{margin:0;font-size:21px}
+    header p{margin:7px 0 0;color:#dbe7fa;font-size:13px}
+    main{max-width:650px;margin:22px auto;padding:0 15px 35px}
+    .card{background:white;border:1px solid #e4eaf3;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 5px 18px #102b5508}
+    .avatar{width:58px;height:58px;border-radius:50%;background:#e6efff;color:#173b73;display:grid;place-items:center;font-size:23px;font-weight:bold;margin-bottom:13px}
+    h2{font-size:19px;margin:0 0 12px}
+    .muted{color:#718096;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+    .row{padding:12px 0;border-bottom:1px solid #edf0f5}
+    .row:last-child{border:0}
+    .label{display:block;color:#718096;font-size:12px;margin-bottom:5px}
+    .value{font-size:14px;font-weight:700;overflow-wrap:anywhere}
+    a.button,button{display:block;width:100%;padding:14px;margin-top:10px;border:0;border-radius:10px;background:#173b73;color:white;text-align:center;text-decoration:none;font-size:14px;font-weight:bold;cursor:pointer}
+    a.secondary{background:#eaf0fb;color:#173b73}
+    button.logout{background:#fff0f0;color:#a12727}
+    #status{padding:13px;border-radius:10px;background:#fff7df;color:#795b13;font-size:13px;line-height:1.6}
+    [hidden]{display:none!important}
+  </style>
+</head>
+<body>
+<header>
+  <h1>EXAM JUNCTION</h1>
+  <p>Your learning journey starts here.</p>
+</header>
 
+<main>
+  <div id="status">Account check ho raha hai. Kripya wait karein...</div>
+
+  <section id="profile-card" class="card" hidden>
+    <div class="avatar" id="avatar">EJ</div>
+    <h2 id="name">Student</h2>
+    <p class="muted">Aapka EXAM JUNCTION account</p>
+
+    <div class="row">
+      <span class="label">Registered email</span>
+      <div class="value" id="email"></div>
+    </div>
+    <div class="row">
+      <span class="label">Account role</span>
+      <div class="value" id="role"></div>
+    </div>
+
+    <a class="button" href="batch.html">My Learning / Batches</a>
+    <a class="button secondary" href="index.html">Home par jaayein</a>
+    <a id="admin-link" class="button" href="admin.html" hidden>Admin Panel</a>
+    <button id="logout" class="logout" type="button">Logout</button>
+  </section>
+
+  <p class="muted">EXAM JUNCTION — Learn, Practice, Succeed.</p>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/common.js"></script>
+<script>
+(async function(){
+  const status=document.getElementById("status");
+  const card=document.getElementById("profile-card");
+  const showError=(text)=>{
+    status.hidden=false;
+    status.textContent=text;
+  };
+
+  try{
+    if(!window.EXAM_JUNCTION || !(await window.EXAM_JUNCTION.init())){
+      showError("Supabase configuration load nahi hui. config.js check karein.");
+      return;
+    }
+
+    const client=window.EXAM_JUNCTION.supabase;
+    const {data:authData,error:authError}=await client.auth.getUser();
+
+    if(authError || !authData.user){
+      window.location.replace("login.html");
+      return;
+    }
+
+    const user=authData.user;
+    const {data:profile,error:profileError}=await client
+      .from("profiles")
+      .select("full_name, role")
+      .eq("id",user.id)
+      .maybeSingle();
+
+    if(profileError){
+      showError("Profile load nahi hui. Database permissions check karni hongi.");
+      return;
+    }
+
+    if(!profile){
+      showError("Aapka profile record nahi mila. Admin ko database mein profile setup karna hoga.");
+      return;
+    }
+
+    const name=profile.full_name || "Student";
+    const role=profile.role || "student";
+
+    document.getElementById("name").textContent=name;
+    document.getElementById("email").textContent=user.email || "Not available";
+    document.getElementById("role").textContent=role;
+    document.getElementById("avatar").textContent=
+      name.trim().split(/\s+/).slice(0,2).map(part=>part[0]).join("").toUpperCase();
+
+    document.getElementById("admin-link").hidden=(role!=="admin");
+    status.hidden=true;
+    card.hidden=false;
+
+    document.getElementById("logout").addEventListener("click",async()=>{
+      document.getElementById("logout").disabled=true;
+      await window.EXAM_JUNCTION.signOut();
+    });
+  }catch(error){
+    showError("Connection error. Internet aur Supabase settings check karein.");
+  }
+})();
+</script>
+</body>
+</html>
