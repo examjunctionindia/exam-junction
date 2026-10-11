@@ -23,7 +23,8 @@
     a.button,button{display:block;width:100%;padding:14px;margin-top:10px;border:0;border-radius:10px;background:#173b73;color:white;text-align:center;text-decoration:none;font-size:14px;font-weight:bold;cursor:pointer}
     a.secondary{background:#eaf0fb;color:#173b73}
     button.logout{background:#fff0f0;color:#a12727}
-    #status{padding:13px;border-radius:10px;background:#fff7df;color:#795b13;font-size:13px;line-height:1.6}
+    #status{padding:13px;border-radius:10px;background:#fff7df;color:#795b13;font-size:13px;line-height:1.6;overflow-wrap:anywhere;white-space:pre-wrap}
+    #status.error{background:#fff0f0;color:#a12727}
     [hidden]{display:none!important}
   </style>
 </head>
@@ -64,63 +65,161 @@
 <script src="assets/js/common.js"></script>
 <script>
 (async function(){
-  const status=document.getElementById("status");
-  const card=document.getElementById("profile-card");
-  const showError=(text)=>{
-    status.hidden=false;
-    status.textContent=text;
-  };
+  "use strict";
 
-  try{
-    if(!window.EXAM_JUNCTION || !(await window.EXAM_JUNCTION.init())){
-      showError("Supabase configuration load nahi hui. config.js check karein.");
+  const status = document.getElementById("status");
+  const card = document.getElementById("profile-card");
+
+  function showMessage(message, isError = true) {
+    status.hidden = false;
+    status.classList.toggle("error", isError);
+    status.textContent = message;
+  }
+
+  // Detailed errors are deliberately not printed to the student-facing page.
+  // Browser console is not private; secure admin-only logs require a server.
+  function recordError(operation, error, userId) {
+    const diagnostic = {
+      operation,
+      userId: userId || null,
+      code: error?.code || null,
+      message: error?.message || String(error),
+      details: error?.details || null,
+      hint: error?.hint || null,
+      status: error?.status || null
+    };
+
+    // Local diagnostics only; this is NOT secure admin-only logging.
+    console.error("[EXAM JUNCTION diagnostic]", diagnostic);
+  }
+
+  let user = null;
+
+  try {
+    if (
+      !window.EXAM_JUNCTION ||
+      !(await window.EXAM_JUNCTION.init())
+    ) {
+      recordError(
+        "supabase.init",
+        new Error("Supabase initialization failed")
+      );
+      showMessage(
+        "Website se connection nahi ho saka. Kripya baad mein try karein."
+      );
       return;
     }
 
-    const client=window.EXAM_JUNCTION.supabase;
-    const {data:authData,error:authError}=await client.auth.getUser();
+    const client = window.EXAM_JUNCTION.supabase;
 
-    if(authError || !authData.user){
+    const { data: authData, error: authError } =
+      await client.auth.getUser();
+
+    if (authError) {
+      recordError("auth.getUser", authError);
+      showMessage(
+        "Login session check nahi ho saka. Dobara login karke try karein."
+      );
+      return;
+    }
+
+    if (!authData.user) {
       window.location.replace("login.html");
       return;
     }
 
-    const user=authData.user;
-    const {data:profile,error:profileError}=await client
+    user = authData.user;
+
+    const { data: profile, error: profileError } = await client
       .from("profiles")
       .select("full_name, role")
-      .eq("id",user.id)
+      .eq("id", user.id)
       .maybeSingle();
 
-    if(profileError){
-      showError("Profile load nahi hui. Database permissions check karni hongi.");
+    if (profileError) {
+      recordError("profiles.select", profileError, user.id);
+      showMessage(
+        "Aapki profile abhi load nahi ho rahi. Kripya baad mein try karein."
+      );
       return;
     }
 
-    if(!profile){
-      showError("Aapka profile record nahi mila. Admin ko database mein profile setup karna hoga.");
+    if (!profile) {
+      recordError(
+        "profiles.record_missing",
+        new Error("No profile row found for authenticated user"),
+        user.id
+      );
+      showMessage(
+        "Aapka profile setup nahi hua hai. Admin se sampark karein."
+      );
       return;
     }
 
-    const name=profile.full_name || "Student";
-    const role=profile.role || "student";
+    const name =
+      typeof profile.full_name === "string" &&
+      profile.full_name.trim()
+        ? profile.full_name.trim()
+        : "Student";
 
-    document.getElementById("name").textContent=name;
-    document.getElementById("email").textContent=user.email || "Not available";
-    document.getElementById("role").textContent=role;
-    document.getElementById("avatar").textContent=
-      name.trim().split(/\s+/).slice(0,2).map(part=>part[0]).join("").toUpperCase();
+    const role =
+      typeof profile.role === "string"
+        ? profile.role
+        : "student";
 
-    document.getElementById("admin-link").hidden=(role!=="admin");
-    status.hidden=true;
-    card.hidden=false;
+    document.getElementById("name").textContent = name;
+    document.getElementById("email").textContent =
+      user.email || "Not available";
+    document.getElementById("role").textContent = role;
 
-    document.getElementById("logout").addEventListener("click",async()=>{
-      document.getElementById("logout").disabled=true;
-      await window.EXAM_JUNCTION.signOut();
-    });
-  }catch(error){
-    showError("Connection error. Internet aur Supabase settings check karein.");
+    document.getElementById("avatar").textContent =
+      name.split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(part => part.charAt(0))
+        .join("")
+        .toUpperCase() || "EJ";
+
+    document.getElementById("admin-link").hidden =
+      role !== "admin";
+
+    status.hidden = true;
+    card.hidden = false;
+
+    document.getElementById("logout").addEventListener(
+      "click",
+      async function(){
+        const button = this;
+        button.disabled = true;
+
+        try {
+          const { error } = await client.auth.signOut();
+
+          if (error) {
+            recordError("auth.signOut", error, user.id);
+            showMessage(
+              "Logout nahi ho saka. Kripya dobara try karein."
+            );
+            button.disabled = false;
+            return;
+          }
+
+          window.location.replace("login.html");
+        } catch (error) {
+          recordError("auth.signOut.exception", error, user.id);
+          showMessage(
+            "Logout nahi ho saka. Kripya dobara try karein."
+          );
+          button.disabled = false;
+        }
+      }
+    );
+
+  } catch (error) {
+    recordError("profile.unexpected", error, user?.id);
+    showMessage(
+      "Kuch technical problem aa gayi. Internet check karke dobara try karein."
+    );
   }
 })();
 </script>
