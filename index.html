@@ -703,10 +703,7 @@
             </div>
 
 
-            <!--
-                REAL BATCHES WILL BE LOADED FROM SUPABASE LATER.
-                Do not add fake course data here.
-            -->
+            <!-- REAL BATCHES WILL BE LOADED FROM SUPABASE LATER -->
 
             <div class="batch-list" id="batch-list">
 
@@ -731,7 +728,7 @@
     </main>
 
 
-    <!-- FIXED BOTTOM NAVIGATION: EXACTLY FIVE ITEMS -->
+    <!-- FIXED BOTTOM NAVIGATION: FIVE ITEMS -->
     <nav class="bottom-nav" aria-label="Main navigation">
 
         <a class="nav-item active"
@@ -810,5 +807,15 @@
 
 </div>
 
+<!-- =========================================
+     EXAM JUNCTION: SUPABASE + ACTIVITY TRACKING
+     Keep these scripts in this exact order.
+     ========================================= -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/common.js"></script>
+<script src="assets/js/activity-tracking.js"></script>
+
 </body>
-  </html>
+</html>
