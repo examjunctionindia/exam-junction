@@ -130,6 +130,38 @@
             box-shadow: 0 0 0 3px #376bc018;
         }
 
+        /* Added: password show/hide control */
+        .password-box {
+            position: relative;
+            width: 100%;
+        }
+
+        .password-box input {
+            padding-right: 76px;
+        }
+
+        .toggle-password {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            min-width: 52px;
+            min-height: 34px;
+            padding: 6px;
+            border: 0;
+            border-radius: 7px;
+            background: transparent;
+            color: #376bc0;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .toggle-password:focus-visible {
+            outline: 2px solid #376bc0;
+            outline-offset: 2px;
+        }
+
         .submit {
             width: 100%;
             min-height: 49px;
@@ -227,17 +259,41 @@
 
             <div class="field">
                 <label for="password">Password</label>
-                <input id="password" name="password" type="password"
-                       autocomplete="current-password"
-                       minlength="8" required
-                       placeholder="At least 8 characters">
+
+                <div class="password-box">
+                    <input id="password" name="password" type="password"
+                           autocomplete="current-password"
+                           minlength="8" required
+                           placeholder="At least 8 characters">
+
+                    <button class="toggle-password"
+                            type="button"
+                            data-password-target="password"
+                            aria-controls="password"
+                            aria-label="Show password"
+                            aria-pressed="false">
+                        Show
+                    </button>
+                </div>
             </div>
 
             <div class="field" id="confirm-field" hidden>
                 <label for="confirm-password">Confirm password</label>
-                <input id="confirm-password" type="password"
-                       autocomplete="new-password" minlength="8"
-                       placeholder="Enter password again">
+
+                <div class="password-box">
+                    <input id="confirm-password" type="password"
+                           autocomplete="new-password" minlength="8"
+                           placeholder="Enter password again">
+
+                    <button class="toggle-password"
+                            type="button"
+                            data-password-target="confirm-password"
+                            aria-controls="confirm-password"
+                            aria-label="Show confirm password"
+                            aria-pressed="false">
+                        Show
+                    </button>
+                </div>
             </div>
 
             <button class="submit" id="submit-button" type="submit">
@@ -277,6 +333,23 @@
 
     let mode = "login";
     let busy = false;
+
+    /* Added: independent show/hide for both password fields */
+    document.querySelectorAll(".toggle-password").forEach(toggle => {
+        toggle.addEventListener("click", () => {
+            const input = $(toggle.dataset.passwordTarget);
+            const isHidden = input.type === "password";
+
+            input.type = isHidden ? "text" : "password";
+            toggle.textContent = isHidden ? "Hide" : "Show";
+            toggle.setAttribute("aria-pressed", String(isHidden));
+            toggle.setAttribute(
+                "aria-label",
+                (isHidden ? "Hide " : "Show ") +
+                (input.id === "password" ? "password" : "confirm password")
+            );
+        });
+    });
 
     function showMessage(text, type) {
         message.textContent = text;
@@ -443,4 +516,4 @@
 })();
 </script>
 </body>
-</html>
+    </html>
