@@ -130,7 +130,6 @@
             box-shadow: 0 0 0 3px #376bc018;
         }
 
-        /* Added: password show/hide control */
         .password-box {
             position: relative;
             width: 100%;
@@ -160,6 +159,31 @@
         .toggle-password:focus-visible {
             outline: 2px solid #376bc0;
             outline-offset: 2px;
+        }
+
+        .forgot-password {
+            display: block;
+            margin: -7px 0 17px;
+            padding: 4px 0;
+            border: 0;
+            background: transparent;
+            color: #376bc0;
+            font-size: 13px;
+            font-weight: 700;
+            text-align: right;
+            cursor: pointer;
+        }
+
+        .text-button {
+            display: block;
+            margin: 12px auto 0;
+            padding: 8px;
+            border: 0;
+            background: transparent;
+            color: #376bc0;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
         }
 
         .submit {
@@ -232,7 +256,7 @@
             Login with your registered email and password to access your account.
         </p>
 
-        <div class="tabs">
+        <div class="tabs" id="tabs">
             <button class="tab active" id="login-tab"
                     type="button" aria-pressed="true">Login</button>
             <button class="tab" id="signup-tab"
@@ -257,8 +281,8 @@
                        placeholder="Enter your email">
             </div>
 
-            <div class="field">
-                <label for="password">Password</label>
+            <div class="field" id="password-field">
+                <label for="password" id="password-label">Password</label>
 
                 <div class="password-box">
                     <input id="password" name="password" type="password"
@@ -276,6 +300,11 @@
                     </button>
                 </div>
             </div>
+
+            <button class="forgot-password" id="forgot-password"
+                    type="button">
+                Forgot Password?
+            </button>
 
             <div class="field" id="confirm-field" hidden>
                 <label for="confirm-password">Confirm password</label>
@@ -298,6 +327,11 @@
 
             <button class="submit" id="submit-button" type="submit">
                 Login to Your Account
+            </button>
+
+            <button class="text-button" id="cancel-recovery"
+                    type="button" hidden>
+                Back to Login
             </button>
         </form>
     </main>
@@ -330,11 +364,13 @@
     const confirmPassword = $("confirm-password");
     const button = $("submit-button");
     const message = $("message");
+    const forgotButton = $("forgot-password");
+    const cancelRecoveryButton = $("cancel-recovery");
 
     let mode = "login";
     let busy = false;
+    let recoveryReady = false;
 
-    /* Added: independent show/hide for both password fields */
     document.querySelectorAll(".toggle-password").forEach(toggle => {
         toggle.addEventListener("click", () => {
             const input = $(toggle.dataset.passwordTarget);
@@ -361,10 +397,23 @@
         message.className = "message";
     }
 
+    function resetPasswordVisibility() {
+        document.querySelectorAll(".toggle-password").forEach(toggle => {
+            const input = $(toggle.dataset.passwordTarget);
+            input.type = "password";
+            toggle.textContent = "Show";
+            toggle.setAttribute("aria-pressed", "false");
+        });
+    }
+
     function setMode(nextMode) {
         mode = nextMode;
-        const signup = mode === "signup";
 
+        const signup = mode === "signup";
+        const recovery = mode === "recovery";
+        const resetRequest = mode === "forgot";
+
+        $("tabs").hidden = recovery || resetRequest;
         loginTab.classList.toggle("active", !signup);
         signupTab.classList.toggle("active", signup);
 
@@ -372,28 +421,67 @@
         signupTab.setAttribute("aria-pressed", String(signup));
 
         nameField.hidden = !signup;
-        confirmField.hidden = !signup;
+        confirmField.hidden = !(signup || recovery);
         fullName.required = signup;
-        confirmPassword.required = signup;
+        confirmPassword.required = signup || recovery;
 
-        $("heading").textContent =
-            signup ? "Create your account" : "Welcome back!";
+        $("password-field").hidden = resetRequest;
+        password.required = !resetRequest;
+        forgotButton.hidden = mode !== "login";
+        cancelRecoveryButton.hidden = !(recovery || resetRequest);
 
-        $("subtitle").textContent = signup
-            ? "Register to start your EXAM JUNCTION learning journey."
-            : "Login with your registered email and password to access your account.";
+        $("heading").textContent = recovery
+            ? "Set a new password"
+            : resetRequest
+                ? "Reset your password"
+                : signup
+                    ? "Create your account"
+                    : "Welcome back!";
 
-        button.textContent =
-            signup ? "Create Account" : "Login to Your Account";
+        $("subtitle").textContent = recovery
+            ? "Create a new password for your EXAM JUNCTION account."
+            : resetRequest
+                ? "Enter your registered email address. We will send a password reset link if the account is eligible."
+                : signup
+                    ? "Register to start your EXAM JUNCTION learning journey."
+                    : "Login with your registered email and password to access your account.";
 
-        password.autocomplete =
-            signup ? "new-password" : "current-password";
+        $("password-label").textContent = recovery
+            ? "New password"
+            : "Password";
 
+        password.placeholder = recovery
+            ? "Enter a new password"
+            : "At least 8 characters";
+
+        button.textContent = recovery
+            ? "Update Password"
+            : resetRequest
+                ? "Send Reset Link"
+                : signup
+                    ? "Create Account"
+                    : "Login to Your Account";
+
+        password.autocomplete = signup || recovery
+            ? "new-password"
+            : "current-password";
+
+        resetPasswordVisibility();
         clearMessage();
     }
 
     loginTab.addEventListener("click", () => setMode("login"));
     signupTab.addEventListener("click", () => setMode("signup"));
+
+    forgotButton.addEventListener("click", () => {
+        setMode("forgot");
+        email.focus();
+    });
+
+    cancelRecoveryButton.addEventListener("click", () => {
+        recoveryReady = false;
+        setMode("login");
+    });
 
     async function getClient() {
         if (!window.EXAM_JUNCTION) {
@@ -411,6 +499,40 @@
         return window.EXAM_JUNCTION.supabase;
     }
 
+    /*
+     * Supabase sends PASSWORD_RECOVERY when the user opens a valid
+     * password-reset link. Then show the new-password form.
+     */
+    async function initializeRecovery() {
+        try {
+            const client = await getClient();
+
+            client.auth.onAuthStateChange((event) => {
+                if (event === "PASSWORD_RECOVERY") {
+                    recoveryReady = true;
+                    setMode("recovery");
+                    showMessage(
+                        "Reset link verify ho gaya. Ab naya password set karein.",
+                        "success"
+                    );
+                }
+            });
+
+            const { data } = await client.auth.getSession();
+
+            if (data.session && window.location.hash.includes("type=recovery")) {
+                recoveryReady = true;
+                setMode("recovery");
+                showMessage(
+                    "Ab apna naya password set karein.",
+                    "success"
+                );
+            }
+        } catch (error) {
+            console.error("Recovery initialization error:", error);
+        }
+    }
+
     form.addEventListener("submit", async event => {
         event.preventDefault();
 
@@ -420,34 +542,82 @@
         const userEmail = email.value.trim();
         const userPassword = password.value;
 
-        if (mode === "signup") {
-            if (fullName.value.trim().length < 2) {
-                showMessage("Apna poora naam likhein.", "error");
-                return;
-            }
+        if ((mode === "signup" || mode === "recovery") &&
+            userPassword.length < 8) {
+            showMessage(
+                "Password kam se kam 8 characters ka hona chahiye.",
+                "error"
+            );
+            return;
+        }
 
-            if (userPassword.length < 8) {
-                showMessage(
-                    "Password kam se kam 8 characters ka hona chahiye.",
-                    "error"
-                );
-                return;
-            }
+        if (mode === "signup" && fullName.value.trim().length < 2) {
+            showMessage("Apna poora naam likhein.", "error");
+            return;
+        }
 
+        if (mode === "signup" || mode === "recovery") {
             if (userPassword !== confirmPassword.value) {
                 showMessage("Dono passwords match nahi karte.", "error");
                 return;
             }
         }
 
+        if ((mode === "login" || mode === "forgot") && !userEmail) {
+            showMessage("Apna registered email address likhein.", "error");
+            return;
+        }
+
         busy = true;
         button.disabled = true;
+
+        const originalMode = mode;
         button.textContent = "Please wait...";
 
         try {
             const client = await getClient();
 
-            if (mode === "signup") {
+            if (mode === "forgot") {
+                const redirectTo = window.location.origin +
+                    window.location.pathname.replace(/[^/]*$/, "login.html");
+
+                const { error } = await client.auth.resetPasswordForEmail(
+                    userEmail,
+                    { redirectTo }
+                );
+
+                if (error) throw error;
+
+                showMessage(
+                    "Agar is email par account hai, password reset link bhej diya gaya hai. Inbox aur Spam folder check karein.",
+                    "success"
+                );
+            } else if (mode === "recovery") {
+                if (!recoveryReady) {
+                    throw new Error(
+                        "Reset link se page kholna zaroori hai. Email ka naya reset link use karein."
+                    );
+                }
+
+                const { error } = await client.auth.updateUser({
+                    password: userPassword
+                });
+
+                if (error) throw error;
+
+                recoveryReady = false;
+
+                await client.auth.signOut();
+
+                password.value = "";
+                confirmPassword.value = "";
+                setMode("login");
+
+                showMessage(
+                    "Password successfully change ho gaya! Ab naye password se Login karein.",
+                    "success"
+                );
+            } else if (mode === "signup") {
                 const { data, error } = await client.auth.signUp({
                     email: userEmail,
                     password: userPassword,
@@ -509,11 +679,22 @@
         } finally {
             busy = false;
             button.disabled = false;
-            button.textContent =
-                mode === "signup" ? "Create Account" : "Login to Your Account";
+
+            if (mode === originalMode) {
+                button.textContent =
+                    mode === "recovery"
+                        ? "Update Password"
+                        : mode === "forgot"
+                            ? "Send Reset Link"
+                            : mode === "signup"
+                                ? "Create Account"
+                                : "Login to Your Account";
+            }
         }
     });
+
+    initializeRecovery();
 })();
 </script>
 </body>
-    </html>
+</html>
