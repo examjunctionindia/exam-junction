@@ -16,8 +16,8 @@
                 !CONFIG.SUPABASE_URL ||
                 !CONFIG.SUPABASE_PUBLISHABLE_KEY
             ) {
-                console.info(
-                    "EXAM JUNCTION: Supabase configuration pending."
+                console.error(
+                    "EXAM JUNCTION: Supabase configuration missing."
                 );
                 return false;
             }
@@ -40,17 +40,22 @@
         },
 
         async getCurrentUser() {
-            if (!(await this.init())) return null;
+            if (!(await this.init())) {
+                return null;
+            }
 
             const { data, error } =
                 await this.supabase.auth.getUser();
 
             if (error) {
-                console.error("Could not get current user.");
+                console.error(
+                    "Current user load nahi hua:",
+                    error.message
+                );
                 return null;
             }
 
-            return data.user;
+            return data.user || null;
         },
 
         async signOut() {
@@ -59,10 +64,11 @@
                 return;
             }
 
-            const { error } = await this.supabase.auth.signOut();
+            const { error } =
+                await this.supabase.auth.signOut();
 
             if (error) {
-                console.error("Sign out failed.");
+                console.error("Logout error:", error.message);
                 alert("Logout nahi ho saka. Dobara try karein.");
                 return;
             }
@@ -71,15 +77,22 @@
         },
 
         async getPublishedBatches() {
-            if (!(await this.init())) return [];
+            if (!(await this.init())) {
+                return [];
+            }
 
             const { data, error } = await this.supabase
                 .from("batches")
                 .select("*")
+                .eq("is_published", true)
+                .order("created_at", { ascending: false })
                 .limit(100);
 
             if (error) {
-                console.error("Batches load nahi hue.");
+                console.error(
+                    "Batches load nahi hue:",
+                    error.message
+                );
                 return [];
             }
 
@@ -87,15 +100,22 @@
         },
 
         async getPublishedBooks() {
-            if (!(await this.init())) return [];
+            if (!(await this.init())) {
+                return [];
+            }
 
             const { data, error } = await this.supabase
                 .from("books")
                 .select("*")
+                .eq("is_published", true)
+                .order("created_at", { ascending: false })
                 .limit(100);
 
             if (error) {
-                console.error("Books load nahi hui.");
+                console.error(
+                    "Books load nahi hui:",
+                    error.message
+                );
                 return [];
             }
 
@@ -103,15 +123,22 @@
         },
 
         async getNotifications() {
-            if (!(await this.init())) return [];
+            if (!(await this.init())) {
+                return [];
+            }
 
             const { data, error } = await this.supabase
                 .from("notifications")
                 .select("*")
+                .eq("is_published", true)
+                .order("created_at", { ascending: false })
                 .limit(100);
 
             if (error) {
-                console.error("Notifications load nahi hui.");
+                console.error(
+                    "Notifications load nahi hui:",
+                    error.message
+                );
                 return [];
             }
 
@@ -121,16 +148,19 @@
         escapeHTML(value) {
             return String(value ?? "").replace(
                 /[&<>"']/g,
-                character => ({
-                    "&": "&amp;",
-                    "<": "&lt;",
-                    ">": "&gt;",
-                    '"': "&quot;",
-                    "'": "&#39;"
-                })[character]
+                function (character) {
+                    return {
+                        "&": "&amp;",
+                        "<": "&lt;",
+                        ">": "&gt;",
+                        '"': "&quot;",
+                        "'": "&#39;"
+                    }[character];
+                }
             );
         }
     };
 
     window.EXAM_JUNCTION = EJ;
+
 })();
