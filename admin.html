@@ -619,8 +619,15 @@ async function saveRecord(formId,buttonId,table,type,payload){
   button.textContent="Saving...";
 
   try{
-    const hiddenId = $(type + "Id");
-    const id = hiddenId ? hiddenId.value.trim() : "";
+   const formConfig = forms[type];
+
+if (!formConfig) {
+  message("Form configuration nahi mili. Dobara try karein.", true);
+  return;
+}
+
+const hiddenId = $(formConfig.id);
+const id = hiddenId ? hiddenId.value.trim() : ""; 
 
     let query;
 
