@@ -816,6 +816,43 @@
 <script src="assets/js/config.js"></script>
 <script src="assets/js/common.js"></script>
 <script src="assets/js/activity-tracking.js"></script>
+<script>
+(async function () {
+    const accountLink = document.querySelector(
+        'a[aria-label="My account"]'
+    );
 
+    if (!accountLink || !window.EXAM_JUNCTION) return;
+
+    try {
+        const ready = await window.EXAM_JUNCTION.init();
+        if (!ready) return;
+
+        const client = window.EXAM_JUNCTION.supabase;
+
+        async function updateAccountLink() {
+            const { data, error } = await client.auth.getSession();
+
+            if (error) {
+                accountLink.href = "login.html";
+                return;
+            }
+
+            accountLink.href = data.session
+                ? "profile.html"
+                : "login.html";
+        }
+
+        await updateAccountLink();
+
+        client.auth.onAuthStateChange(() => {
+            updateAccountLink();
+        });
+    } catch (error) {
+        console.error("Account link update failed:", error);
+        accountLink.href = "login.html";
+    }
+})();
+</script>
 </body>
 </html>
