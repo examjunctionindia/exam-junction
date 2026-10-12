@@ -883,10 +883,11 @@ $("loginForm").addEventListener("submit",async function(e){
 
     await checkSession();
   }catch(error){
-    message(
-      "Login nahi hua. Email/password aur configuration check karein. " +
-      (error.message || ""),
-      true
+    console.error("Admin login failed:", error);
+message(
+  "Login nahi hua. Email/password check karein aur dobara try karein.",
+  true
+);
     );
   }finally{
     button.disabled=false;
