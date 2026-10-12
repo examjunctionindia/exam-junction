@@ -574,13 +574,17 @@ async function checkSession(){
     .maybeSingle();
 
   if(profileError){
-    message(
-      "Admin role verify nahi hua. Profiles ki SELECT policy check karein.",
-      true
-    );
-    console.error(profileError.message);
-    return;
-  }
+  console.error("Admin role verification failed:", profileError);
+
+  $("loginSection").classList.remove("hidden");
+
+  message(
+    "Admin role verify nahi ho paya. Database permissions check karein aur dobara login karein.",
+    true
+  );
+
+  return;
+}
 
   if(!profile || profile.role !== "admin"){
     message(
