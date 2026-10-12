@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,18 +15,29 @@ header p{font-size:13px;margin:0;color:#d9e5ff}
 main{max-width:800px;margin:auto;padding:16px 12px 40px}
 .card{background:white;border:1px solid #e2e8f0;border-radius:15px;padding:17px;margin-bottom:15px}
 h2{font-size:18px;margin:0 0 15px}
+h3{font-size:15px;margin:0 0 8px}
 label{display:block;font-size:13px;font-weight:bold;margin:12px 0 6px}
-input,textarea,select{width:100%;padding:12px;border:1px solid #d5deeb;border-radius:9px;font:14px Arial;background:white}
+input,textarea,select{
+  width:100%;padding:12px;border:1px solid #d5deeb;
+  border-radius:9px;font:14px Arial;background:white
+}
 textarea{min-height:85px;resize:vertical}
-button,.button{display:inline-block;border:0;border-radius:9px;background:#17458a;color:white;padding:12px 15px;font-size:14px;font-weight:bold;cursor:pointer;text-decoration:none}
-button:disabled{opacity:.6}
+button,.button{
+  display:inline-block;border:0;border-radius:9px;background:#17458a;
+  color:white;padding:12px 15px;font-size:14px;font-weight:bold;
+  cursor:pointer;text-decoration:none
+}
+button:disabled{opacity:.6;cursor:wait}
 .secondary{background:#e8eef8;color:#173b73}
+.danger{background:#b42318;color:white}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}
 .status{padding:12px;border-radius:9px;background:#edf3ff;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
 .hidden{display:none!important}
-.item{padding:12px 0;border-bottom:1px solid #e5eaf2;overflow-wrap:anywhere}
+.item{padding:13px 0;border-bottom:1px solid #e5eaf2;overflow-wrap:anywhere}
 .item:last-child{border-bottom:0}
 .small{font-size:12px;color:#64748b;line-height:1.5}
+.badge{display:inline-block;background:#edf3ff;color:#173b73;border-radius:6px;padding:4px 7px;font-size:11px;margin-top:5px}
+.divider{border:0;border-top:1px solid #e5eaf2;margin:16px 0}
 </style>
 </head>
 
@@ -38,16 +48,22 @@ button:disabled{opacity:.6}
 </header>
 
 <main>
-  <div id="status" class="card status">Checking login and admin permissions...</div>
+  <div id="status" class="card status">
+    Checking login and admin permissions...
+  </div>
 
   <section id="loginSection" class="card hidden">
     <h2>Admin Login</h2>
     <p class="small">Apne registered admin email aur password se login karein.</p>
+
     <form id="loginForm">
       <label for="email">Email</label>
       <input id="email" type="email" autocomplete="username" required>
+
       <label for="password">Password</label>
-      <input id="password" type="password" autocomplete="current-password" required>
+      <input id="password" type="password"
+             autocomplete="current-password" required>
+
       <div class="actions">
         <button id="loginButton" type="submit">Login</button>
       </div>
@@ -55,23 +71,33 @@ button:disabled{opacity:.6}
   </section>
 
   <div id="dashboard" class="hidden">
+
     <section class="card">
       <h2>Admin Account</h2>
       <div id="adminEmail" class="small"></div>
+
       <div class="actions">
-        <button id="refreshButton" class="secondary" type="button">Refresh Data</button>
+        <button id="refreshButton" class="secondary" type="button">
+          Refresh Data
+        </button>
         <button id="logoutButton" type="button">Logout</button>
       </div>
     </section>
 
+    <!-- BATCH FORM -->
     <section class="card">
-      <h2>➕ Add Batch</h2>
+      <h2 id="batchHeading">➕ Add Batch</h2>
+
       <form id="batchForm">
+        <input id="batchId" type="hidden">
+
         <label for="batchTitle">Batch Name *</label>
-        <input id="batchTitle" maxlength="150" required placeholder="SSC Maths Foundation">
+        <input id="batchTitle" maxlength="150" required
+               placeholder="SSC Maths Foundation">
 
         <label for="batchDescription">Batch Description</label>
-        <textarea id="batchDescription" maxlength="5000" placeholder="Course ki details"></textarea>
+        <textarea id="batchDescription" maxlength="5000"
+                  placeholder="Course ki details"></textarea>
 
         <label for="batchTeacher">Teacher / Platform Name</label>
         <input id="batchTeacher" maxlength="150" placeholder="Rahul Sir">
@@ -90,15 +116,22 @@ button:disabled{opacity:.6}
 
         <div class="actions">
           <button id="batchSave" type="submit">Save Batch</button>
+          <button id="batchCancel" class="secondary hidden"
+                  type="button">Cancel Edit</button>
         </div>
       </form>
     </section>
 
+    <!-- BOOK FORM -->
     <section class="card">
-      <h2>📚 Add Book / Notes</h2>
+      <h2 id="bookHeading">📚 Add Book / Notes</h2>
+
       <form id="bookForm">
+        <input id="bookId" type="hidden">
+
         <label for="bookTitle">Book / Notes Title *</label>
-        <input id="bookTitle" maxlength="200" required placeholder="SSC Maths Notes">
+        <input id="bookTitle" maxlength="200" required
+               placeholder="SSC Maths Notes">
 
         <label for="bookAuthor">Teacher / Author</label>
         <input id="bookAuthor" maxlength="150" placeholder="Teacher name">
@@ -123,14 +156,25 @@ button:disabled{opacity:.6}
 
         <div class="actions">
           <button id="bookSave" type="submit">Save Book</button>
+          <button id="bookCancel" class="secondary hidden"
+                  type="button">Cancel Edit</button>
         </div>
-        <p class="small">Restricted PDF ko public Google Drive link se protect nahi kiya ja sakta. Private files ke liye secure storage setup alag se zaroori hai.</p>
+
+        <p class="small">
+          Important: Public Google Drive links ko restricted access select
+          karne se private nahi banaya ja sakta. Private files ke liye secure
+          storage aur access policies chahiye.
+        </p>
       </form>
     </section>
 
+    <!-- NOTIFICATION FORM -->
     <section class="card">
-      <h2>🔔 Publish Notification</h2>
+      <h2 id="noticeHeading">🔔 Publish Notification</h2>
+
       <form id="notificationForm">
+        <input id="noticeId" type="hidden">
+
         <label for="noticeTitle">Title *</label>
         <input id="noticeTitle" maxlength="200" required>
 
@@ -148,10 +192,76 @@ button:disabled{opacity:.6}
 
         <div class="actions">
           <button id="noticeSave" type="submit">Save Notification</button>
+          <button id="noticeCancel" class="secondary hidden"
+                  type="button">Cancel Edit</button>
         </div>
       </form>
     </section>
 
+    <!-- CHAPTER FORM -->
+    <section class="card">
+      <h2 id="chapterHeading">📖 Add Chapter</h2>
+
+      <form id="chapterForm">
+        <input id="chapterId" type="hidden">
+
+        <label for="chapterBatch">Select Batch *</label>
+        <select id="chapterBatch" required>
+          <option value="">Pehle batch select karein</option>
+        </select>
+
+        <label for="chapterTitle">Chapter Name *</label>
+        <input id="chapterTitle" maxlength="200" required
+               placeholder="Percentage">
+
+        <label for="chapterPosition">Position</label>
+        <input id="chapterPosition" type="number" min="0" value="0">
+
+        <div class="actions">
+          <button id="chapterSave" type="submit">Save Chapter</button>
+          <button id="chapterCancel" class="secondary hidden"
+                  type="button">Cancel Edit</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- LECTURE FORM -->
+    <section class="card">
+      <h2 id="lectureHeading">▶️ Add YouTube Lecture</h2>
+
+      <form id="lectureForm">
+        <input id="lectureId" type="hidden">
+
+        <label for="lectureBatch">Select Batch *</label>
+        <select id="lectureBatch" required>
+          <option value="">Select Batch</option>
+        </select>
+
+        <label for="lectureChapter">Select Chapter *</label>
+        <select id="lectureChapter" required>
+          <option value="">Select Chapter</option>
+        </select>
+
+        <label for="lectureTitle">Lecture Title *</label>
+        <input id="lectureTitle" maxlength="200" required
+               placeholder="Percentage Class 1">
+
+        <label for="lectureUrl">YouTube URL *</label>
+        <input id="lectureUrl" type="url" required
+               placeholder="https://www.youtube.com/watch?v=...">
+
+        <label for="lecturePosition">Position</label>
+        <input id="lecturePosition" type="number" min="0" value="0">
+
+        <div class="actions">
+          <button id="lectureSave" type="submit">Save Lecture</button>
+          <button id="lectureCancel" class="secondary hidden"
+                  type="button">Cancel Edit</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- LISTS -->
     <section class="card">
       <h2>Existing Batches</h2>
       <div id="batchList" class="small">Loading...</div>
@@ -166,9 +276,21 @@ button:disabled{opacity:.6}
       <h2>Recent Notifications</h2>
       <div id="noticeList" class="small">Loading...</div>
     </section>
+
+    <section class="card">
+      <h2>Existing Chapters</h2>
+      <div id="chapterList" class="small">Loading...</div>
+    </section>
+
+    <section class="card">
+      <h2>Existing Lectures</h2>
+      <div id="lectureList" class="small">Loading...</div>
+    </section>
   </div>
 
-  <p class="small">EXAM JUNCTION · Admin access is controlled by Supabase permissions.</p>
+  <p class="small">
+    EXAM JUNCTION · Admin access is controlled by Supabase permissions.
+  </p>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -180,94 +302,264 @@ button:disabled{opacity:.6}
 "use strict";
 
 const $ = id => document.getElementById(id);
+
 let db = null;
 let busy = false;
 
-function message(text, isError=false){
+const cache = {
+  batches: [],
+  books: [],
+  notifications: [],
+  chapters: [],
+  lectures: []
+};
+
+function message(text,isError=false){
   $("status").textContent = text;
   $("status").style.background = isError ? "#fff0f0" : "#edf3ff";
   $("status").style.color = isError ? "#a12727" : "#173b73";
   $("status").classList.remove("hidden");
 }
 
-function safe(value){
-  return window.EXAM_JUNCTION.escapeHTML(value ?? "");
+function escapeText(value){
+  return String(value ?? "");
 }
 
-function showItems(id, rows, fields, emptyText){
-  const root = $(id);
+function makeButton(label,action,type,id,className){
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = label;
+  button.dataset.action = action;
+  button.dataset.type = type;
+  button.dataset.id = String(id);
+  if(className) button.className = className;
+  return button;
+}
+
+function makeItem(root,row,type,lines){
+  const item = document.createElement("div");
+  item.className = "item";
+
+  lines.forEach(line => {
+    const div = document.createElement("div");
+    div.textContent = line.label + ": " +
+      escapeText(typeof line.value === "function"
+        ? line.value(row)
+        : row[line.key]);
+    item.appendChild(div);
+  });
+
+  const actions = document.createElement("div");
+  actions.className = "actions";
+
+  actions.appendChild(
+    makeButton("Edit","edit",type,row.id,"secondary")
+  );
+
+  actions.appendChild(
+    makeButton("Delete","delete",type,row.id,"danger")
+  );
+
+  item.appendChild(actions);
+  root.appendChild(item);
+}
+
+function showList(elementId,rows,type,lines,emptyText){
+  const root = $(elementId);
+  root.replaceChildren();
+
   if(!rows || !rows.length){
     root.textContent = emptyText;
     return;
   }
 
-  root.replaceChildren();
+  rows.forEach(row => makeItem(root,row,type,lines));
+}
+
+function findById(type,id){
+  return (cache[type] || []).find(row => String(row.id) === String(id));
+}
+
+function fillSelect(selectId,rows,placeholder,labelFn,selectedValue){
+  const select = $(selectId);
+  select.replaceChildren();
+
+  const first = document.createElement("option");
+  first.value = "";
+  first.textContent = placeholder;
+  select.appendChild(first);
 
   rows.forEach(row => {
-    const item = document.createElement("div");
-    item.className = "item";
-
-    fields.forEach(field => {
-      const line = document.createElement("div");
-      line.textContent = field.label + ": " + (row[field.key] ?? "—");
-      item.appendChild(line);
-    });
-
-    root.appendChild(item);
+    const option = document.createElement("option");
+    option.value = row.id;
+    option.textContent = labelFn(row);
+    select.appendChild(option);
   });
+
+  if(selectedValue != null){
+    select.value = String(selectedValue);
+  }
+}
+
+function refreshDropdowns(){
+  fillSelect(
+    "chapterBatch",
+    cache.batches,
+    "Select Batch",
+    row => row.title
+  );
+
+  fillSelect(
+    "lectureBatch",
+    cache.batches,
+    "Select Batch",
+    row => row.title
+  );
+
+  fillSelect(
+    "lectureChapter",
+    cache.chapters,
+    "Select Chapter",
+    row => {
+      const batch = findById("batches",row.batch_id);
+      return (batch ? batch.title + " — " : "") + row.title;
+    }
+  );
 }
 
 async function loadLists(){
+  if(!db) return;
+
   const jobs = [
     {
       table:"batches",
+      key:"batches",
       element:"batchList",
-      fields:[{key:"title",label:"Batch"},{key:"platform_name",label:"Teacher"},{key:"access_type",label:"Access"},{key:"is_published",label:"Published"}],
+      order:"created_at",
+      lines:[
+        {key:"title",label:"Batch"},
+        {key:"platform_name",label:"Teacher"},
+        {key:"access_type",label:"Access"},
+        {key:"is_published",label:"Published"}
+      ],
       empty:"Abhi koi batch nahi hai."
     },
     {
       table:"books",
+      key:"books",
       element:"bookList",
-      fields:[{key:"title",label:"Book"},{key:"author",label:"Author"},{key:"access_type",label:"Access"},{key:"is_published",label:"Published"}],
+      order:"created_at",
+      lines:[
+        {key:"title",label:"Book"},
+        {key:"author",label:"Author"},
+        {key:"access_type",label:"Access"},
+        {key:"is_published",label:"Published"}
+      ],
       empty:"Abhi koi book nahi hai."
     },
     {
       table:"notifications",
+      key:"notifications",
       element:"noticeList",
-      fields:[{key:"title",label:"Title"},{key:"created_at",label:"Created"}],
+      order:"created_at",
+      lines:[
+        {key:"title",label:"Title"},
+        {key:"is_published",label:"Published"},
+        {
+          label:"Created",
+          value:row => row.created_at
+            ? new Date(row.created_at).toLocaleString()
+            : "—"
+        }
+      ],
       empty:"Abhi koi notification nahi hai."
+    },
+    {
+      table:"chapters",
+      key:"chapters",
+      element:"chapterList",
+      order:"position",
+      lines:[
+        {
+          label:"Batch",
+          value:row => {
+            const batch=findById("batches",row.batch_id);
+            return batch ? batch.title : "Unknown batch";
+          }
+        },
+        {key:"title",label:"Chapter"},
+        {key:"position",label:"Position"}
+      ],
+      empty:"Abhi koi chapter nahi hai."
+    },
+    {
+      table:"lectures",
+      key:"lectures",
+      element:"lectureList",
+      order:"position",
+      lines:[
+        {key:"title",label:"Lecture"},
+        {
+          label:"Chapter",
+          value:row => {
+            const chapter=findById("chapters",row.chapter_id);
+            return chapter ? chapter.title : "Unknown chapter";
+          }
+        },
+        {key:"position",label:"Position"},
+        {key:"youtube_url",label:"YouTube URL"}
+      ],
+      empty:"Abhi koi lecture nahi hai."
     }
   ];
 
   for(const job of jobs){
     const result = await db.from(job.table)
       .select("*")
-      .order("created_at",{ascending:false})
-      .limit(20);
+      .order(job.order,{ascending:true})
+      .limit(200);
 
     if(result.error){
       $(job.element).textContent =
-        "Load nahi hua. Database policy ya permissions check karni hongi.";
+        "Load nahi hua. Table, RLS policy aur permissions check karein.";
       console.error(job.table,result.error.message);
+      cache[job.key] = [];
     }else{
-      showItems(job.element,result.data,job.fields,job.empty);
+      cache[job.key] = result.data || [];
+
+      showList(
+        job.element,
+        cache[job.key],
+        job.key,
+        job.lines,
+        job.empty
+      );
     }
   }
+
+  refreshDropdowns();
 }
+
+/* SESSION AND ADMIN VERIFICATION */
 
 async function checkSession(){
   $("dashboard").classList.add("hidden");
   $("loginSection").classList.add("hidden");
 
   const ready = await window.EXAM_JUNCTION.init();
+
   if(!ready){
-    message("Supabase configuration ya library load nahi hui. config.js aur internet check karein.",true);
+    message(
+      "Supabase configuration ya library load nahi hui. config.js aur internet check karein.",
+      true
+    );
     return;
   }
 
   db = window.EXAM_JUNCTION.supabase;
 
   const {data,error} = await db.auth.getUser();
+
   if(error || !data.user){
     $("loginSection").classList.remove("hidden");
     message("Admin account se login karein.");
@@ -281,13 +573,19 @@ async function checkSession(){
     .maybeSingle();
 
   if(profileError){
-    message("Admin role verify nahi hua. Profiles ki SELECT policy check karni hogi.",true);
+    message(
+      "Admin role verify nahi hua. Profiles ki SELECT policy check karein.",
+      true
+    );
     console.error(profileError.message);
     return;
   }
 
   if(!profile || profile.role !== "admin"){
-    message("Access denied: is account ko admin role nahi mila hai.",true);
+    message(
+      "Access denied: is account ko admin role nahi mila hai.",
+      true
+    );
     await db.auth.signOut();
     $("loginSection").classList.remove("hidden");
     return;
@@ -297,28 +595,53 @@ async function checkSession(){
     (profile.full_name || "Admin") + " · " + data.user.email;
 
   $("dashboard").classList.remove("hidden");
-  message("Admin verified. Database se data load ho raha hai.");
+  message("Admin verified. Data load ho raha hai.");
+
   await loadLists();
 }
 
-async function saveForm(formId,buttonId,table,payload){
-  if(busy)return;
+/* GENERIC INSERT / UPDATE */
+
+async function saveRecord(formId,buttonId,table,type,payload){
+  if(busy) return;
+
+  if(!db){
+    message("Database connection available nahi hai.",true);
+    return;
+  }
+
   busy=true;
+
   const button=$(buttonId);
-  button.disabled=true;
   const oldText=button.textContent;
+  button.disabled=true;
   button.textContent="Saving...";
 
   try{
-    const {error}=await db.from(table).insert(payload);
+    const hiddenId = $(type + "Id");
+    const id = hiddenId ? hiddenId.value.trim() : "";
+
+    let query;
+
+    if(id){
+      query = db.from(table).update(payload).eq("id",id);
+    }else{
+      query = db.from(table).insert(payload);
+    }
+
+    const {error} = await query;
+
     if(error){
-      console.error(table,error.message);
+      console.error(table,error);
       message("Save nahi hua: " + error.message,true);
       return;
     }
 
     $(formId).reset();
-    message("Successfully saved.");
+    resetEdit(type);
+
+    message(id ? "Changes successfully updated." : "Successfully saved.");
+
     await loadLists();
   }catch(error){
     console.error(error);
@@ -330,42 +653,256 @@ async function saveForm(formId,buttonId,table,payload){
   }
 }
 
+/* RESET / CANCEL EDIT */
+
+const forms = {
+  batches:{
+    form:"batchForm",
+    id:"batchId",
+    heading:"batchHeading",
+    save:"batchSave",
+    cancel:"batchCancel",
+    addHeading:"➕ Add Batch",
+    addButton:"Save Batch",
+    editHeading:"✏️ Edit Batch",
+    editButton:"Update Batch"
+  },
+  books:{
+    form:"bookForm",
+    id:"bookId",
+    heading:"bookHeading",
+    save:"bookSave",
+    cancel:"bookCancel",
+    addHeading:"📚 Add Book / Notes",
+    addButton:"Save Book",
+    editHeading:"✏️ Edit Book / Notes",
+    editButton:"Update Book"
+  },
+  notifications:{
+    form:"notificationForm",
+    id:"noticeId",
+    heading:"noticeHeading",
+    save:"noticeSave",
+    cancel:"noticeCancel",
+    addHeading:"🔔 Publish Notification",
+    addButton:"Save Notification",
+    editHeading:"✏️ Edit Notification",
+    editButton:"Update Notification"
+  },
+  chapters:{
+    form:"chapterForm",
+    id:"chapterId",
+    heading:"chapterHeading",
+    save:"chapterSave",
+    cancel:"chapterCancel",
+    addHeading:"📖 Add Chapter",
+    addButton:"Save Chapter",
+    editHeading:"✏️ Edit Chapter",
+    editButton:"Update Chapter"
+  },
+  lectures:{
+    form:"lectureForm",
+    id:"lectureId",
+    heading:"lectureHeading",
+    save:"lectureSave",
+    cancel:"lectureCancel",
+    addHeading:"▶️ Add YouTube Lecture",
+    addButton:"Save Lecture",
+    editHeading:"✏️ Edit Lecture",
+    editButton:"Update Lecture"
+  }
+};
+
+function resetEdit(type){
+  const config=forms[type];
+
+  $(config.id).value="";
+  $(config.heading).textContent=config.addHeading;
+  $(config.save).textContent=config.addButton;
+  $(config.cancel).classList.add("hidden");
+}
+
+function editRecord(type,id){
+  const row=findById(type,id);
+
+  if(!row){
+    message("Record nahi mila. Data refresh karke try karein.",true);
+    return;
+  }
+
+  if(type==="batches"){
+    $("batchId").value=row.id;
+    $("batchTitle").value=row.title || "";
+    $("batchDescription").value=row.description || "";
+    $("batchTeacher").value=row.platform_name || "";
+    $("batchAccess").value=row.access_type || "free";
+    $("batchPublished").value=String(!!row.is_published);
+  }
+
+  if(type==="books"){
+    $("bookId").value=row.id;
+    $("bookTitle").value=row.title || "";
+    $("bookAuthor").value=row.author || "";
+    $("bookDescription").value=row.description || "";
+    $("bookUrl").value=row.external_url || "";
+    $("bookAccess").value=row.access_type || "free";
+    $("bookPublished").value=String(!!row.is_published);
+  }
+
+  if(type==="notifications"){
+    $("noticeId").value=row.id;
+    $("noticeTitle").value=row.title || "";
+    $("noticeMessage").value=row.message || "";
+    $("noticeUrl").value=row.target_url || "";
+    $("noticePublished").value=String(!!row.is_published);
+  }
+
+  if(type==="chapters"){
+    $("chapterId").value=row.id;
+    $("chapterBatch").value=String(row.batch_id || "");
+    $("chapterTitle").value=row.title || "";
+    $("chapterPosition").value=String(row.position ?? 0);
+  }
+
+  if(type==="lectures"){
+    $("lectureId").value=row.id;
+    $("lectureTitle").value=row.title || "";
+    $("lectureUrl").value=row.youtube_url || "";
+    $("lecturePosition").value=String(row.position ?? 0);
+
+    const chapter=findById("chapters",row.chapter_id);
+    if(chapter){
+      $("lectureBatch").value=String(chapter.batch_id);
+      updateLectureChapterOptions(chapter.batch_id,row.chapter_id);
+    }
+  }
+
+  const config=forms[type];
+  $(config.heading).textContent=config.editHeading;
+  $(config.save).textContent=config.editButton;
+  $(config.cancel).classList.remove("hidden");
+
+  $(config.form).scrollIntoView({behavior:"smooth",block:"start"});
+  message("Edit mode: changes save karne ke liye Update button dabayein.");
+}
+
+/* DELETE */
+
+async function deleteRecord(type,id){
+  if(busy || !db) return;
+
+  const table=type;
+
+  const row=findById(type,id);
+  if(!row) return;
+
+  const title=row.title || "this record";
+
+  if(!confirm('"' + title + '" ko permanently delete karna hai?')){
+    return;
+  }
+
+  busy=true;
+
+  try{
+    const {error}=await db.from(table).delete().eq("id",id);
+
+    if(error){
+      console.error(error);
+      message("Delete nahi hua: " + error.message,true);
+      return;
+    }
+
+    if(forms[type] && $(forms[type].id).value===String(id)){
+      $(forms[type].form).reset();
+      resetEdit(type);
+    }
+
+    message("Record successfully deleted.");
+    await loadLists();
+  }catch(error){
+    console.error(error);
+    message("Delete ke dauran connection error hua.",true);
+  }finally{
+    busy=false;
+  }
+}
+
+/* LECTURE CHAPTER FILTER */
+
+function updateLectureChapterOptions(batchId,selectedChapterId){
+  const chapters=cache.chapters.filter(
+    chapter=>String(chapter.batch_id)===String(batchId)
+  );
+
+  fillSelect(
+    "lectureChapter",
+    chapters,
+    chapters.length ? "Select Chapter" : "Is batch mein chapter nahi hai",
+    chapter=>chapter.title,
+    selectedChapterId
+  );
+}
+
+$("lectureBatch").addEventListener("change",function(){
+  updateLectureChapterOptions(this.value);
+});
+
+/* LOGIN */
+
 $("loginForm").addEventListener("submit",async function(e){
   e.preventDefault();
+
   const button=$("loginButton");
   button.disabled=true;
+
   try{
     const ready=await window.EXAM_JUNCTION.init();
-    if(!ready)throw new Error("Supabase configuration missing.");
+    if(!ready) throw new Error("Supabase configuration missing.");
 
     db=window.EXAM_JUNCTION.supabase;
+
     const {error}=await db.auth.signInWithPassword({
       email:$("email").value.trim(),
       password:$("password").value
     });
 
-    if(error)throw error;
+    if(error) throw error;
+
     await checkSession();
   }catch(error){
-    message("Login nahi hua. Email/password aur configuration check karein. " + (error.message || ""),true);
+    message(
+      "Login nahi hua. Email/password aur configuration check karein. " +
+      (error.message || ""),
+      true
+    );
   }finally{
     button.disabled=false;
   }
 });
 
+/* BATCH SAVE */
+
 $("batchForm").addEventListener("submit",async function(e){
   e.preventDefault();
-  await saveForm("batchForm","batchSave","batches",{
-    title:$("batchTitle").value.trim(),
-    description:$("batchDescription").value.trim() || null,
-    platform_name:$("batchTeacher").value.trim() || null,
-    access_type:$("batchAccess").value,
-    is_published:$("batchPublished").value === "true"
-  });
+
+  await saveRecord(
+    "batchForm","batchSave","batches","batches",
+    {
+      title:$("batchTitle").value.trim(),
+      description:$("batchDescription").value.trim() || null,
+      platform_name:$("batchTeacher").value.trim() || null,
+      access_type:$("batchAccess").value,
+      is_published:$("batchPublished").value==="true"
+    }
+  );
 });
+
+/* BOOK SAVE */
 
 $("bookForm").addEventListener("submit",async function(e){
   e.preventDefault();
+
   const url=$("bookUrl").value.trim();
 
   if(url && !/^https:\/\//i.test(url)){
@@ -373,18 +910,24 @@ $("bookForm").addEventListener("submit",async function(e){
     return;
   }
 
-  await saveForm("bookForm","bookSave","books",{
-    title:$("bookTitle").value.trim(),
-    author:$("bookAuthor").value.trim() || null,
-    description:$("bookDescription").value.trim() || null,
-    external_url:url || null,
-    access_type:$("bookAccess").value,
-    is_published:$("bookPublished").value === "true"
-  });
+  await saveRecord(
+    "bookForm","bookSave","books","books",
+    {
+      title:$("bookTitle").value.trim(),
+      author:$("bookAuthor").value.trim() || null,
+      description:$("bookDescription").value.trim() || null,
+      external_url:url || null,
+      access_type:$("bookAccess").value,
+      is_published:$("bookPublished").value==="true"
+    }
+  );
 });
+
+/* NOTIFICATION SAVE */
 
 $("notificationForm").addEventListener("submit",async function(e){
   e.preventDefault();
+
   const url=$("noticeUrl").value.trim();
 
   if(url && !/^https:\/\//i.test(url)){
@@ -392,22 +935,134 @@ $("notificationForm").addEventListener("submit",async function(e){
     return;
   }
 
-  await saveForm("notificationForm","noticeSave","notifications",{
-    title:$("noticeTitle").value.trim(),
-    message:$("noticeMessage").value.trim(),
-    target_url:url || null,
-    is_published:$("noticePublished").value === "true"
+  await saveRecord(
+    "notificationForm","noticeSave","notifications","notifications",
+    {
+      title:$("noticeTitle").value.trim(),
+      message:$("noticeMessage").value.trim(),
+      target_url:url || null,
+      is_published:$("noticePublished").value==="true"
+    }
+  );
+});
+
+/* CHAPTER SAVE */
+
+$("chapterForm").addEventListener("submit",async function(e){
+  e.preventDefault();
+
+  if(!$("chapterBatch").value){
+    message("Chapter ke liye batch select karein.",true);
+    return;
+  }
+
+  await saveRecord(
+    "chapterForm","chapterSave","chapters","chapters",
+    {
+      batch_id:$("chapterBatch").value,
+      title:$("chapterTitle").value.trim(),
+      position:Number($("chapterPosition").value || 0)
+    }
+  );
+});
+
+/* LECTURE SAVE */
+
+$("lectureForm").addEventListener("submit",async function(e){
+  e.preventDefault();
+
+  const url=$("lectureUrl").value.trim();
+
+  if(!/^https:\/\//i.test(url)){
+    message("YouTube link HTTPS se shuru hona chahiye.",true);
+    return;
+  }
+
+  let parsedUrl;
+
+  try{
+    parsedUrl=new URL(url);
+  }catch(error){
+    message("YouTube URL sahi nahi hai.",true);
+    return;
+  }
+
+  const host=parsedUrl.hostname.toLowerCase();
+
+  const validYouTube =
+    host==="youtube.com" ||
+    host.endsWith(".youtube.com") ||
+    host==="youtu.be" ||
+    host.endsWith(".youtu.be");
+
+  if(!validYouTube){
+    message("Kripya valid YouTube ya youtu.be link daalein.",true);
+    return;
+  }
+
+  if(!$("lectureChapter").value){
+    message("Lecture ke liye chapter select karein.",true);
+    return;
+  }
+
+  await saveRecord(
+    "lectureForm","lectureSave","lectures","lectures",
+    {
+      chapter_id:$("lectureChapter").value,
+      title:$("lectureTitle").value.trim(),
+      youtube_url:url,
+      position:Number($("lecturePosition").value || 0)
+    }
+  );
+});
+
+/* EDIT / DELETE BUTTONS */
+
+$("dashboard").addEventListener("click",async function(e){
+  const button=e.target.closest("button[data-action]");
+  if(!button) return;
+
+  const action=button.dataset.action;
+  const type=button.dataset.type;
+  const id=button.dataset.id;
+
+  if(action==="edit"){
+    editRecord(type,id);
+  }else if(action==="delete"){
+    await deleteRecord(type,id);
+  }
+});
+
+/* CANCEL EDIT BUTTONS */
+
+Object.keys(forms).forEach(type=>{
+  const config=forms[type];
+
+  $(config.cancel).addEventListener("click",function(){
+    $(config.form).reset();
+    resetEdit(type);
+    message("Edit cancel kar diya gaya.");
   });
 });
 
-$("refreshButton").addEventListener("click",loadLists);
+/* REFRESH / LOGOUT */
+
+$("refreshButton").addEventListener("click",async function(){
+  await loadLists();
+  message("Data refresh ho gaya.");
+});
 
 $("logoutButton").addEventListener("click",async function(){
-  await window.EXAM_JUNCTION.signOut();
+  try{
+    await window.EXAM_JUNCTION.signOut();
+  }catch(error){
+    message("Logout error: " + error.message,true);
+  }
 });
 
 checkSession();
+
 })();
 </script>
 </body>
-          </html>
+</html>
