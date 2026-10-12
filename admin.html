@@ -9,24 +9,16 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#f3f6fb;color:#17243a;font-family:Arial,sans-serif}
-header{background:#102b55;color:white;padding:20px 16px}
+header{background:#102b55;color:white;padding:16px}
 header h1{font-size:21px;margin:0 0 6px}
 header p{font-size:13px;margin:0;color:#d9e5ff}
-main{max-width:800px;margin:auto;padding:16px 12px 40px}
+main{max-width:900px;margin:auto;padding:16px 12px 40px}
 .card{background:white;border:1px solid #e2e8f0;border-radius:15px;padding:17px;margin-bottom:15px}
 h2{font-size:18px;margin:0 0 15px}
-h3{font-size:15px;margin:0 0 8px}
 label{display:block;font-size:13px;font-weight:bold;margin:12px 0 6px}
-input,textarea,select{
-  width:100%;padding:12px;border:1px solid #d5deeb;
-  border-radius:9px;font:14px Arial;background:white
-}
+input,textarea,select{width:100%;padding:12px;border:1px solid #d5deeb;border-radius:9px;font:14px Arial;background:white}
 textarea{min-height:85px;resize:vertical}
-button,.button{
-  display:inline-block;border:0;border-radius:9px;background:#17458a;
-  color:white;padding:12px 15px;font-size:14px;font-weight:bold;
-  cursor:pointer;text-decoration:none
-}
+button,.button{display:inline-block;border:0;border-radius:9px;background:#17458a;color:white;padding:12px 15px;font-size:14px;font-weight:bold;cursor:pointer;text-decoration:none}
 button:disabled{opacity:.6;cursor:wait}
 .secondary{background:#e8eef8;color:#173b73}
 .danger{background:#b42318;color:white}
@@ -37,260 +29,213 @@ button:disabled{opacity:.6;cursor:wait}
 .item:last-child{border-bottom:0}
 .small{font-size:12px;color:#64748b;line-height:1.5}
 .badge{display:inline-block;background:#edf3ff;color:#173b73;border-radius:6px;padding:4px 7px;font-size:11px;margin-top:5px}
-.divider{border:0;border-top:1px solid #e5eaf2;margin:16px 0}
+.search{margin-bottom:12px}
+.top-actions{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 </style>
 </head>
 
 <body>
 <header>
-  <h1>EXAM JUNCTION</h1>
-  <p>Admin Control Panel</p>
+  <div class="top-actions">
+    <button type="button" id="backButton" class="secondary">← Back</button>
+    <span>EXAM JUNCTION</span>
+  </div>
+  <h1>Admin Control Panel</h1>
+  <p>Manage batches, books, notifications, chapters and lectures</p>
 </header>
 
 <main>
-  <div id="status" class="card status">
-    Checking login and admin permissions...
-  </div>
+<div id="status" class="card status">Checking login and admin permissions...</div>
 
-  <section id="loginSection" class="card hidden">
-    <h2>Admin Login</h2>
-    <p class="small">Apne registered admin email aur password se login karein.</p>
+<section id="loginSection" class="card hidden">
+<h2>Admin Login</h2>
+<p class="small">Apne registered admin email aur password se login karein.</p>
+<form id="loginForm">
+<label for="email">Email</label>
+<input id="email" type="email" autocomplete="username" required>
+<label for="password">Password</label>
+<input id="password" type="password" autocomplete="current-password" required>
+<div class="actions"><button id="loginButton" type="submit">Login</button></div>
+</form>
+</section>
 
-    <form id="loginForm">
-      <label for="email">Email</label>
-      <input id="email" type="email" autocomplete="username" required>
+<div id="dashboard" class="hidden">
 
-      <label for="password">Password</label>
-      <input id="password" type="password"
-             autocomplete="current-password" required>
+<section class="card">
+<h2>Admin Account</h2>
+<div id="adminEmail" class="small"></div>
+<div class="actions">
+<button id="refreshButton" class="secondary" type="button">Refresh Data</button>
+<button id="logoutButton" type="button">Logout</button>
+</div>
+</section>
 
-      <div class="actions">
-        <button id="loginButton" type="submit">Login</button>
-      </div>
-    </form>
-  </section>
+<section class="card">
+<h2 id="batchHeading">➕ Add Batch</h2>
+<form id="batchForm">
+<input id="batchId" type="hidden">
+<label for="batchTitle">Batch Name *</label>
+<input id="batchTitle" maxlength="150" required placeholder="SSC Maths Foundation">
+<label for="batchDescription">Batch Description</label>
+<textarea id="batchDescription" maxlength="5000" placeholder="Course ki details"></textarea>
+<label for="batchTeacher">Teacher / Platform Name</label>
+<input id="batchTeacher" maxlength="150" placeholder="Rahul Sir">
+<label for="batchAccess">Access</label>
+<select id="batchAccess">
+<option value="free">Free</option>
+<option value="restricted">Restricted — selected students</option>
+</select>
+<label for="batchPublished">Publish</label>
+<select id="batchPublished">
+<option value="false">Draft — website par nahi dikhega</option>
+<option value="true">Published</option>
+</select>
+<div class="actions">
+<button id="batchSave" type="submit">Save Batch</button>
+<button id="batchCancel" class="secondary hidden" type="button">Cancel Edit</button>
+</div>
+</form>
+</section>
 
-  <div id="dashboard" class="hidden">
+<section class="card">
+<h2 id="bookHeading">📚 Add Book / Notes</h2>
+<form id="bookForm">
+<input id="bookId" type="hidden">
+<label for="bookTitle">Book / Notes Title *</label>
+<input id="bookTitle" maxlength="200" required placeholder="SSC Maths Notes">
+<label for="bookAuthor">Teacher / Author</label>
+<input id="bookAuthor" maxlength="150" placeholder="Teacher name">
+<label for="bookDescription">Description</label>
+<textarea id="bookDescription" maxlength="5000"></textarea>
+<label for="bookUrl">PDF / Google Drive Link</label>
+<input id="bookUrl" type="url" placeholder="https://...">
+<label for="bookAccess">Access</label>
+<select id="bookAccess">
+<option value="free">Free</option>
+<option value="restricted">Restricted — selected students</option>
+</select>
+<label for="bookPublished">Publish</label>
+<select id="bookPublished">
+<option value="false">Draft</option>
+<option value="true">Published</option>
+</select>
+<div class="actions">
+<button id="bookSave" type="submit">Save Book</button>
+<button id="bookCancel" class="secondary hidden" type="button">Cancel Edit</button>
+</div>
+<p class="small">Public Google Drive links restricted nahi hote. Private files ke liye secure storage aur access policies zaroori hain.</p>
+</form>
+</section>
 
-    <section class="card">
-      <h2>Admin Account</h2>
-      <div id="adminEmail" class="small"></div>
+<section class="card">
+<h2 id="noticeHeading">🔔 Publish Notification</h2>
+<form id="notificationForm">
+<input id="noticeId" type="hidden">
+<label for="noticeTitle">Title *</label>
+<input id="noticeTitle" maxlength="200" required>
+<label for="noticeMessage">Message *</label>
+<textarea id="noticeMessage" maxlength="5000" required></textarea>
+<label for="noticeUrl">Optional Link</label>
+<input id="noticeUrl" type="url" placeholder="https://...">
+<label for="noticePublished">Publish</label>
+<select id="noticePublished">
+<option value="false">Draft</option>
+<option value="true">Published</option>
+</select>
+<div class="actions">
+<button id="noticeSave" type="submit">Save Notification</button>
+<button id="noticeCancel" class="secondary hidden" type="button">Cancel Edit</button>
+</div>
+</form>
+</section>
 
-      <div class="actions">
-        <button id="refreshButton" class="secondary" type="button">
-          Refresh Data
-        </button>
-        <button id="logoutButton" type="button">Logout</button>
-      </div>
-    </section>
+<section class="card">
+<h2 id="chapterHeading">📖 Add Chapter</h2>
+<form id="chapterForm">
+<input id="chapterId" type="hidden">
+<label for="chapterBatch">Select Batch *</label>
+<select id="chapterBatch" required><option value="">Select Batch</option></select>
+<label for="chapterTitle">Chapter Name *</label>
+<input id="chapterTitle" maxlength="200" required placeholder="Percentage">
+<label for="chapterPosition">Position</label>
+<input id="chapterPosition" type="number" min="0" value="0">
+<div class="actions">
+<button id="chapterSave" type="submit">Save Chapter</button>
+<button id="chapterCancel" class="secondary hidden" type="button">Cancel Edit</button>
+</div>
+</form>
+</section>
 
-    <!-- BATCH FORM -->
-    <section class="card">
-      <h2 id="batchHeading">➕ Add Batch</h2>
+<section class="card">
+<h2 id="lectureHeading">▶️ Add YouTube Lecture</h2>
+<form id="lectureForm">
+<input id="lectureId" type="hidden">
+<label for="lectureBatch">Select Batch *</label>
+<select id="lectureBatch" required><option value="">Select Batch</option></select>
+<label for="lectureChapter">Select Chapter *</label>
+<select id="lectureChapter" required><option value="">Select Chapter</option></select>
+<label for="lectureTitle">Lecture Title *</label>
+<input id="lectureTitle" maxlength="200" required placeholder="Percentage Class 1">
+<label for="lectureUrl">YouTube URL *</label>
+<input id="lectureUrl" type="url" required placeholder="https://www.youtube.com/watch?v=...">
+<label for="lecturePosition">Position</label>
+<input id="lecturePosition" type="number" min="0" value="0">
+<div class="actions">
+<button id="lectureSave" type="submit">Save Lecture</button>
+<button id="lectureCancel" class="secondary hidden" type="button">Cancel Edit</button>
+</div>
+</form>
+</section>
 
-      <form id="batchForm">
-        <input id="batchId" type="hidden">
+<section class="card">
+<h2>Existing Batches</h2>
+<input id="batchSearch" class="search" type="search" placeholder="Search batches...">
+<div id="batchList" class="small">Loading...</div>
+</section>
 
-        <label for="batchTitle">Batch Name *</label>
-        <input id="batchTitle" maxlength="150" required
-               placeholder="SSC Maths Foundation">
+<section class="card">
+<h2>Existing Books</h2>
+<input id="bookSearch" class="search" type="search" placeholder="Search books...">
+<div id="bookList" class="small">Loading...</div>
+</section>
 
-        <label for="batchDescription">Batch Description</label>
-        <textarea id="batchDescription" maxlength="5000"
-                  placeholder="Course ki details"></textarea>
+<section class="card">
+<h2>Recent Notifications</h2>
+<input id="noticeSearch" class="search" type="search" placeholder="Search notifications...">
+<div id="noticeList" class="small">Loading...</div>
+</section>
 
-        <label for="batchTeacher">Teacher / Platform Name</label>
-        <input id="batchTeacher" maxlength="150" placeholder="Rahul Sir">
+<section class="card">
+<h2>Existing Chapters</h2>
+<input id="chapterSearch" class="search" type="search" placeholder="Search chapters...">
+<div id="chapterList" class="small">Loading...</div>
+</section>
 
-        <label for="batchAccess">Access</label>
-        <select id="batchAccess">
-          <option value="free">Free</option>
-          <option value="restricted">Restricted — selected students</option>
-        </select>
+<section class="card">
+<h2>Existing Lectures</h2>
+<input id="lectureSearch" class="search" type="search" placeholder="Search lectures...">
+<div id="lectureList" class="small">Loading...</div>
+</section>
 
-        <label for="batchPublished">Publish</label>
-        <select id="batchPublished">
-          <option value="false">Draft — website par nahi dikhega</option>
-          <option value="true">Published</option>
-        </select>
+<!-- Problem reports, banners and student access require verified database schemas. -->
+<section class="card">
+<h2>Problem Reports</h2>
+<p class="small">Report management enable karne se pehle reports table, reply fields aur RLS policies verify karna zaroori hai. Database integration abhi configure nahi hai.</p>
+</section>
 
-        <div class="actions">
-          <button id="batchSave" type="submit">Save Batch</button>
-          <button id="batchCancel" class="secondary hidden"
-                  type="button">Cancel Edit</button>
-        </div>
-      </form>
-    </section>
+<section class="card">
+<h2>Home Banner Management</h2>
+<p class="small">Banner upload enable karne se pehle ej-banners Storage bucket aur banners table ki schema verify karna zaroori hai. Database integration abhi configure nahi hai.</p>
+</section>
 
-    <!-- BOOK FORM -->
-    <section class="card">
-      <h2 id="bookHeading">📚 Add Book / Notes</h2>
+<section class="card">
+<h2>Selected Students Access</h2>
+<p class="small">Restricted content ke liye student identity, access records aur RLS policies verify karna zaroori hai. Sirf website par content hide karna security nahi hai.</p>
+</section>
 
-      <form id="bookForm">
-        <input id="bookId" type="hidden">
+</div>
 
-        <label for="bookTitle">Book / Notes Title *</label>
-        <input id="bookTitle" maxlength="200" required
-               placeholder="SSC Maths Notes">
-
-        <label for="bookAuthor">Teacher / Author</label>
-        <input id="bookAuthor" maxlength="150" placeholder="Teacher name">
-
-        <label for="bookDescription">Description</label>
-        <textarea id="bookDescription" maxlength="5000"></textarea>
-
-        <label for="bookUrl">PDF / Google Drive Link</label>
-        <input id="bookUrl" type="url" placeholder="https://...">
-
-        <label for="bookAccess">Access</label>
-        <select id="bookAccess">
-          <option value="free">Free</option>
-          <option value="restricted">Restricted — selected students</option>
-        </select>
-
-        <label for="bookPublished">Publish</label>
-        <select id="bookPublished">
-          <option value="false">Draft</option>
-          <option value="true">Published</option>
-        </select>
-
-        <div class="actions">
-          <button id="bookSave" type="submit">Save Book</button>
-          <button id="bookCancel" class="secondary hidden"
-                  type="button">Cancel Edit</button>
-        </div>
-
-        <p class="small">
-          Important: Public Google Drive links ko restricted access select
-          karne se private nahi banaya ja sakta. Private files ke liye secure
-          storage aur access policies chahiye.
-        </p>
-      </form>
-    </section>
-
-    <!-- NOTIFICATION FORM -->
-    <section class="card">
-      <h2 id="noticeHeading">🔔 Publish Notification</h2>
-
-      <form id="notificationForm">
-        <input id="noticeId" type="hidden">
-
-        <label for="noticeTitle">Title *</label>
-        <input id="noticeTitle" maxlength="200" required>
-
-        <label for="noticeMessage">Message *</label>
-        <textarea id="noticeMessage" maxlength="5000" required></textarea>
-
-        <label for="noticeUrl">Optional Link</label>
-        <input id="noticeUrl" type="url" placeholder="https://...">
-
-        <label for="noticePublished">Publish</label>
-        <select id="noticePublished">
-          <option value="false">Draft</option>
-          <option value="true">Published</option>
-        </select>
-
-        <div class="actions">
-          <button id="noticeSave" type="submit">Save Notification</button>
-          <button id="noticeCancel" class="secondary hidden"
-                  type="button">Cancel Edit</button>
-        </div>
-      </form>
-    </section>
-
-    <!-- CHAPTER FORM -->
-    <section class="card">
-      <h2 id="chapterHeading">📖 Add Chapter</h2>
-
-      <form id="chapterForm">
-        <input id="chapterId" type="hidden">
-
-        <label for="chapterBatch">Select Batch *</label>
-        <select id="chapterBatch" required>
-          <option value="">Pehle batch select karein</option>
-        </select>
-
-        <label for="chapterTitle">Chapter Name *</label>
-        <input id="chapterTitle" maxlength="200" required
-               placeholder="Percentage">
-
-        <label for="chapterPosition">Position</label>
-        <input id="chapterPosition" type="number" min="0" value="0">
-
-        <div class="actions">
-          <button id="chapterSave" type="submit">Save Chapter</button>
-          <button id="chapterCancel" class="secondary hidden"
-                  type="button">Cancel Edit</button>
-        </div>
-      </form>
-    </section>
-
-    <!-- LECTURE FORM -->
-    <section class="card">
-      <h2 id="lectureHeading">▶️ Add YouTube Lecture</h2>
-
-      <form id="lectureForm">
-        <input id="lectureId" type="hidden">
-
-        <label for="lectureBatch">Select Batch *</label>
-        <select id="lectureBatch" required>
-          <option value="">Select Batch</option>
-        </select>
-
-        <label for="lectureChapter">Select Chapter *</label>
-        <select id="lectureChapter" required>
-          <option value="">Select Chapter</option>
-        </select>
-
-        <label for="lectureTitle">Lecture Title *</label>
-        <input id="lectureTitle" maxlength="200" required
-               placeholder="Percentage Class 1">
-
-        <label for="lectureUrl">YouTube URL *</label>
-        <input id="lectureUrl" type="url" required
-               placeholder="https://www.youtube.com/watch?v=...">
-
-        <label for="lecturePosition">Position</label>
-        <input id="lecturePosition" type="number" min="0" value="0">
-
-        <div class="actions">
-          <button id="lectureSave" type="submit">Save Lecture</button>
-          <button id="lectureCancel" class="secondary hidden"
-                  type="button">Cancel Edit</button>
-        </div>
-      </form>
-    </section>
-
-    <!-- LISTS -->
-    <section class="card">
-      <h2>Existing Batches</h2>
-      <div id="batchList" class="small">Loading...</div>
-    </section>
-
-    <section class="card">
-      <h2>Existing Books</h2>
-      <div id="bookList" class="small">Loading...</div>
-    </section>
-
-    <section class="card">
-      <h2>Recent Notifications</h2>
-      <div id="noticeList" class="small">Loading...</div>
-    </section>
-
-    <section class="card">
-      <h2>Existing Chapters</h2>
-      <div id="chapterList" class="small">Loading...</div>
-    </section>
-
-    <section class="card">
-      <h2>Existing Lectures</h2>
-      <div id="lectureList" class="small">Loading...</div>
-    </section>
-  </div>
-
-  <p class="small">
-    EXAM JUNCTION · Admin access is controlled by Supabase permissions.
-  </p>
+<p class="small">EXAM JUNCTION · Admin access is controlled by Supabase permissions.</p>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -302,762 +247,470 @@ button:disabled{opacity:.6;cursor:wait}
 "use strict";
 
 const $ = id => document.getElementById(id);
-
 let db = null;
 let busy = false;
 
 const cache = {
-  batches: [],
-  books: [],
-  notifications: [],
-  chapters: [],
-  lectures: []
+ batches:[], books:[], notifications:[], chapters:[], lectures:[]
+};
+
+const forms = {
+ batches:{form:"batchForm",id:"batchId",heading:"batchHeading",save:"batchSave",cancel:"batchCancel",addHeading:"➕ Add Batch",addButton:"Save Batch",editHeading:"✏️ Edit Batch",editButton:"Update Batch"},
+ books:{form:"bookForm",id:"bookId",heading:"bookHeading",save:"bookSave",cancel:"bookCancel",addHeading:"📚 Add Book / Notes",addButton:"Save Book",editHeading:"✏️ Edit Book / Notes",editButton:"Update Book"},
+ notifications:{form:"notificationForm",id:"noticeId",heading:"noticeHeading",save:"noticeSave",cancel:"noticeCancel",addHeading:"🔔 Publish Notification",addButton:"Save Notification",editHeading:"✏️ Edit Notification",editButton:"Update Notification"},
+ chapters:{form:"chapterForm",id:"chapterId",heading:"chapterHeading",save:"chapterSave",cancel:"chapterCancel",addHeading:"📖 Add Chapter",addButton:"Save Chapter",editHeading:"✏️ Edit Chapter",editButton:"Update Chapter"},
+ lectures:{form:"lectureForm",id:"lectureId",heading:"lectureHeading",save:"lectureSave",cancel:"lectureCancel",addHeading:"▶️ Add YouTube Lecture",addButton:"Save Lecture",editHeading:"✏️ Edit YouTube Lecture",editButton:"Update Lecture"}
 };
 
 function message(text,isError=false){
-  $("status").textContent = text;
-  $("status").style.background = isError ? "#fff0f0" : "#edf3ff";
-  $("status").style.color = isError ? "#a12727" : "#173b73";
-  $("status").classList.remove("hidden");
+ $("status").textContent=text;
+ $("status").style.background=isError?"#fff0f0":"#edf3ff";
+ $("status").style.color=isError?"#a12727":"#173b73";
+ $("status").classList.remove("hidden");
 }
 
-function escapeText(value){
-  return String(value ?? "");
-}
-
-function makeButton(label,action,type,id,className){
-  const button = document.createElement("button");
-  button.type = "button";
-  button.textContent = label;
-  button.dataset.action = action;
-  button.dataset.type = type;
-  button.dataset.id = String(id);
-  if(className) button.className = className;
-  return button;
-}
-
-function makeItem(root,row,type,lines){
-  const item = document.createElement("div");
-  item.className = "item";
-
-  lines.forEach(line => {
-    const div = document.createElement("div");
-    div.textContent = line.label + ": " +
-      escapeText(typeof line.value === "function"
-        ? line.value(row)
-        : row[line.key]);
-    item.appendChild(div);
-  });
-
-  const actions = document.createElement("div");
-  actions.className = "actions";
-
-  actions.appendChild(
-    makeButton("Edit","edit",type,row.id,"secondary")
-  );
-
-  actions.appendChild(
-    makeButton("Delete","delete",type,row.id,"danger")
-  );
-
-  item.appendChild(actions);
-  root.appendChild(item);
-}
-
-function showList(elementId,rows,type,lines,emptyText){
-  const root = $(elementId);
-  root.replaceChildren();
-
-  if(!rows || !rows.length){
-    root.textContent = emptyText;
-    return;
-  }
-
-  rows.forEach(row => makeItem(root,row,type,lines));
+function errorDetails(operation,table,error,id){
+ console.error("EXAM JUNCTION Admin Error",{
+  operation,table,recordId:id||null,
+  code:error?.code||null,
+  message:error?.message||String(error||"Unknown error"),
+  details:error?.details||null,
+  hint:error?.hint||null
+ });
 }
 
 function findById(type,id){
-  return (cache[type] || []).find(row => String(row.id) === String(id));
+ return (cache[type]||[]).find(row=>String(row.id)===String(id));
+}
+
+function makeButton(label,action,type,id,className){
+ const button=document.createElement("button");
+ button.type="button";
+ button.textContent=label;
+ button.dataset.action=action;
+ button.dataset.type=type;
+ button.dataset.id=String(id);
+ if(className)button.className=className;
+ return button;
+}
+
+function makeItem(root,row,type,lines){
+ const item=document.createElement("div");
+ item.className="item";
+ lines.forEach(line=>{
+  const div=document.createElement("div");
+  const value=typeof line.value==="function"?line.value(row):row[line.key];
+  div.textContent=line.label+": "+String(value??"—");
+  item.appendChild(div);
+ });
+ const actions=document.createElement("div");
+ actions.className="actions";
+ actions.appendChild(makeButton("Edit","edit",type,row.id,"secondary"));
+ actions.appendChild(makeButton("Delete","delete",type,row.id,"danger"));
+ item.appendChild(actions);
+ root.appendChild(item);
+}
+
+function showList(elementId,rows,type,lines,emptyText,searchId){
+ const root=$(elementId);
+ root.replaceChildren();
+ const term=searchId?$(searchId).value.trim().toLowerCase():"";
+ const filtered=(rows||[]).filter(row=>{
+  if(!term)return true;
+  return lines.some(line=>{
+   const val=typeof line.value==="function"?line.value(row):row[line.key];
+   return String(val??"").toLowerCase().includes(term);
+  });
+ });
+ if(!filtered.length){
+  root.textContent=term?"Koi matching record nahi mila.":emptyText;
+  return;
+ }
+ filtered.forEach(row=>makeItem(root,row,type,lines));
 }
 
 function fillSelect(selectId,rows,placeholder,labelFn,selectedValue){
-  const select = $(selectId);
-  select.replaceChildren();
-
-  const first = document.createElement("option");
-  first.value = "";
-  first.textContent = placeholder;
-  select.appendChild(first);
-
-  rows.forEach(row => {
-    const option = document.createElement("option");
-    option.value = row.id;
-    option.textContent = labelFn(row);
-    select.appendChild(option);
-  });
-
-  if(selectedValue != null){
-    select.value = String(selectedValue);
-  }
+ const select=$(selectId);
+ select.replaceChildren();
+ const first=document.createElement("option");
+ first.value="";
+ first.textContent=placeholder;
+ select.appendChild(first);
+ rows.forEach(row=>{
+  const option=document.createElement("option");
+  option.value=row.id;
+  option.textContent=labelFn(row);
+  select.appendChild(option);
+ });
+ if(selectedValue!=null)select.value=String(selectedValue);
 }
 
 function refreshDropdowns(){
-  fillSelect(
-    "chapterBatch",
-    cache.batches,
-    "Select Batch",
-    row => row.title
-  );
-
-  fillSelect(
-    "lectureBatch",
-    cache.batches,
-    "Select Batch",
-    row => row.title
-  );
-
-  fillSelect(
-    "lectureChapter",
-    cache.chapters,
-    "Select Chapter",
-    row => {
-      const batch = findById("batches",row.batch_id);
-      return (batch ? batch.title + " — " : "") + row.title;
-    }
-  );
+ fillSelect("chapterBatch",cache.batches,"Select Batch",row=>row.title);
+ fillSelect("lectureBatch",cache.batches,"Select Batch",row=>row.title);
+ updateLectureChapterOptions($("lectureBatch").value);
 }
+
+function updateLectureChapterOptions(batchId,selectedChapterId){
+ const chapters=cache.chapters.filter(ch=>String(ch.batch_id)===String(batchId));
+ fillSelect("lectureChapter",chapters,chapters.length?"Select Chapter":"Is batch mein chapter nahi hai",ch=>ch.title,selectedChapterId);
+}
+
+const jobs=[
+ {table:"batches",key:"batches",element:"batchList",order:"created_at",search:"batchSearch",empty:"Abhi koi batch nahi hai.",lines:[
+  {key:"title",label:"Batch"},{key:"platform_name",label:"Teacher"},{key:"access_type",label:"Access"},{key:"is_published",label:"Published"}]},
+ {table:"books",key:"books",element:"bookList",order:"created_at",search:"bookSearch",empty:"Abhi koi book nahi hai.",lines:[
+  {key:"title",label:"Book"},{key:"author",label:"Author"},{key:"access_type",label:"Access"},{key:"is_published",label:"Published"}]},
+ {table:"notifications",key:"notifications",element:"noticeList",order:"created_at",search:"noticeSearch",empty:"Abhi koi notification nahi hai.",lines:[
+  {key:"title",label:"Title"},{key:"is_published",label:"Published"},{label:"Created",value:r=>r.created_at?new Date(r.created_at).toLocaleString():"—"}]},
+ {table:"chapters",key:"chapters",element:"chapterList",order:"position",search:"chapterSearch",empty:"Abhi koi chapter nahi hai.",lines:[
+  {label:"Batch",value:r=>findById("batches",r.batch_id)?.title||"Unknown batch"},{key:"title",label:"Chapter"},{key:"position",label:"Position"}]},
+ {table:"lectures",key:"lectures",element:"lectureList",order:"position",search:"lectureSearch",empty:"Abhi koi lecture nahi hai.",lines:[
+  {key:"title",label:"Lecture"},{label:"Chapter",value:r=>findById("chapters",r.chapter_id)?.title||"Unknown chapter"},{key:"position",label:"Position"},{key:"youtube_url",label:"YouTube URL"}]}
+];
 
 async function loadLists(){
-  if(!db) return;
-
-  const jobs = [
-    {
-      table:"batches",
-      key:"batches",
-      element:"batchList",
-      order:"created_at",
-      lines:[
-        {key:"title",label:"Batch"},
-        {key:"platform_name",label:"Teacher"},
-        {key:"access_type",label:"Access"},
-        {key:"is_published",label:"Published"}
-      ],
-      empty:"Abhi koi batch nahi hai."
-    },
-    {
-      table:"books",
-      key:"books",
-      element:"bookList",
-      order:"created_at",
-      lines:[
-        {key:"title",label:"Book"},
-        {key:"author",label:"Author"},
-        {key:"access_type",label:"Access"},
-        {key:"is_published",label:"Published"}
-      ],
-      empty:"Abhi koi book nahi hai."
-    },
-    {
-      table:"notifications",
-      key:"notifications",
-      element:"noticeList",
-      order:"created_at",
-      lines:[
-        {key:"title",label:"Title"},
-        {key:"is_published",label:"Published"},
-        {
-          label:"Created",
-          value:row => row.created_at
-            ? new Date(row.created_at).toLocaleString()
-            : "—"
-        }
-      ],
-      empty:"Abhi koi notification nahi hai."
-    },
-    {
-      table:"chapters",
-      key:"chapters",
-      element:"chapterList",
-      order:"position",
-      lines:[
-        {
-          label:"Batch",
-          value:row => {
-            const batch=findById("batches",row.batch_id);
-            return batch ? batch.title : "Unknown batch";
-          }
-        },
-        {key:"title",label:"Chapter"},
-        {key:"position",label:"Position"}
-      ],
-      empty:"Abhi koi chapter nahi hai."
-    },
-    {
-      table:"lectures",
-      key:"lectures",
-      element:"lectureList",
-      order:"position",
-      lines:[
-        {key:"title",label:"Lecture"},
-        {
-          label:"Chapter",
-          value:row => {
-            const chapter=findById("chapters",row.chapter_id);
-            return chapter ? chapter.title : "Unknown chapter";
-          }
-        },
-        {key:"position",label:"Position"},
-        {key:"youtube_url",label:"YouTube URL"}
-      ],
-      empty:"Abhi koi lecture nahi hai."
-    }
-  ];
-
-  for(const job of jobs){
-    const result = await db.from(job.table)
-      .select("*")
-      .order(job.order,{ascending:true})
-      .limit(200);
-
-    if(result.error){
-      $(job.element).textContent =
-        "Load nahi hua. Table, RLS policy aur permissions check karein.";
-      console.error(job.table,result.error.message);
-      cache[job.key] = [];
-    }else{
-      cache[job.key] = result.data || [];
-
-      showList(
-        job.element,
-        cache[job.key],
-        job.key,
-        job.lines,
-        job.empty
-      );
-    }
+ if(!db)return {failed:["Database connection"]};
+ const failed=[];
+ for(const job of jobs){
+  try{
+   const {data,error}=await db.from(job.table).select("*").order(job.order,{ascending:true}).limit(200);
+   if(error){
+    errorDetails("SELECT",job.table,error);
+    failed.push(job.table);
+    $(job.element).textContent="Load nahi hua. Permissions ya database configuration check karein.";
+    continue;
+   }
+   cache[job.key]=data||[];
+   showList(job.element,cache[job.key],job.key,job.lines,job.empty,job.search);
+  }catch(error){
+   errorDetails("SELECT",job.table,error);
+   failed.push(job.table);
+   $(job.element).textContent="Load nahi hua. Internet check karke dobara try karein.";
   }
-
-  refreshDropdowns();
+ }
+ refreshDropdowns();
+ // Re-render after dropdown refresh so related names use the latest caches.
+ for(const job of jobs){
+  if(!failed.includes(job.table)){
+   showList(job.element,cache[job.key],job.key,job.lines,job.empty,job.search);
+  }
+ }
+ return {failed};
 }
-
-/* SESSION AND ADMIN VERIFICATION */
 
 async function checkSession(){
-  $("dashboard").classList.add("hidden");
-  $("loginSection").classList.add("hidden");
-
-  const ready = await window.EXAM_JUNCTION.init();
-
-  if(!ready){
-    message(
-      "Supabase configuration ya library load nahi hui. config.js aur internet check karein.",
-      true
-    );
-    return;
-  }
-
-  db = window.EXAM_JUNCTION.supabase;
-
-  const {data,error} = await db.auth.getUser();
-
-  if(error || !data.user){
-    $("loginSection").classList.remove("hidden");
-    message("Admin account se login karein.");
-    return;
-  }
-
-  const {data:profile,error:profileError} = await db
-    .from("profiles")
-    .select("id,full_name,role")
-    .eq("id",data.user.id)
-    .maybeSingle();
-
-  if(profileError){
-    message(
-      "Admin role verify nahi hua. Profiles ki SELECT policy check karein.",
-      true
-    );
-    console.error(profileError.message);
-    return;
-  }
-
-  if(!profile || profile.role !== "admin"){
-    message(
-      "Access denied: is account ko admin role nahi mila hai.",
-      true
-    );
-    await db.auth.signOut();
-    $("loginSection").classList.remove("hidden");
-    return;
-  }
-
-  $("adminEmail").textContent =
-    (profile.full_name || "Admin") + " · " + data.user.email;
-
-  $("dashboard").classList.remove("hidden");
-  message("Admin verified. Data load ho raha hai.");
-
-  await loadLists();
+ $("dashboard").classList.add("hidden");
+ $("loginSection").classList.add("hidden");
+ const ready=await window.EXAM_JUNCTION.init();
+ if(!ready){
+  message("Supabase configuration ya library load nahi hui. config.js aur internet check karein.",true);
+  return;
+ }
+ db=window.EXAM_JUNCTION.supabase;
+ const {data,error}=await db.auth.getUser();
+ if(errorDetails && error)errorDetails("AUTH_USER","auth",error);
+ if(error||!data.user){
+  $("loginSection").classList.remove("hidden");
+  message("Admin account se login karein.");
+  return;
+ }
+ const {data:profile,error:profileError}=await db.from("profiles").select("id,full_name,role").eq("id",data.user.id).maybeSingle();
+ if(profileError){
+  errorDetails("VERIFY_ADMIN_ROLE","profiles",profileError,data.user.id);
+  message("Admin role verify nahi hua. Profiles ki SELECT policy check karein.",true);
+  return;
+ }
+ if(!profile||profile.role!=="admin"){
+  message("Access denied: is account ko admin role nahi mila hai.",true);
+  await db.auth.signOut();
+  $("loginSection").classList.remove("hidden");
+  return;
+ }
+ $("adminEmail").textContent=(profile.full_name||"Admin")+" · "+data.user.email;
+ $("dashboard").classList.remove("hidden");
+ message("Admin verified. Data load ho raha hai.");
+ const result=await loadLists();
+ if(result.failed.length){
+  message("Admin verified, lekin kuch sections load nahi hue: "+result.failed.join(", "),true);
+ }else{
+  message("Admin verified. Sabhi sections load ho gaye.");
+ }
 }
-
-/* GENERIC INSERT / UPDATE */
-
-async function saveRecord(formId,buttonId,table,type,payload){
-  if(busy) return;
-
-  if(!db){
-    message("Database connection available nahi hai.",true);
-    return;
-  }
-
-  busy=true;
-
-  const button=$(buttonId);
-  const oldText=button.textContent;
-  button.disabled=true;
-  button.textContent="Saving...";
-
-  try{
-    const hiddenId = $(type + "Id");
-    const id = hiddenId ? hiddenId.value.trim() : "";
-
-    let query;
-
-    if(id){
-      query = db.from(table).update(payload).eq("id",id);
-    }else{
-      query = db.from(table).insert(payload);
-    }
-
-    const {error} = await query;
-
-    if(error){
-      console.error(table,error);
-      message("Save nahi hua: " + error.message,true);
-      return;
-    }
-
-    $(formId).reset();
-    resetEdit(type);
-
-    message(id ? "Changes successfully updated." : "Successfully saved.");
-
-    await loadLists();
-  }catch(error){
-    console.error(error);
-    message("Connection error. Internet check karke try karein.",true);
-  }finally{
-    busy=false;
-    button.disabled=false;
-    button.textContent=oldText;
-  }
-}
-
-/* RESET / CANCEL EDIT */
-
-const forms = {
-  batches:{
-    form:"batchForm",
-    id:"batchId",
-    heading:"batchHeading",
-    save:"batchSave",
-    cancel:"batchCancel",
-    addHeading:"➕ Add Batch",
-    addButton:"Save Batch",
-    editHeading:"✏️ Edit Batch",
-    editButton:"Update Batch"
-  },
-  books:{
-    form:"bookForm",
-    id:"bookId",
-    heading:"bookHeading",
-    save:"bookSave",
-    cancel:"bookCancel",
-    addHeading:"📚 Add Book / Notes",
-    addButton:"Save Book",
-    editHeading:"✏️ Edit Book / Notes",
-    editButton:"Update Book"
-  },
-  notifications:{
-    form:"notificationForm",
-    id:"noticeId",
-    heading:"noticeHeading",
-    save:"noticeSave",
-    cancel:"noticeCancel",
-    addHeading:"🔔 Publish Notification",
-    addButton:"Save Notification",
-    editHeading:"✏️ Edit Notification",
-    editButton:"Update Notification"
-  },
-  chapters:{
-    form:"chapterForm",
-    id:"chapterId",
-    heading:"chapterHeading",
-    save:"chapterSave",
-    cancel:"chapterCancel",
-    addHeading:"📖 Add Chapter",
-    addButton:"Save Chapter",
-    editHeading:"✏️ Edit Chapter",
-    editButton:"Update Chapter"
-  },
-  lectures:{
-    form:"lectureForm",
-    id:"lectureId",
-    heading:"lectureHeading",
-    save:"lectureSave",
-    cancel:"lectureCancel",
-    addHeading:"▶️ Add YouTube Lecture",
-    addButton:"Save Lecture",
-    editHeading:"✏️ Edit Lecture",
-    editButton:"Update Lecture"
-  }
-};
 
 function resetEdit(type){
-  const config=forms[type];
+ const c=forms[type];
+ if(!c)return;
+ $(c.id).value="";
+ $(c.heading).textContent=c.addHeading;
+ $(c.save).textContent=c.addButton;
+ $(c.cancel).classList.add("hidden");
+}
 
-  $(config.id).value="";
-  $(config.heading).textContent=config.addHeading;
-  $(config.save).textContent=config.addButton;
-  $(config.cancel).classList.add("hidden");
+async function saveRecord(formId,buttonId,table,type,payload){
+ if(busy)return;
+ if(!db){message("Database connection available nahi hai.",true);return;}
+ const c=forms[type];
+ const hiddenId=c?$(c.id):null;
+ const id=hiddenId?hiddenId.value.trim():"";
+ busy=true;
+ const button=$(buttonId);
+ const oldText=button.textContent;
+ button.disabled=true;
+ button.textContent=id?"Updating...":"Saving...";
+ try{
+  let query;
+  if(id){
+   query=db.from(table).update(payload).eq("id",id).select("id");
+  }else{
+   query=db.from(table).insert(payload).select("id");
+  }
+  const {data,error}=await query;
+  if(error){
+   errorDetails(id?"UPDATE":"INSERT",table,error,id);
+   message("Changes save nahi hue. Permissions, fields aur database settings check karein.",true);
+   return;
+  }
+  if(id&&(!data||data.length===0)){
+   message("Record update nahi hua. Permission ya record ID verify karein.",true);
+   return;
+  }
+  $(formId).reset();
+  resetEdit(type);
+  message(id?"Record successfully updated.":"Record successfully saved.");
+  const result=await loadLists();
+  if(result.failed.length)message("Record save hua, lekin kuch lists refresh nahi hui: "+result.failed.join(", "),true);
+ }catch(error){
+  errorDetails(id?"UPDATE":"INSERT",table,error,id);
+  message("Save nahi hua. Internet check karke dobara try karein.",true);
+ }finally{
+  busy=false;
+  button.disabled=false;
+  button.textContent=$(c.save).textContent;
+ }
 }
 
 function editRecord(type,id){
-  const row=findById(type,id);
-
-  if(!row){
-    message("Record nahi mila. Data refresh karke try karein.",true);
-    return;
-  }
-
-  if(type==="batches"){
-    $("batchId").value=row.id;
-    $("batchTitle").value=row.title || "";
-    $("batchDescription").value=row.description || "";
-    $("batchTeacher").value=row.platform_name || "";
-    $("batchAccess").value=row.access_type || "free";
-    $("batchPublished").value=String(!!row.is_published);
-  }
-
-  if(type==="books"){
-    $("bookId").value=row.id;
-    $("bookTitle").value=row.title || "";
-    $("bookAuthor").value=row.author || "";
-    $("bookDescription").value=row.description || "";
-    $("bookUrl").value=row.external_url || "";
-    $("bookAccess").value=row.access_type || "free";
-    $("bookPublished").value=String(!!row.is_published);
-  }
-
-  if(type==="notifications"){
-    $("noticeId").value=row.id;
-    $("noticeTitle").value=row.title || "";
-    $("noticeMessage").value=row.message || "";
-    $("noticeUrl").value=row.target_url || "";
-    $("noticePublished").value=String(!!row.is_published);
-  }
-
-  if(type==="chapters"){
-    $("chapterId").value=row.id;
-    $("chapterBatch").value=String(row.batch_id || "");
-    $("chapterTitle").value=row.title || "";
-    $("chapterPosition").value=String(row.position ?? 0);
-  }
-
-  if(type==="lectures"){
-    $("lectureId").value=row.id;
-    $("lectureTitle").value=row.title || "";
-    $("lectureUrl").value=row.youtube_url || "";
-    $("lecturePosition").value=String(row.position ?? 0);
-
-    const chapter=findById("chapters",row.chapter_id);
-    if(chapter){
-      $("lectureBatch").value=String(chapter.batch_id);
-      updateLectureChapterOptions(chapter.batch_id,row.chapter_id);
-    }
-  }
-
-  const config=forms[type];
-  $(config.heading).textContent=config.editHeading;
-  $(config.save).textContent=config.editButton;
-  $(config.cancel).classList.remove("hidden");
-
-  $(config.form).scrollIntoView({behavior:"smooth",block:"start"});
-  message("Edit mode: changes save karne ke liye Update button dabayein.");
+ const row=findById(type,id);
+ if(!row){message("Record nahi mila. Data refresh karke try karein.",true);return;}
+ if(type==="batches"){
+  $("batchId").value=row.id;$("batchTitle").value=row.title||"";$("batchDescription").value=row.description||"";$("batchTeacher").value=row.platform_name||"";$("batchAccess").value=row.access_type||"free";$("batchPublished").value=String(!!row.is_published);
+ }
+ if(type==="books"){
+  $("bookId").value=row.id;$("bookTitle").value=row.title||"";$("bookAuthor").value=row.author||"";$("bookDescription").value=row.description||"";$("bookUrl").value=row.external_url||"";$("bookAccess").value=row.access_type||"free";$("bookPublished").value=String(!!row.is_published);
+ }
+ if(type==="notifications"){
+  $("noticeId").value=row.id;$("noticeTitle").value=row.title||"";$("noticeMessage").value=row.message||"";$("noticeUrl").value=row.target_url||"";$("noticePublished").value=String(!!row.is_published);
+ }
+ if(type==="chapters"){
+  $("chapterId").value=row.id;$("chapterBatch").value=String(row.batch_id||"");$("chapterTitle").value=row.title||"";$("chapterPosition").value=String(row.position??0);
+ }
+ if(type==="lectures"){
+  $("lectureId").value=row.id;$("lectureTitle").value=row.title||"";$("lectureUrl").value=row.youtube_url||"";$("lecturePosition").value=String(row.position??0);
+  const chapter=findById("chapters",row.chapter_id);
+  if(chapter){$("lectureBatch").value=String(chapter.batch_id);updateLectureChapterOptions(chapter.batch_id,row.chapter_id);}
+ }
+ const c=forms[type];
+ $(c.heading).textContent=c.editHeading;
+ $(c.save).textContent=c.editButton;
+ $(c.cancel).classList.remove("hidden");
+ $(c.form).scrollIntoView({behavior:"smooth",block:"start"});
+ message("Edit mode: changes save karne ke liye Update button dabayein.");
 }
-
-/* DELETE */
 
 async function deleteRecord(type,id){
-  if(busy || !db) return;
-
-  const table=type;
-
-  const row=findById(type,id);
-  if(!row) return;
-
-  const title=row.title || "this record";
-
-  if(!confirm('"' + title + '" ko permanently delete karna hai?')){
-    return;
+ if(busy||!db)return;
+ const row=findById(type,id);
+ if(!row)return;
+ const title=row.title||"this record";
+ if(type==="batches"){
+  const children=cache.chapters.filter(r=>String(r.batch_id)===String(id));
+  if(children.length){
+   message("Is batch mein "+children.length+" chapter(s) hain. Pehle chapters aur lectures manage karein.",true);
+   return;
   }
-
-  busy=true;
-
-  try{
-    const {error}=await db.from(table).delete().eq("id",id);
-
-    if(error){
-      console.error(error);
-      message("Delete nahi hua: " + error.message,true);
-      return;
-    }
-
-    if(forms[type] && $(forms[type].id).value===String(id)){
-      $(forms[type].form).reset();
-      resetEdit(type);
-    }
-
-    message("Record successfully deleted.");
-    await loadLists();
-  }catch(error){
-    console.error(error);
-    message("Delete ke dauran connection error hua.",true);
-  }finally{
-    busy=false;
+ }
+ if(type==="chapters"){
+  const children=cache.lectures.filter(r=>String(r.chapter_id)===String(id));
+  if(children.length){
+   message("Is chapter mein "+children.length+" lecture(s) hain. Pehle lectures manage karein.",true);
+   return;
   }
-}
-
-/* LECTURE CHAPTER FILTER */
-
-function updateLectureChapterOptions(batchId,selectedChapterId){
-  const chapters=cache.chapters.filter(
-    chapter=>String(chapter.batch_id)===String(batchId)
-  );
-
-  fillSelect(
-    "lectureChapter",
-    chapters,
-    chapters.length ? "Select Chapter" : "Is batch mein chapter nahi hai",
-    chapter=>chapter.title,
-    selectedChapterId
-  );
+ }
+ if(!confirm('"'+title+'" ko permanently delete karna hai?'))return;
+ busy=true;
+ try{
+  const {data,error}=await db.from(type).delete().eq("id",id).select("id");
+  if(error){
+   errorDetails("DELETE",type,error,id);
+   message("Delete nahi hua. Related records aur permissions check karein.",true);
+   return;
+  }
+  if(!data||data.length===0){
+   message("Record delete nahi hua. Permission ya record ID verify karein.",true);
+   return;
+  }
+  if(forms[type]&&$(forms[type].id).value===String(id)){
+   $(forms[type].form).reset();resetEdit(type);
+  }
+  message("Record successfully deleted.");
+  const result=await loadLists();
+  if(result.failed.length)message("Record delete hua, lekin kuch lists refresh nahi hui: "+result.failed.join(", "),true);
+ }catch(error){
+  errorDetails("DELETE",type,error,id);
+  message("Delete nahi hua. Internet check karke dobara try karein.",true);
+ }finally{busy=false;}
 }
 
 $("lectureBatch").addEventListener("change",function(){
-  updateLectureChapterOptions(this.value);
+ updateLectureChapterOptions(this.value);
 });
-
-/* LOGIN */
 
 $("loginForm").addEventListener("submit",async function(e){
-  e.preventDefault();
-
-  const button=$("loginButton");
-  button.disabled=true;
-
-  try{
-    const ready=await window.EXAM_JUNCTION.init();
-    if(!ready) throw new Error("Supabase configuration missing.");
-
-    db=window.EXAM_JUNCTION.supabase;
-
-    const {error}=await db.auth.signInWithPassword({
-      email:$("email").value.trim(),
-      password:$("password").value
-    });
-
-    if(error) throw error;
-
-    await checkSession();
-  }catch(error){
-    message(
-      "Login nahi hua. Email/password aur configuration check karein. " +
-      (error.message || ""),
-      true
-    );
-  }finally{
-    button.disabled=false;
+ e.preventDefault();
+ const button=$("loginButton");
+ button.disabled=true;
+ const oldText=button.textContent;
+ button.textContent="Logging in...";
+ try{
+  const ready=await window.EXAM_JUNCTION.init();
+  if(!ready)throw new Error("Supabase configuration missing");
+  db=window.EXAM_JUNCTION.supabase;
+  const {error}=await db.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});
+  if(error){
+   errorDetails("LOGIN","auth",error);
+   message("Login nahi hua. Email/password check karein.",true);
+   return;
   }
+  await checkSession();
+ }catch(error){
+  errorDetails("LOGIN","auth",error);
+  message("Login nahi hua. Email/password aur configuration check karein.",true);
+ }finally{
+  button.disabled=false;button.textContent=oldText;
+ }
 });
-
-/* BATCH SAVE */
 
 $("batchForm").addEventListener("submit",async function(e){
-  e.preventDefault();
-
-  await saveRecord(
-    "batchForm","batchSave","batches","batches",
-    {
-      title:$("batchTitle").value.trim(),
-      description:$("batchDescription").value.trim() || null,
-      platform_name:$("batchTeacher").value.trim() || null,
-      access_type:$("batchAccess").value,
-      is_published:$("batchPublished").value==="true"
-    }
-  );
+ e.preventDefault();
+ await saveRecord("batchForm","batchSave","batches","batches",{
+  title:$("batchTitle").value.trim(),
+  description:$("batchDescription").value.trim()||null,
+  platform_name:$("batchTeacher").value.trim()||null,
+  access_type:$("batchAccess").value,
+  is_published:$("batchPublished").value==="true"
+ });
 });
-
-/* BOOK SAVE */
 
 $("bookForm").addEventListener("submit",async function(e){
-  e.preventDefault();
-
-  const url=$("bookUrl").value.trim();
-
-  if(url && !/^https:\/\//i.test(url)){
-    message("Book link HTTPS se shuru hona chahiye.",true);
-    return;
-  }
-
-  await saveRecord(
-    "bookForm","bookSave","books","books",
-    {
-      title:$("bookTitle").value.trim(),
-      author:$("bookAuthor").value.trim() || null,
-      description:$("bookDescription").value.trim() || null,
-      external_url:url || null,
-      access_type:$("bookAccess").value,
-      is_published:$("bookPublished").value==="true"
-    }
-  );
+ e.preventDefault();
+ const url=$("bookUrl").value.trim();
+ if(url&&!/^https:\/\//i.test(url)){message("Book link HTTPS se shuru hona chahiye.",true);return;}
+ await saveRecord("bookForm","bookSave","books","books",{
+  title:$("bookTitle").value.trim(),
+  author:$("bookAuthor").value.trim()||null,
+  description:$("bookDescription").value.trim()||null,
+  external_url:url||null,
+  access_type:$("bookAccess").value,
+  is_published:$("bookPublished").value==="true"
+ });
 });
-
-/* NOTIFICATION SAVE */
 
 $("notificationForm").addEventListener("submit",async function(e){
-  e.preventDefault();
-
-  const url=$("noticeUrl").value.trim();
-
-  if(url && !/^https:\/\//i.test(url)){
-    message("Notification link HTTPS se shuru hona chahiye.",true);
-    return;
-  }
-
-  await saveRecord(
-    "notificationForm","noticeSave","notifications","notifications",
-    {
-      title:$("noticeTitle").value.trim(),
-      message:$("noticeMessage").value.trim(),
-      target_url:url || null,
-      is_published:$("noticePublished").value==="true"
-    }
-  );
+ e.preventDefault();
+ const url=$("noticeUrl").value.trim();
+ if(url&&!/^https:\/\//i.test(url)){message("Notification link HTTPS se shuru hona chahiye.",true);return;}
+ await saveRecord("notificationForm","noticeSave","notifications","notifications",{
+  title:$("noticeTitle").value.trim(),
+  message:$("noticeMessage").value.trim(),
+  target_url:url||null,
+  is_published:$("noticePublished").value==="true"
+ });
 });
-
-/* CHAPTER SAVE */
 
 $("chapterForm").addEventListener("submit",async function(e){
-  e.preventDefault();
-
-  if(!$("chapterBatch").value){
-    message("Chapter ke liye batch select karein.",true);
-    return;
-  }
-
-  await saveRecord(
-    "chapterForm","chapterSave","chapters","chapters",
-    {
-      batch_id:$("chapterBatch").value,
-      title:$("chapterTitle").value.trim(),
-      position:Number($("chapterPosition").value || 0)
-    }
-  );
+ e.preventDefault();
+ if(!$("chapterBatch").value){message("Chapter ke liye batch select karein.",true);return;}
+ await saveRecord("chapterForm","chapterSave","chapters","chapters",{
+  batch_id:$("chapterBatch").value,
+  title:$("chapterTitle").value.trim(),
+  position:Number($("chapterPosition").value||0)
+ });
 });
-
-/* LECTURE SAVE */
 
 $("lectureForm").addEventListener("submit",async function(e){
-  e.preventDefault();
-
-  const url=$("lectureUrl").value.trim();
-
-  if(!/^https:\/\//i.test(url)){
-    message("YouTube link HTTPS se shuru hona chahiye.",true);
-    return;
-  }
-
-  let parsedUrl;
-
-  try{
-    parsedUrl=new URL(url);
-  }catch(error){
-    message("YouTube URL sahi nahi hai.",true);
-    return;
-  }
-
-  const host=parsedUrl.hostname.toLowerCase();
-
-  const validYouTube =
-    host==="youtube.com" ||
-    host.endsWith(".youtube.com") ||
-    host==="youtu.be" ||
-    host.endsWith(".youtu.be");
-
-  if(!validYouTube){
-    message("Kripya valid YouTube ya youtu.be link daalein.",true);
-    return;
-  }
-
-  if(!$("lectureChapter").value){
-    message("Lecture ke liye chapter select karein.",true);
-    return;
-  }
-
-  await saveRecord(
-    "lectureForm","lectureSave","lectures","lectures",
-    {
-      chapter_id:$("lectureChapter").value,
-      title:$("lectureTitle").value.trim(),
-      youtube_url:url,
-      position:Number($("lecturePosition").value || 0)
-    }
-  );
+ e.preventDefault();
+ const url=$("lectureUrl").value.trim();
+ if(!/^https:\/\//i.test(url)){message("YouTube link HTTPS se shuru hona chahiye.",true);return;}
+ let parsed;
+ try{parsed=new URL(url);}catch(e){message("YouTube URL sahi nahi hai.",true);return;}
+ const host=parsed.hostname.toLowerCase();
+ const valid=host==="youtube.com"||host.endsWith(".youtube.com")||host==="youtu.be"||host.endsWith(".youtu.be");
+ if(!valid){message("Kripya valid YouTube ya youtu.be link daalein.",true);return;}
+ if(!$("lectureChapter").value){message("Lecture ke liye chapter select karein.",true);return;}
+ await saveRecord("lectureForm","lectureSave","lectures","lectures",{
+  chapter_id:$("lectureChapter").value,
+  title:$("lectureTitle").value.trim(),
+  youtube_url:url,
+  position:Number($("lecturePosition").value||0)
+ });
 });
-
-/* EDIT / DELETE BUTTONS */
 
 $("dashboard").addEventListener("click",async function(e){
-  const button=e.target.closest("button[data-action]");
-  if(!button) return;
-
-  const action=button.dataset.action;
-  const type=button.dataset.type;
-  const id=button.dataset.id;
-
-  if(action==="edit"){
-    editRecord(type,id);
-  }else if(action==="delete"){
-    await deleteRecord(type,id);
-  }
+ const button=e.target.closest("button[data-action]");
+ if(!button)return;
+ const action=button.dataset.action,type=button.dataset.type,id=button.dataset.id;
+ if(action==="edit")editRecord(type,id);
+ else if(action==="delete")await deleteRecord(type,id);
 });
-
-/* CANCEL EDIT BUTTONS */
 
 Object.keys(forms).forEach(type=>{
-  const config=forms[type];
-
-  $(config.cancel).addEventListener("click",function(){
-    $(config.form).reset();
-    resetEdit(type);
-    message("Edit cancel kar diya gaya.");
-  });
+ const c=forms[type];
+ $(c.cancel).addEventListener("click",function(){
+  $(c.form).reset();resetEdit(type);message("Edit cancel kar diya gaya.");
+ });
 });
 
-/* REFRESH / LOGOUT */
+jobs.forEach(job=>{
+ $(job.search).addEventListener("input",()=>{
+  showList(job.element,cache[job.key],job.key,job.lines,job.empty,job.search);
+ });
+});
 
 $("refreshButton").addEventListener("click",async function(){
-  await loadLists();
-  message("Data refresh ho gaya.");
+ if(busy)return;
+ const button=this,oldText=button.textContent;
+ button.disabled=true;button.textContent="Refreshing...";
+ try{
+  const result=await loadLists();
+  if(result.failed.length)message("Kuch sections load nahi hue: "+result.failed.join(", "),true);
+  else message("Sabhi sections ka data refresh ho gaya.");
+ }catch(error){
+  errorDetails("REFRESH","multiple",error);
+  message("Data refresh nahi hua. Internet check karke dobara try karein.",true);
+ }finally{button.disabled=false;button.textContent=oldText;}
 });
 
 $("logoutButton").addEventListener("click",async function(){
-  try{
-    await window.EXAM_JUNCTION.signOut();
-  }catch(error){
-    message("Logout error: " + error.message,true);
+ if(busy)return;
+ this.disabled=true;
+ try{
+  const {error}=await db.auth.signOut();
+  if(error){
+   errorDetails("LOGOUT","auth",error);
+   message("Logout nahi ho saka. Dobara try karein.",true);
+   return;
   }
+  window.location.href="login.html";
+ }catch(error){
+  errorDetails("LOGOUT","auth",error);
+  message("Logout nahi ho saka. Dobara try karein.",true);
+ }finally{this.disabled=false;}
+});
+
+$("backButton").addEventListener("click",function(){
+ if(window.history.length>1)window.history.back();
+ else window.location.href="index.html";
 });
 
 checkSession();
