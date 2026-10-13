@@ -521,11 +521,14 @@ async function loadLists(){
       .limit(200);
 
     if(result.error){
-      $(job.element).textContent =
-        "Load nahi hua. Table, RLS policy aur permissions check karein.";
-      console.error(job.table,result.error.message);
-      cache[job.key] = [];
-    }else{
+  $(job.element).textContent =
+    "ERROR [" + job.table + "]: " +
+    result.error.message +
+    (result.error.code ? " | Code: " + result.error.code : "");
+
+  console.error("Supabase error:", job.table, result.error);
+  cache[job.key] = [];
+}else{
       cache[job.key] = result.data || [];
 
       showList(
