@@ -622,7 +622,7 @@ async function saveRecord(formId,buttonId,table,type,payload){
   button.textContent="Saving...";
 
   try{
-    const hiddenId = $(type + "Id");
+    const hiddenId = $(forms[type].id);
     const id = hiddenId ? hiddenId.value.trim() : "";
 
     let query;
