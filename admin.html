@@ -574,17 +574,13 @@ async function checkSession(){
     .maybeSingle();
 
   if(profileError){
-  console.error("Admin role verification failed:", profileError);
-
-  $("loginSection").classList.remove("hidden");
-
-  message(
-    "Admin role verify nahi ho paya. Database permissions check karein aur dobara login karein.",
-    true
-  );
-
-  return;
-}
+    message(
+      "Admin role verify nahi hua. Profiles ki SELECT policy check karein.",
+      true
+    );
+    console.error(profileError.message);
+    return;
+  }
 
   if(!profile || profile.role !== "admin"){
     message(
@@ -623,15 +619,8 @@ async function saveRecord(formId,buttonId,table,type,payload){
   button.textContent="Saving...";
 
   try{
-   const formConfig = forms[type];
-
-if (!formConfig) {
-  message("Form configuration nahi mili. Dobara try karein.", true);
-  return;
-}
-
-const hiddenId = $(formConfig.id);
-const id = hiddenId ? hiddenId.value.trim() : ""; 
+    const hiddenId = $(type + "Id");
+    const id = hiddenId ? hiddenId.value.trim() : "";
 
     let query;
 
@@ -883,11 +872,10 @@ $("loginForm").addEventListener("submit",async function(e){
 
     await checkSession();
   }catch(error){
-    console.error("Admin login failed:", error);
-message(
-  "Login nahi hua. Email/password check karein aur dobara try karein.",
-  true
-);
+    message(
+      "Login nahi hua. Email/password aur configuration check karein. " +
+      (error.message || ""),
+      true
     );
   }finally{
     button.disabled=false;
