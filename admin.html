@@ -1064,8 +1064,15 @@ async function loadProblemReports(){
       root.appendChild(item);
     });
   }catch(error){
-    console.error("Problem reports load error:",error);
-    root.textContent="Reports load nahi hui. Admin SELECT policy aur connection check karein.";
+    console.error("Problem reports load error:",{
+      message:error?.message,
+      code:error?.code,
+      details:error?.details,
+      hint:error?.hint
+    });
+    const errorCode=error?.code ? " ("+error.code+")" : "";
+    const errorMessage=error?.message ? " "+error.message : " Connection aur database access check karein.";
+    root.textContent="Reports load nahi hui."+errorCode+errorMessage;
   }
 }
 
