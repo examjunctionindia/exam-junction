@@ -168,7 +168,47 @@ button:disabled{opacity:.6;cursor:wait}
         </p>
       </form>
     </section>
+    <!-- STUDENT BOOK ACCESS -->
+    <section class="card">
+      <h2>🔐 Student Book Access</h2>
 
+      <p class="small">
+        Kisi student ko ek restricted book ka access dene ya hatane ke liye.
+      </p>
+
+      <form id="bookAccessForm">
+        <label for="accessStudent">Select Student *</label>
+        <select id="accessStudent" required>
+          <option value="">Students load ho rahe hain...</option>
+        </select>
+
+        <label for="accessBook">Select Restricted Book *</label>
+        <select id="accessBook" required>
+          <option value="">Books load ho rahi hain...</option>
+        </select>
+
+        <div class="actions">
+          <button id="grantBookButton" type="submit">
+            Grant Access
+          </button>
+
+          <button id="refreshBookAccessButton"
+                  class="secondary" type="button">
+            Refresh Permissions
+          </button>
+        </div>
+      </form>
+
+      <hr class="divider">
+
+      <h3>Existing Permissions</h3>
+
+      <div id="bookAccessList" class="small">
+        Permissions load ho rahi hain...
+      </div>
+    </section>
+
+    <!-- NOTIFICATION FORM -->
     <!-- NOTIFICATION FORM -->
     <section class="card">
       <h2 id="noticeHeading">🔔 Publish Notification</h2>
