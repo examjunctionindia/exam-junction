@@ -1005,13 +1005,28 @@ async function loadProblemReports(){
       });
 
       if(report.screenshot_url){
-        const link=document.createElement("a");
-        link.href=report.screenshot_url;
-        link.target="_blank";
-        link.rel="noopener noreferrer";
-        link.textContent="Open attached screenshot";
-        link.className="small";
-        item.appendChild(link);
+        try{
+          const screenshotUrl = new URL(report.screenshot_url, window.location.origin);
+          if(screenshotUrl.protocol === "https:" || screenshotUrl.protocol === "http:"){
+            const link=document.createElement("a");
+            link.href=screenshotUrl.href;
+            link.target="_blank";
+            link.rel="noopener noreferrer";
+            link.textContent="Open attached screenshot";
+            link.className="small";
+            item.appendChild(link);
+          }else{
+            const note=document.createElement("div");
+            note.className="small";
+            note.textContent="Screenshot link unavailable (unsupported URL).";
+            item.appendChild(note);
+          }
+        }catch(_){
+          const note=document.createElement("div");
+          note.className="small";
+          note.textContent="Screenshot link unavailable (invalid URL).";
+          item.appendChild(note);
+        }
       }
 
       const actions=document.createElement("div");
