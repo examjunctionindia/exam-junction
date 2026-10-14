@@ -1275,10 +1275,12 @@ $("dashboard").addEventListener("click",async function(e){
   const type=button.dataset.type;
   const id=button.dataset.id;
 
-  if(action==="edit"){
+    if(action==="edit"){
     editRecord(type,id);
   }else if(action==="delete"){
     await deleteRecord(type,id);
+  }else if(action==="revoke-book-access"){
+    await revokeBookAccess(id);
   }
 });
 
