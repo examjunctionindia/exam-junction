@@ -229,6 +229,25 @@ button:active{transform:translateY(1px)}
       </div>
     </section>
 
+    <!-- STUDENT BATCH ACCESS -->
+    <section class="card">
+      <h2>🔐 Student Batch Access</h2>
+      <p class="small">Restricted published batch ka access selected student ko dein ya revoke karein.</p>
+      <form id="batchAccessForm">
+        <label for="batchAccessStudent">Select Student *</label>
+        <select id="batchAccessStudent" required><option value="">Students load ho rahe hain...</option></select>
+        <label for="batchAccessBatch">Select Restricted Batch *</label>
+        <select id="batchAccessBatch" required><option value="">Batches load ho rahe hain...</option></select>
+        <div class="actions">
+          <button id="grantBatchAccessButton" type="submit">Grant Batch Access</button>
+          <button id="refreshBatchAccessButton" class="secondary" type="button">Refresh Permissions</button>
+        </div>
+      </form>
+      <hr class="divider">
+      <h3>Existing Batch Permissions</h3>
+      <div id="batchAccessList" class="small">Permissions load ho rahi hain...</div>
+    </section>
+
     <!-- STUDENT PROBLEM REPORTS -->
     <section class="card">
       <h2>🛟 Student Problem Reports</h2>
@@ -614,6 +633,7 @@ async function loadLists(){
 
    refreshDropdowns();
   await loadBookAccess();
+  await loadBatchAccess();
   await loadProblemReports();
 }
 /* STUDENT BOOK ACCESS */
@@ -821,6 +841,81 @@ $("refreshBookAccessButton").addEventListener("click",async function(){
   await loadBookAccess();
   message("Book permissions refresh ho gayi.");
 });
+/* STUDENT BATCH ACCESS — existing Supabase schema only */
+async function loadBatchAccess(){
+  const studentSelect=$("batchAccessStudent");
+  const batchSelect=$("batchAccessBatch");
+  const list=$("batchAccessList");
+  if(!studentSelect || !batchSelect || !list || !db) return;
+  list.textContent="Batch permissions load ho rahi hain...";
+  try{
+    const [studentsResult,batchesResult,accessResult]=await Promise.all([
+      db.from("profiles").select("id,full_name").eq("role","student").order("full_name"),
+      db.from("batches").select("id,title,access_type,is_published").eq("access_type","restricted").eq("is_published",true).order("title"),
+      db.from("batch_access").select("id,student_id,batch_id,granted_at").order("granted_at",{ascending:false}).limit(300)
+    ]);
+    if(studentsResult.error) throw studentsResult.error;
+    if(batchesResult.error) throw batchesResult.error;
+    if(accessResult.error) throw accessResult.error;
+    const students=studentsResult.data||[], batches=batchesResult.data||[], permissions=accessResult.data||[];
+    fillSelect("batchAccessStudent",students,"Select Student",s=>s.full_name||"Unnamed Student");
+    fillSelect("batchAccessBatch",batches,"Select Restricted Batch",b=>b.title);
+    list.replaceChildren();
+    if(!permissions.length){list.textContent="Abhi kisi student ko batch access nahi diya gaya.";return;}
+    permissions.forEach(permission=>{
+      const student=students.find(s=>s.id===permission.student_id);
+      const batch=batches.find(b=>b.id===permission.batch_id);
+      const item=document.createElement("div"); item.className="item";
+      const details=document.createElement("div");
+      details.textContent="Student: "+(student?.full_name||"Student ID: "+permission.student_id)+" | Batch: "+(batch?.title||"Batch ID: "+permission.batch_id)+" | Granted: "+(permission.granted_at?new Date(permission.granted_at).toLocaleString():"—");
+      item.appendChild(details);
+      const actions=document.createElement("div"); actions.className="actions";
+      actions.appendChild(makeButton("Revoke Access","revoke-batch-access","batch_access",permission.id,"danger"));
+      item.appendChild(actions); list.appendChild(item);
+    });
+  }catch(error){
+    console.error("Batch access loading error:",error);
+    list.textContent="Batch permissions load nahi hui. Admin policy aur database connection check karein.";
+  }
+}
+
+async function grantBatchAccess(){
+  if(busy||!db) return;
+  const studentId=$("batchAccessStudent").value, batchId=$("batchAccessBatch").value;
+  if(!studentId||!batchId){message("Student aur restricted batch dono select karein.",true);return;}
+  if(!confirm("Kya is student ko selected batch ka access dena hai?")) return;
+  busy=true;
+  const button=$("grantBatchAccessButton"); button.disabled=true;
+  try{
+    const {error}=await db.from("batch_access").insert({student_id:studentId,batch_id:batchId});
+    if(error){
+      message(error.code==="23505"?"Is student ko is batch ka access pehle se mila hua hai.":"Access grant nahi hua: "+error.message,true);
+      return;
+    }
+    message("Student ko batch access successfully grant ho gaya.");
+    await loadBatchAccess();
+  }catch(error){
+    console.error(error); message("Batch access grant karte waqt error aaya.",true);
+  }finally{busy=false;button.disabled=false;}
+}
+
+async function revokeBatchAccess(id){
+  if(busy||!db) return;
+  if(!confirm("Kya is student ka batch access hatana hai?")) return;
+  busy=true;
+  try{
+    const {error}=await db.from("batch_access").delete().eq("id",id);
+    if(error){message("Batch access remove nahi hua: "+error.message,true);return;}
+    message("Batch access successfully remove ho gaya.");
+    await loadBatchAccess();
+  }catch(error){
+    console.error(error);message("Batch access remove karte waqt error aaya.",true);
+  }finally{busy=false;}
+}
+
+$("batchAccessForm").addEventListener("submit",async function(e){e.preventDefault();await grantBatchAccess();});
+$("refreshBatchAccessButton").addEventListener("click",async function(){await loadBatchAccess();message("Batch permissions refresh ho gayi.");});
+
 /* STUDENT PROBLEM REPORTS — admin-only data, existing Supabase schema */
 async function loadProblemReports(){
   const root = $("problemReportsList");
@@ -1418,6 +1513,8 @@ $("dashboard").addEventListener("click",async function(e){
     await deleteRecord(type,id);
   }else if(action==="revoke-book-access"){
     await revokeBookAccess(id);
+  }else if(action==="revoke-batch-access"){
+    await revokeBatchAccess(id);
   }
 });
 
