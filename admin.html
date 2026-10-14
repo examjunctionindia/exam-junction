@@ -489,7 +489,7 @@ function refreshDropdowns(){
   );
 }
 
-async async function loadLists(){
+async function loadLists(){
   if(!db) return;
 
   const jobs = [
@@ -812,7 +812,7 @@ $("refreshBookAccessButton").addEventListener("click",async function(){
 });
 /* SESSION AND ADMIN VERIFICATION */
 
-async async function checkSession(){
+async function checkSession(){
   $("dashboard").classList.add("hidden");
   $("loginSection").classList.add("hidden");
 
