@@ -1139,26 +1139,7 @@ $("loginForm").addEventListener("submit",async function(e){
 
     if(error) throw error;
 
-    await 
-// Safe Back navigation: same-site referrer only; otherwise return to Home.
-const adminBackButton = $("adminBackButton");
-if (adminBackButton) {
-  adminBackButton.addEventListener("click", function () {
-    try {
-      const referrer = document.referrer ? new URL(document.referrer) : null;
-      if (referrer && referrer.origin === window.location.origin &&
-          referrer.pathname !== window.location.pathname) {
-        window.location.href = referrer.href;
-      } else {
-        window.location.href = "index.html";
-      }
-    } catch (_) {
-      window.location.href = "index.html";
-    }
-  });
-}
-
-checkSession();
+    await checkSession();
   }catch(error){
     message(
       "Login nahi hua. Email/password aur configuration check karein. " +
@@ -1349,6 +1330,25 @@ $("logoutButton").addEventListener("click",async function(){
     message("Logout error: " + error.message,true);
   }
 });
+
+
+/* Safe Back navigation: stay on this site; default to Home. */
+const adminBackButton = $("adminBackButton");
+if (adminBackButton) {
+  adminBackButton.addEventListener("click", function () {
+    try {
+      const referrer = document.referrer ? new URL(document.referrer) : null;
+      if (referrer && referrer.origin === window.location.origin &&
+          referrer.pathname !== window.location.pathname) {
+        window.location.href = referrer.href;
+      } else {
+        window.location.href = "index.html";
+      }
+    } catch (_) {
+      window.location.href = "index.html";
+    }
+  });
+}
 
 checkSession();
 
