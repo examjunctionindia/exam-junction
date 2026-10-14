@@ -58,6 +58,11 @@ button:hover{filter:brightness(.97)}
 button:active{transform:translateY(1px)}
 @media(min-width:850px){main{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}main>.card{margin:0;min-width:0}main>.card:first-child{grid-column:1/-1}}
 @media(max-width:600px){header{padding:18px 14px 22px}main{padding:14px 12px 90px}.card{padding:15px;border-radius:13px}#adminBackButton{margin-bottom:14px}}
+.dashboard-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.dashboard-stat{border:1px solid #dce7f6;border-radius:12px;padding:14px;background:linear-gradient(145deg,#fff,#f4f8ff);min-width:0}
+.dashboard-stat strong{display:block;font-size:25px;line-height:1.2;color:#17458a}
+.dashboard-stat span{display:block;margin-top:5px;font-size:12px;color:#526783}
+@media(max-width:480px){.dashboard-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 </style>
 </head>
@@ -103,6 +108,18 @@ button:active{transform:translateY(1px)}
           Refresh Data
         </button>
         <button id="logoutButton" type="button">Logout</button>
+      </div>
+    </section>
+    <section class="card" aria-labelledby="overviewHeading">
+      <h2 id="overviewHeading">📊 Dashboard Overview</h2>
+      <p class="small">Counts of records currently loaded in this Admin Panel (maximum 200 per list).</p>
+      <div class="dashboard-stats" aria-live="polite">
+        <div class="dashboard-stat"><strong id="statBatches">—</strong><span>Batches loaded</span></div>
+        <div class="dashboard-stat"><strong id="statBooks">—</strong><span>Books / Notes loaded</span></div>
+        <div class="dashboard-stat"><strong id="statChapters">—</strong><span>Chapters loaded</span></div>
+        <div class="dashboard-stat"><strong id="statLectures">—</strong><span>Lectures loaded</span></div>
+        <div class="dashboard-stat"><strong id="statNotifications">—</strong><span>Notifications loaded</span></div>
+        <div class="dashboard-stat"><strong id="statDrafts">—</strong><span>Draft items loaded</span></div>
       </div>
     </section>
 
@@ -492,6 +509,25 @@ function fillSelect(selectId,rows,placeholder,labelFn,selectedValue){
   }
 }
 
+function updateDashboardCounts(){
+  const counts = {
+    statBatches: cache.batches.length,
+    statBooks: cache.books.length,
+    statChapters: cache.chapters.length,
+    statLectures: cache.lectures.length,
+    statNotifications: cache.notifications.length,
+    statDrafts: [
+      ...cache.batches,
+      ...cache.books,
+      ...cache.notifications
+    ].filter(row => row.is_published === false).length
+  };
+  Object.entries(counts).forEach(([id,value]) => {
+    const node = $(id);
+    if(node) node.textContent = String(value);
+  });
+}
+
 function refreshDropdowns(){
   fillSelect(
     "chapterBatch",
@@ -631,6 +667,7 @@ async function loadLists(){
     }
   }
 
+   updateDashboardCounts();
    refreshDropdowns();
   await loadBookAccess();
   await loadBatchAccess();
