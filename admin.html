@@ -229,6 +229,16 @@ button:active{transform:translateY(1px)}
       </div>
     </section>
 
+    <!-- STUDENT PROBLEM REPORTS -->
+    <section class="card">
+      <h2>🛟 Student Problem Reports</h2>
+      <p class="small">Student ke reported issues dekhein, reply karein aur resolve karein.</p>
+      <div class="actions">
+        <button id="refreshReportsButton" class="secondary" type="button">Refresh Reports</button>
+      </div>
+      <div id="problemReportsList" class="small">Reports load ho rahi hain...</div>
+    </section>
+
     <!-- NOTIFICATION FORM -->
     
     <section class="card">
@@ -604,6 +614,7 @@ async function loadLists(){
 
    refreshDropdowns();
   await loadBookAccess();
+  await loadProblemReports();
 }
 /* STUDENT BOOK ACCESS */
 
@@ -810,6 +821,112 @@ $("refreshBookAccessButton").addEventListener("click",async function(){
   await loadBookAccess();
   message("Book permissions refresh ho gayi.");
 });
+/* STUDENT PROBLEM REPORTS — admin-only data, existing Supabase schema */
+async function loadProblemReports(){
+  const root = $("problemReportsList");
+  if(!root || !db) return;
+  root.textContent = "Reports load ho rahi hain...";
+
+  try{
+    const [reportsResult,studentsResult] = await Promise.all([
+      db.from("problem_reports")
+        .select("id,student_id,category,description,status,created_at,screenshot_url,admin_reply")
+        .order("created_at",{ascending:false})
+        .limit(100),
+      db.from("profiles")
+        .select("id,full_name")
+        .eq("role","student")
+    ]);
+
+    if(reportsResult.error) throw reportsResult.error;
+    if(studentsResult.error) throw studentsResult.error;
+
+    const reports = reportsResult.data || [];
+    const students = studentsResult.data || [];
+    root.replaceChildren();
+
+    if(!reports.length){
+      root.textContent = "Abhi koi student problem report nahi hai.";
+      return;
+    }
+
+    reports.forEach(report=>{
+      const item=document.createElement("div");
+      item.className="item";
+      const student=students.find(s=>s.id===report.student_id);
+      const fields=[
+        ["Student",student?.full_name || report.student_id],
+        ["Category",report.category],
+        ["Status",report.status],
+        ["Reported",report.created_at ? new Date(report.created_at).toLocaleString() : "—"],
+        ["Problem",report.description],
+        ["Admin reply",report.admin_reply || "Abhi reply nahi diya gaya."]
+      ];
+      fields.forEach(([label,value])=>{
+        const line=document.createElement("div");
+        line.style.marginBottom="6px";
+        const strong=document.createElement("strong");
+        strong.textContent=label+": ";
+        line.appendChild(strong);
+        line.appendChild(document.createTextNode(String(value ?? "—")));
+        item.appendChild(line);
+      });
+
+      if(report.screenshot_url){
+        const link=document.createElement("a");
+        link.href=report.screenshot_url;
+        link.target="_blank";
+        link.rel="noopener noreferrer";
+        link.textContent="Open attached screenshot";
+        link.className="small";
+        item.appendChild(link);
+      }
+
+      const actions=document.createElement("div");
+      actions.className="actions";
+      const replyButton=document.createElement("button");
+      replyButton.type="button";
+      replyButton.textContent="Reply / Resolve";
+      replyButton.addEventListener("click",async()=>{
+        const reply=window.prompt("Student ko reply likhein:",report.admin_reply || "");
+        if(reply===null) return;
+        if(!reply.trim()){
+          message("Reply khaali nahi ho sakta.",true);
+          return;
+        }
+        const resolve=window.confirm("OK dabayein agar report resolve ho gayi hai. Cancel = In progress.");
+        replyButton.disabled=true;
+        try{
+          const {error}=await db.rpc("ej_admin_reply_to_report",{
+            p_report_id:report.id,
+            p_reply:reply.trim(),
+            p_resolve:resolve
+          });
+          if(error) throw error;
+          message(resolve ? "Reply save hua aur report resolved mark hui." : "Reply save hua; report in progress hai.");
+          await loadProblemReports();
+        }catch(error){
+          console.error("Problem report reply error:",error);
+          message("Reply save nahi hua. Admin permission aur Supabase function check karein.",true);
+        }finally{
+          replyButton.disabled=false;
+        }
+      });
+      actions.appendChild(replyButton);
+      item.appendChild(actions);
+      root.appendChild(item);
+    });
+  }catch(error){
+    console.error("Problem reports load error:",error);
+    root.textContent="Reports load nahi hui. Admin SELECT policy aur connection check karein.";
+  }
+}
+
+$("refreshReportsButton").addEventListener("click",async function(){
+  await loadProblemReports();
+  message("Problem reports refresh ho gayi.");
+});
+
 /* SESSION AND ADMIN VERIFICATION */
 
 async function checkSession(){
