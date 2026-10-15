@@ -1965,6 +1965,16 @@ $("notesForm").addEventListener("submit",async function(e){
   if(source==="drive" && !["drive.google.com","docs.google.com"].includes(parsed.hostname.toLowerCase())){message("Google Drive ya Google Docs link hi paste karein.",true);return;}
   if(source==="storage" && !["supabase.co","supabase.in"].some(host=>parsed.hostname.toLowerCase()===host||parsed.hostname.toLowerCase().endsWith("."+host))){message("Supabase Storage ka file URL paste karein. Storage bucket pehle configure hona chahiye.",true);return;}
   if(!$("notesChapter").value){message("Notes ke liye chapter select karein.",true);return;}
+  // Same title is blocked only within the same chapter and same notes location.
+  const chapterId=$("notesChapter").value;
+  const lectureId=$("notesLecture").value || null;
+  let duplicateQuery=db.from("chapter_notes").select("id,title").eq("chapter_id",chapterId).ilike("title",$("notesTitle").value.trim());
+  if(lectureId){duplicateQuery=duplicateQuery.eq("lecture_id",lectureId);}else{duplicateQuery=duplicateQuery.is("lecture_id",null);}
+  const currentNoteId=$("notesId")?$("notesId").value:"";
+  if(currentNoteId)duplicateQuery=duplicateQuery.neq("id",currentNoteId);
+  const {data:duplicateNotes,error:duplicateError}=await duplicateQuery;
+  if(duplicateError){message("Duplicate notes check nahi ho paya. Dobara try karein.",true);return;}
+  if((duplicateNotes||[]).length){message("❌ Is chapter/lecture ke liye isi naam ke notes pehle se hain. Duplicate upload nahi ho sakta. Badlav ke liye existing notes ko Edit karein.",true);return;}
   await saveRecord("notesForm","notesSave","chapter_notes","notes",{
     chapter_id:$("notesChapter").value,
     lecture_id:$("notesLecture").value || null,
