@@ -560,6 +560,7 @@ button:disabled{filter:none;transform:none}
         <input id="lectureDownloadUrl" type="url" placeholder="Google Drive video link">
         <label for="lectureDownloadAllowed">Download Permission</label>
         <select id="lectureDownloadAllowed"><option value="false">Disabled</option><option value="true">Allow eligible students</option></select>
+        <p class="small">Download URL is a separate link. If the file host makes it public, eligible students can still share that link.</p>
 
         <label for="lecturePosition">Position</label>
         <input id="lecturePosition" type="number" min="0" value="0">
@@ -1653,7 +1654,7 @@ function resetEdit(type){
   $(config.cancel).classList.add("hidden");
 }
 
-function editRecord(type,id){
+async function editRecord(type,id){
   const row=findById(type,id);
 
   if(!row){
@@ -1715,6 +1716,11 @@ function editRecord(type,id){
     $("notesChapter").value=String(row.chapter_id||"");
     $("notesTitle").value=row.title||"";
     $("notesUrl").value=row.storage_path||"";
+    $("notesEnabled").value="yes";
+    $("notesEnabled").dispatchEvent(new Event("change"));
+    $("notesSource").value=(/^https:\/\/drive\.google\.com|^https:\/\/docs\.google\.com/i.test(row.storage_path||""))?"drive":"external";
+    $("notesSource").dispatchEvent(new Event("change"));
+    await populateNotesLectureOptions(row.chapter_id, row.lecture_id || "");
   }
 
   if(type==="lectures"){
@@ -1942,16 +1948,17 @@ $("notesLecture").addEventListener("change",function(){const v=$("notesLecture")
 $("notesEnabled").addEventListener("change",function(){const enabled=$("notesEnabled").value==="yes";$("notesContentFields").classList.toggle("hidden",!enabled);$("notesTitle").required=enabled;$("notesUrl").required=enabled;$("notesSource").required=enabled;});
 $("notesSource").addEventListener("change",function(){const source=$("notesSource").value;const input=$("notesUrl");const help=$("notesSourceHelp");if(source==="storage"){input.placeholder="Supabase Storage file URL (future setup)";help.textContent="Storage mode tabhi kaam karega jab Supabase Storage bucket aur access policies configure hon. Is option se upload automatically nahi hota.";}else{input.placeholder="https://drive.google.com/file/d/...";help.textContent="Abhi Google Drive link use karein. Storage select karne par bhi file upload automatic nahi hota; pehle Storage bucket/configuration set karna hoga.";}});
 const openLectureNotesBtn=$("openLectureNotesForm");if(openLectureNotesBtn)openLectureNotesBtn.addEventListener("click",function(){const location=$("notesLecture");if(location){location.value="";location.dispatchEvent(new Event("change"));}const enabled=$("notesEnabled");if(enabled){enabled.value="yes";enabled.dispatchEvent(new Event("change"));}const form=$("notesForm");if(form)form.scrollIntoView({behavior:"smooth",block:"start"});const heading=$("notesHeading");if(heading)heading.textContent="📝 Add Lecture Notes — select chapter and lecture";});
-$("notesChapter").addEventListener("change",async function(){
+async function populateNotesLectureOptions(chapterId, selectedLectureId=""){
   const select=$("notesLecture");
   if(!select||!db)return;
   select.replaceChildren(new Option("Chapter notes (not tied to one lecture)",""));
-  const chapterId=$("notesChapter").value;
-  if(!chapterId)return;
+  if(!chapterId){select.value="";return;}
   const {data,error}=await db.from("lectures").select("id,title,position").eq("chapter_id",chapterId).order("position",{ascending:true});
-  if(error){message("Lecture list load nahi hui.",true);return}
+  if(error){message("Lecture list load nahi hui.",true);return;}
   (data||[]).forEach(item=>select.add(new Option(item.title||"Lecture",item.id)));
-});
+  select.value=selectedLectureId || "";
+}
+$("notesChapter").addEventListener("change",async function(){await populateNotesLectureOptions(this.value);});
 
 $("notesForm").addEventListener("submit",async function(e){
   e.preventDefault();
