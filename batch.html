@@ -170,6 +170,8 @@
         const open=document.createElement("a");open.className="open";open.href="batch-detail.html?id="+encodeURIComponent(b.id);open.textContent="Open Batch →";
         footer.append(status,open);body.append(desc,teacher,footer);card.append(cover,body);list.append(card);
       });
+      const noResults=document.createElement("div");noResults.id="no-results";noResults.className="empty";noResults.style.gridColumn="1/-1";noResults.hidden=true;noResults.innerHTML="<h2>No matching batches</h2><p>Search ya filter badal kar dobara dekhein.</p>";list.append(noResults);
+      sortBatches();
       filterBatches();
     }catch(e){console.error("Batch list load failed",e);list.innerHTML='<div class="empty" style="grid-column:1/-1"><h2>Batches load nahi ho paaye</h2><p>Internet check karke refresh karein.</p></div>';}
   })();
