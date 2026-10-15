@@ -505,7 +505,7 @@ button:disabled{filter:none;transform:none}
       <p class="small">Existing chapter_notes table ka use karke chapter ke saath notes link save karein. Yahan file upload nahi hota, link save hota hai.</p>
       <form id="notesForm">
         <input id="notesId" type="hidden">
-        <label for="notesChapter">Select Chapter *</label><select id="notesChapter" required><option value="">Select Chapter</option></select>
+        <label for="notesChapter">Select Chapter *</label><select id="notesChapter" required><option value="">Select Chapter</option></select><label for="notesLecture">Optional: attach to a lecture</label><select id="notesLecture"><option value="">Chapter notes (not tied to one lecture)</option></select>
         <label for="notesTitle">Notes Title *</label><input id="notesTitle" maxlength="200" required placeholder="Percentage PDF Notes">
         <label for="notesUrl">PDF / Drive Link *</label><input id="notesUrl" type="url" required placeholder="https://...">
         <div class="actions"><button id="notesSave" type="submit">Save Notes Link</button><button id="notesCancel" class="secondary hidden" type="button">Cancel Edit</button></div>
@@ -1903,6 +1903,7 @@ $("notesForm").addEventListener("submit",async function(e){
   if(!$("notesChapter").value){message("Notes ke liye chapter select karein.",true);return;}
   await saveRecord("notesForm","notesSave","chapter_notes","notes",{
     chapter_id:$("notesChapter").value,
+    lecture_id:$("notesLecture").value || null,
     title:$("notesTitle").value.trim(),
     storage_path:url
   });
