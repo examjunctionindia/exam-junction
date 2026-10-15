@@ -79,7 +79,9 @@
       <button class="filter" data-filter="restricted">Restricted</button>
     </div>
 
-    <div class="toolbar"><span class="result-count" id="result-count" aria-live="polite">Loading batches…</span><select class="sort" id="sort" aria-label="Sort batches"><option value="newest">Newest first</option><option value="az">Title: A–Z</option></select></div>\n\n    <section class="batch-list" id="batch-list">
+    <div class="toolbar"><span class="result-count" id="result-count" aria-live="polite">Loading batches…</span><select class="sort" id="sort" aria-label="Sort batches"><option value="newest">Newest first</option><option value="az">Title: A–Z</option></select></div>
+
+    <section class="batch-list" id="batch-list">
       <div class="empty" style="grid-column:1/-1">
         <h2>Batches will appear here</h2>
         <p>Published batches will appear here when the database and admin panel are connected.</p>
@@ -108,7 +110,11 @@
     }
   });
 
-  let selectedFilter = "all";\n  const batchList = document.getElementById("batch-list");\n  const resultCount = document.getElementById("result-count");\n  document.getElementById("sort").addEventListener("change", sortBatches);\n  function sortBatches(){const cards=[...batchList.querySelectorAll(".card")];cards.sort((a,b)=>{if(document.getElementById("sort").value==="az")return a.dataset.title.localeCompare(b.dataset.title);return Number(b.dataset.created||0)-Number(a.dataset.created||0)});cards.forEach(card=>batchList.append(card));filterBatches()}
+  let selectedFilter = "all";
+  const batchList = document.getElementById("batch-list");
+  const resultCount = document.getElementById("result-count");
+  document.getElementById("sort").addEventListener("change", sortBatches);
+  function sortBatches(){const cards=[...batchList.querySelectorAll(".card")];cards.sort((a,b)=>{if(document.getElementById("sort").value==="az")return a.dataset.title.localeCompare(b.dataset.title);return Number(b.dataset.created||0)-Number(a.dataset.created||0)});cards.forEach(card=>batchList.append(card));filterBatches()}
 
   document.querySelectorAll(".filter").forEach(button => {
     button.addEventListener("click", () => {
@@ -124,19 +130,24 @@
   document.getElementById("search").addEventListener("input", filterBatches);
 
   function filterBatches() {
-    let visible=0;\n    document.querySelectorAll("#batch-list .card").forEach(card => {
+    let visible=0;
+    document.querySelectorAll("#batch-list .card").forEach(card => {
       const matchesText = card.textContent.toLowerCase().includes(
         document.getElementById("search").value.toLowerCase()
       );
       const matchesType = selectedFilter === "all" ||
         card.dataset.type === selectedFilter;
       card.hidden = !(matchesText && matchesType);
+      if(!card.hidden)visible++;
     });
+    if(resultCount)resultCount.textContent=visible+" batch"+(visible===1?"":"es")+" found";
+    const empty=document.getElementById("no-results");if(empty)empty.hidden=visible!==0;
   }
 
   (async function loadPublishedBatches(){
     const list=document.getElementById("batch-list");
-    if(!list||!window.EXAM_JUNCTION)return;
+    if(!list)return;
+    if(!window.EXAM_JUNCTION){list.innerHTML='<div class="empty" style="grid-column:1/-1"><h2>Connection loading</h2><p>Page refresh karein. Agar issue rahe to connection configuration check karna hoga.</p></div>';return;}
     try{
       const ready=await window.EXAM_JUNCTION.init();
       if(!ready)throw new Error("Supabase unavailable");
