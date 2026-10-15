@@ -204,6 +204,7 @@ button:disabled{filter:none;transform:none}
         <a href="#studentManager">👥 Students & Activity</a>
         <a href="#bannerManager">🖼️ Banners</a>
         <a href="#chapterManager">📖 Chapters</a>
+        <a href="#chapterNotesManager">📄 Chapter Notes</a>
         <a href="#lectureManager">▶️ Lectures</a>
         <a href="#batchAccessManager">🔐 Batch Access</a>
         <a href="#bookAccessManager">🔐 Book Access</a>
@@ -475,6 +476,22 @@ button:disabled{filter:none;transform:none}
       </form>
     </section>
 
+    <!-- CHAPTER NOTES MANAGEMENT -->
+    <section class="card" id="chapterNotesManager">
+      <h2 id="notesHeading">📄 Add Chapter Notes / PDF Link</h2>
+      <p class="small">Existing chapter_notes table ka use karke chapter ke saath notes link save karein. Yahan file upload nahi hota, link save hota hai.</p>
+      <form id="notesForm">
+        <input id="notesId" type="hidden">
+        <label for="notesChapter">Select Chapter *</label><select id="notesChapter" required><option value="">Select Chapter</option></select>
+        <label for="notesTitle">Notes Title *</label><input id="notesTitle" maxlength="200" required placeholder="Percentage PDF Notes">
+        <label for="notesUrl">PDF / Drive Link *</label><input id="notesUrl" type="url" required placeholder="https://...">
+        <div class="actions"><button id="notesSave" type="submit">Save Notes Link</button><button id="notesCancel" class="secondary hidden" type="button">Cancel Edit</button></div>
+      </form>
+      <hr class="divider"><h3>Existing Chapter Notes</h3>
+      <label class="list-search-label" for="searchChapterNotes">Search chapter notes</label><input id="searchChapterNotes" class="list-search" type="search" data-list-search="chapterNotesList" placeholder="Notes title, chapter ya link search karein">
+      <div id="chapterNotesList" class="small">Notes load ho rahe hain...</div>
+    </section>
+
     <!-- LECTURE FORM -->
     <section class="card" id="lectureManager">
       <h2 id="lectureHeading">▶️ Add YouTube Lecture</h2>
@@ -574,6 +591,7 @@ const cache = {
   notifications: [],
   banners: [],
   chapters: [],
+  notes: [],
   lectures: []
 };
 
@@ -707,6 +725,16 @@ function refreshDropdowns(){
   );
 
   fillSelect(
+    "notesChapter",
+    cache.chapters,
+    "Select Chapter",
+    row => {
+      const batch = findById("batches",row.batch_id);
+      return (batch ? batch.title + " — " : "") + row.title;
+    }
+  );
+
+  fillSelect(
     "lectureBatch",
     cache.batches,
     "Select Batch",
@@ -793,6 +821,11 @@ async function loadLists(){
         {key:"position",label:"Position"}
       ],
       empty:"Abhi koi chapter nahi hai."
+    },
+    {
+      table:"chapter_notes",key:"notes",element:"chapterNotesList",order:"created_at",
+      lines:[{label:"Chapter",value:row=>{const ch=findById("chapters",row.chapter_id);return ch?ch.title:"Unknown chapter";}},{key:"title",label:"Notes"},{key:"storage_path",label:"PDF / Drive Link"}],
+      empty:"Abhi chapter notes add nahi hue."
     },
     {
       table:"lectures",
@@ -1523,6 +1556,7 @@ const forms = {
     editHeading:"✏️ Edit Chapter",
     editButton:"Update Chapter"
   },
+  notes:{form:"notesForm",id:"notesId",heading:"notesHeading",save:"notesSave",cancel:"notesCancel",addHeading:"📄 Add Chapter Notes / PDF Link",addButton:"Save Notes Link",editHeading:"✏️ Edit Chapter Notes",editButton:"Update Notes Link"},
   lectures:{
     form:"lectureForm",
     id:"lectureId",
@@ -1598,6 +1632,13 @@ function editRecord(type,id){
     $("chapterPosition").value=String(row.position ?? 0);
   }
 
+  if(type==="notes"){
+    $("notesId").value=row.id;
+    $("notesChapter").value=String(row.chapter_id||"");
+    $("notesTitle").value=row.title||"";
+    $("notesUrl").value=row.storage_path||"";
+  }
+
   if(type==="lectures"){
     $("lectureId").value=row.id;
     $("lectureTitle").value=row.title || "";
@@ -1625,7 +1666,7 @@ function editRecord(type,id){
 async function deleteRecord(type,id){
   if(busy || !db) return;
 
-  const table=type;
+  const table=type==="notes" ? "chapter_notes" : type;
 
   const row=findById(type,id);
   if(!row) return;
@@ -1812,6 +1853,18 @@ $("chapterForm").addEventListener("submit",async function(e){
 
 /* LECTURE SAVE */
 
+$("notesForm").addEventListener("submit",async function(e){
+  e.preventDefault();
+  const url=$("notesUrl").value.trim();
+  if(!/^https:\/\//i.test(url)){message("Notes link HTTPS se shuru hona chahiye.",true);return;}
+  if(!$("notesChapter").value){message("Notes ke liye chapter select karein.",true);return;}
+  await saveRecord("notesForm","notesSave","chapter_notes","notes",{
+    chapter_id:$("notesChapter").value,
+    title:$("notesTitle").value.trim(),
+    storage_path:url
+  });
+});
+
 $("lectureForm").addEventListener("submit",async function(e){
   e.preventDefault();
 
@@ -1927,7 +1980,7 @@ const managementHome = $("managementHome");
 const managementDashboard = $("dashboard");
 const managementSectionIds = [
   "batchManager","bookManager","bookAccessManager","batchAccessManager","studentManager","bannerManager",
-  "reportsManager","notificationManager","chapterManager","lectureManager","requestManager"
+  "reportsManager","notificationManager","chapterManager","chapterNotesManager","lectureManager","requestManager"
 ];
 const existingListIds = [
   "existingBatches","existingBooks","existingNotifications","existingChapters","existingLectures"
