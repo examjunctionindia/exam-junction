@@ -115,6 +115,7 @@ button:active{transform:translateY(1px)}
       <p class="small">Counts of records currently loaded in this Admin Panel (maximum 200 per list).</p>
       <div class="dashboard-stats" aria-live="polite">
         <div class="dashboard-stat"><strong id="statBatches">—</strong><span>Batches loaded</span></div>
+        <div class="dashboard-stat"><strong id="statStudents">—</strong><span>Students loaded</span></div>
         <div class="dashboard-stat"><strong id="statBooks">—</strong><span>Books / Notes loaded</span></div>
         <div class="dashboard-stat"><strong id="statChapters">—</strong><span>Chapters loaded</span></div>
         <div class="dashboard-stat"><strong id="statLectures">—</strong><span>Lectures loaded</span></div>
@@ -415,6 +416,7 @@ let db = null;
 let busy = false;
 
 const cache = {
+  students: [],
   batches: [],
   books: [],
   notifications: [],
@@ -512,6 +514,7 @@ function fillSelect(selectId,rows,placeholder,labelFn,selectedValue){
 function updateDashboardCounts(){
   const counts = {
     statBatches: cache.batches.length,
+    statStudents: cache.students.length,
     statBooks: cache.books.length,
     statChapters: cache.chapters.length,
     statLectures: cache.lectures.length,
@@ -711,6 +714,8 @@ async function loadBookAccess(){
     if(accessResult.error) throw accessResult.error;
 
     const students = studentsResult.data || [];
+    cache.students = students;
+    updateDashboardCounts();
     const books = booksResult.data || [];
     const permissions = accessResult.data || [];
 
@@ -1592,8 +1597,21 @@ Object.keys(forms).forEach(type=>{
 /* REFRESH / LOGOUT */
 
 $("refreshButton").addEventListener("click",async function(){
-  await loadLists();
-  message("Data refresh ho gaya.");
+  if(busy) return;
+  const button=$("refreshButton");
+  const oldText=button.textContent;
+  button.disabled=true;
+  button.textContent="Refreshing...";
+  try{
+    await loadLists();
+    message("Refresh complete. Har section ka status aur count verify karein.");
+  }catch(error){
+    console.error("Admin refresh error:",error);
+    message("Refresh poora nahi hua. Connection aur section errors check karein.",true);
+  }finally{
+    button.disabled=false;
+    button.textContent=oldText;
+  }
 });
 
 $("logoutButton").addEventListener("click",async function(){
