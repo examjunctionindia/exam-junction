@@ -68,6 +68,10 @@ button:active{transform:translateY(1px)}
 .management-nav a{display:flex;align-items:center;justify-content:center;min-height:48px;padding:10px;border:1px solid #dce7f6;border-radius:11px;background:#f6f9ff;color:#17458a;text-align:center;text-decoration:none;font-size:13px;font-weight:750;line-height:1.35}
 .management-nav a:hover{background:#eaf2ff;border-color:#a9c5ee}
 .management-help{padding:12px 14px;border-radius:11px;background:#f2f7ff;border:1px solid #dce8f8;color:#425a79;font-size:13px;line-height:1.6}
+.management-view-hidden{display:none!important}
+.management-nav a[aria-current="page"]{background:#17458a;color:#fff;border-color:#17458a;box-shadow:0 4px 10px rgba(23,69,138,.16)}
+.management-home-button{margin:0 0 14px;display:inline-flex;align-items:center;gap:7px}
+.management-section-title{margin-bottom:10px}
 section[id]{scroll-margin-top:18px}
 @media(max-width:600px){.management-nav{grid-template-columns:repeat(2,minmax(0,1fr))}.management-nav a{font-size:12px;min-height:44px}}
 
@@ -160,7 +164,7 @@ button:disabled{filter:none;transform:none}
       </div>
     </section>
 
-    <section class="card" aria-labelledby="managementNavHeading">
+    <section class="card" id="managementHome" aria-labelledby="managementNavHeading">
       <h2 id="managementNavHeading">🧭 Management Shortcuts</h2>
       <p class="management-help">Daily workflow: pehle batch banayein → uske chapters aur lectures add karein → books/notes publish karein → zaroorat par selected students ko access dein → reports aur notifications check karein. Draft items publish hone tak student website par nahi dikhte.</p>
       <nav class="management-nav" aria-label="Admin management sections">
@@ -423,28 +427,28 @@ button:disabled{filter:none;transform:none}
     </section>
 
     <!-- LISTS -->
-    <div id="existingContent" class="hidden" aria-hidden="true"></div>
-    <section class="card">
+    
+    <section class="card" id="existingBatches">
       <h2>Existing Batches</h2>
       <div id="batchList" class="small">Loading...</div>
     </section>
 
-    <section class="card">
+    <section class="card" id="existingBooks">
       <h2>Existing Books</h2>
       <div id="bookList" class="small">Loading...</div>
     </section>
 
-    <section class="card">
+    <section class="card" id="existingNotifications">
       <h2>Recent Notifications</h2>
       <div id="noticeList" class="small">Loading...</div>
     </section>
 
-    <section class="card">
+    <section class="card" id="existingChapters">
       <h2>Existing Chapters</h2>
       <div id="chapterList" class="small">Loading...</div>
     </section>
 
-    <section class="card">
+    <section class="card" id="existingLectures">
       <h2>Existing Lectures</h2>
       <div id="lectureList" class="small">Loading...</div>
     </section>
@@ -1675,6 +1679,67 @@ $("logoutButton").addEventListener("click",async function(){
   }
 });
 
+
+/* Management dashboard: show the selected section only; keep the management home uncluttered. */
+const managementNav = document.querySelector(".management-nav");
+const managementHome = $("managementHome");
+const managementDashboard = $("dashboard");
+const managementSectionIds = [
+  "batchManager","bookManager","bookAccessManager","batchAccessManager",
+  "reportsManager","notificationManager","chapterManager","lectureManager"
+];
+const existingListIds = [
+  "existingBatches","existingBooks","existingNotifications","existingChapters","existingLectures"
+];
+function showManagementHome() {
+  managementSectionIds.concat(existingListIds).forEach(function(id) {
+    const section = $(id);
+    if (section) section.classList.add("management-view-hidden");
+  });
+  if (managementHome) managementHome.classList.remove("management-view-hidden");
+  if (managementNav) {
+    managementNav.querySelectorAll("a").forEach(function(link) {
+      link.removeAttribute("aria-current");
+    });
+  }
+  window.scrollTo({top:0,behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
+}
+function showManagementSection(id, link) {
+  const isExisting = id === "existingContent";
+  managementSectionIds.concat(existingListIds).forEach(function(sectionId) {
+    const section = $(sectionId);
+    if (section) section.classList.toggle("management-view-hidden", isExisting ? !existingListIds.includes(sectionId) : sectionId !== id);
+  });
+  if (managementHome) managementHome.classList.add("management-view-hidden");
+  if (managementNav) {
+    managementNav.querySelectorAll("a").forEach(function(item) {
+      item.removeAttribute("aria-current");
+    });
+  }
+  if (link) link.setAttribute("aria-current","page");
+  const firstShown = isExisting ? $(existingListIds[0]) : $(id);
+  if (firstShown && !firstShown.querySelector(".management-home-button")) {
+    const back = document.createElement("button");
+    back.type = "button";
+    back.className = "secondary management-home-button";
+    back.textContent = "← Back to Management";
+    back.addEventListener("click",showManagementHome);
+    firstShown.insertBefore(back,firstShown.firstChild);
+  }
+  window.scrollTo({top:0,behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
+}
+if (managementNav) {
+  managementNav.addEventListener("click",function(event) {
+    const link = event.target.closest("a");
+    if (!link) return;
+    const id = (link.getAttribute("href") || "").slice(1);
+    if (!managementSectionIds.includes(id) && id !== "existingContent") return;
+    event.preventDefault();
+    showManagementSection(id,link);
+  });
+}
+/* Start with a clean management landing page after login. */
+showManagementHome();
 
 /* Safe Back navigation: stay on this site; default to Home. */
 const adminBackButton = $("adminBackButton");
