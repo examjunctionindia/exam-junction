@@ -1522,6 +1522,34 @@ async function saveRecord(formId,buttonId,table,type,payload){
     const hiddenId = $(forms[type].id);
     const id = hiddenId ? hiddenId.value.trim() : "";
 
+    // Scoped duplicate protection: chapter positions within a batch; lecture positions within a chapter.
+    if(type==="chapters" || type==="lectures"){
+      const parentKey=type==="chapters"?"batch_id":"chapter_id";
+      const parentValue=payload[parentKey];
+      const position=Number(payload.position);
+      if(!parentValue){message(type==="chapters"?"Batch select karein.":"Chapter select karein.",true);return;}
+      if(!Number.isInteger(position)||position<0){message("Position 0 ya usse bada poora number hona chahiye.",true);return;}
+      let positionQuery=db.from(table).select("id,title,position").eq(parentKey,parentValue).eq("position",position);
+      if(id)positionQuery=positionQuery.neq("id",id);
+      const {data:positionRows,error:positionError}=await positionQuery;
+      if(positionError){message("Duplicate position check nahi ho paya. Dobara try karein.",true);return;}
+      if((positionRows||[]).length){
+        message("❌ Position "+position+" par "+(type==="chapters"?"is batch mein chapter":"is chapter mein lecture")+" pehle se maujood hai. Duplicate upload nahi ho sakta. Badlav ke liye existing item ke Edit button se update karein.",true);
+        return;
+      }
+      const title=String(payload.title||"").trim();
+      if(title){
+        let titleQuery=db.from(table).select("id,title,position").eq(parentKey,parentValue).ilike("title",title);
+        if(id)titleQuery=titleQuery.neq("id",id);
+        const {data:titleRows,error:titleError}=await titleQuery;
+        if(titleError){message("Duplicate title check nahi ho paya. Dobara try karein.",true);return;}
+        if((titleRows||[]).length){
+          message("❌ Is "+(type==="chapters"?"batch":"chapter")+" mein ye naam pehle se hai. Duplicate banane ke bajay existing item ko Edit karein.",true);
+          return;
+        }
+      }
+    }
+
     let query;
 
     if(id){
