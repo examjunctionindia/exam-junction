@@ -648,6 +648,22 @@ function message(text,isError=false){
   $("status").classList.remove("hidden");
 }
 
+/* Admin-only diagnostics. Keep secrets/tokens redacted before displaying details. */
+function formatAdminError(error,context="Admin error"){
+  const redact = value => String(value ?? "")
+    .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g,"[REDACTED TOKEN]")
+    .replace(/(access_token|refresh_token|password|service_role|api[_-]?key)\s*[:=]\s*["']?[^,\s"']+/gi,"$1=[REDACTED]");
+  const lines=[context];
+  if(error && error.name) lines.push("Type: "+redact(error.name));
+  lines.push("Message: "+redact(error?.message || error || "Unknown error"));
+  for(const key of ["code","details","hint","status","statusCode"]){
+    if(error && error[key] !== undefined && error[key] !== null && String(error[key]).trim()){
+      lines.push(key+": "+redact(error[key]));
+    }
+  }
+  return lines.join("\n");
+}
+
 function escapeText(value){
   return String(value ?? "");
 }
@@ -903,10 +919,10 @@ async function loadLists(){
       .limit(200);
 
     if(result.error){
-  $(job.element).textContent =
-    "ERROR [" + job.table + "]: " +
-    result.error.message +
-    (result.error.code ? " | Code: " + result.error.code : "");
+  $(job.element).textContent = formatAdminError(
+    result.error,
+    "Data load failed for table: " + job.table
+  );
 
   console.error("Supabase error:", job.table, result.error);
   cache[job.key] = [];
@@ -1500,7 +1516,16 @@ async function checkSession(){
   $("dashboard").classList.remove("hidden");
   message("Admin verified. Data load ho raha hai.");
 
-  await loadLists();
+  try {
+    await loadLists();
+    message("Admin verified. Data loading complete. Agar kisi section mein error hai, usi section mein dikhaya gaya hai.");
+  } catch(error) {
+    console.error("Admin data loading failed:", error);
+    message(
+      formatAdminError(error,"Admin data loading failed"),
+      true
+    );
+  }
 }
 
 /* GENERIC INSERT / UPDATE */
