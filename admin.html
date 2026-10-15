@@ -1896,6 +1896,17 @@ $("chapterForm").addEventListener("submit",async function(e){
 
 /* LECTURE SAVE */
 
+$("notesChapter").addEventListener("change",async function(){
+  const select=$("notesLecture");
+  if(!select||!db)return;
+  select.replaceChildren(new Option("Chapter notes (not tied to one lecture)",""));
+  const chapterId=$("notesChapter").value;
+  if(!chapterId)return;
+  const {data,error}=await db.from("lectures").select("id,title,position").eq("chapter_id",chapterId).order("position",{ascending:true});
+  if(error){message("Lecture list load nahi hui.",true);return}
+  (data||[]).forEach(item=>select.add(new Option(item.title||"Lecture",item.id)));
+});
+
 $("notesForm").addEventListener("submit",async function(e){
   e.preventDefault();
   const url=$("notesUrl").value.trim();
