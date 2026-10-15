@@ -114,6 +114,7 @@ button:disabled{filter:none;transform:none}
 .management-nav a:hover{background:#f7faff;border-color:#9dbce8;box-shadow:0 8px 18px rgba(16,43,85,.08);transform:translateY(-2px)}
 .management-nav a:focus-visible{outline:3px solid rgba(37,99,184,.35);outline-offset:3px}
 .management-nav a[aria-current="page"]{background:#17458a;color:#fff;border-color:#17458a}
+.management-nav a[href="#dashboardOverview"]:before{content:"00"}
 .management-nav a[href="#batchManager"]:before{content:"01"}
 .management-nav a[href="#bookManager"]:before{content:"02"}
 .management-nav a[href="#chapterManager"]:before{content:"03"}
@@ -122,8 +123,12 @@ button:disabled{filter:none;transform:none}
 .management-nav a[href="#bookAccessManager"]:before{content:"06"}
 .management-nav a[href="#reportsManager"]:before{content:"07"}
 .management-nav a[href="#notificationManager"]:before{content:"08"}
-.management-nav a[href="#existingContent"]:before{content:"09"}
-.management-nav a[href="#requestManager"]:before{content:"10"}
+.management-nav a[href="#existingBatches"]:before{content:"12"}
+.management-nav a[href="#existingBooks"]:before{content:"13"}
+.management-nav a[href="#existingNotifications"]:before{content:"14"}
+.management-nav a[href="#existingChapters"]:before{content:"15"}
+.management-nav a[href="#existingLectures"]:before{content:"16"}
+.management-nav a[href="#requestManager"]:before{content:"11"}
 .management-nav a:before{font-size:10px;letter-spacing:1px;font-weight:800;color:#7992b4}
 .management-nav a[aria-current="page"]:before{color:#d8e8ff}
 .management-home-button{border:1px solid #d7e2f2;margin-bottom:16px}
@@ -169,7 +174,7 @@ button:disabled{filter:none;transform:none}
 
   <div id="dashboard" class="hidden">
 
-    <section class="card">
+    <section class="card" id="adminAccount">
       <h2>Admin Account</h2>
       <div id="adminEmail" class="small"></div>
 
@@ -180,7 +185,7 @@ button:disabled{filter:none;transform:none}
         <button id="logoutButton" type="button">Logout</button>
       </div>
     </section>
-    <section class="card" aria-labelledby="overviewHeading">
+    <section class="card" id="dashboardOverview" aria-labelledby="overviewHeading">
       <h2 id="overviewHeading">📊 Dashboard Overview</h2>
       <p class="small">Counts of records currently loaded in this Admin Panel (maximum 200 per list).</p>
       <div class="dashboard-stats" aria-live="polite">
@@ -201,6 +206,7 @@ button:disabled{filter:none;transform:none}
       <h2 id="managementNavHeading">🧭 Management Shortcuts</h2>
       <p class="management-help">Daily workflow: pehle batch banayein → uske chapters aur lectures add karein → books/notes publish karein → zaroorat par selected students ko access dein → reports aur notifications check karein. Draft items publish hone tak student website par nahi dikhte.</p>
       <nav class="management-nav" aria-label="Admin management sections">
+        <a href="#dashboardOverview">📊 Dashboard</a>
         <a href="#batchManager">➕ Batches</a>
         <a href="#bookManager">📚 Books / Notes</a>
         <a href="#studentManager">👥 Students & Activity</a>
@@ -212,7 +218,11 @@ button:disabled{filter:none;transform:none}
         <a href="#bookAccessManager">🔐 Book Access</a>
         <a href="#reportsManager">🛟 Student Reports</a>
         <a href="#notificationManager">🔔 Notifications</a>
-        <a href="#existingContent">📋 Existing Content</a>
+        <a href="#existingBatches">📋 Existing Batches</a>
+        <a href="#existingBooks">📋 Existing Books</a>
+        <a href="#existingNotifications">🔔 Existing Notifications</a>
+        <a href="#existingChapters">📖 Existing Chapters</a>
+        <a href="#existingLectures">▶️ Existing Lectures</a>
         <a href="#requestManager">📨 Batch Requests</a>
       </nav>
     </section>
@@ -1984,47 +1994,39 @@ const managementNav = document.querySelector(".management-nav");
 const managementHome = $("managementHome");
 const managementDashboard = $("dashboard");
 const managementSectionIds = [
-  "batchManager","bookManager","bookAccessManager","batchAccessManager","studentManager","bannerManager",
-  "reportsManager","notificationManager","chapterManager","chapterNotesManager","lectureManager","requestManager"
-];
-const existingListIds = [
+  "dashboardOverview","batchManager","bookManager","bookAccessManager","batchAccessManager","studentManager","bannerManager",
+  "reportsManager","notificationManager","chapterManager","chapterNotesManager","lectureManager","requestManager",
   "existingBatches","existingBooks","existingNotifications","existingChapters","existingLectures"
 ];
-function showManagementHome() {
-  managementSectionIds.concat(existingListIds).forEach(function(id) {
+function setManagementVisibility(activeId) {
+  managementSectionIds.forEach(function(id) {
     const section = $(id);
-    if (section) section.classList.add("management-view-hidden");
+    if (section) section.classList.toggle("management-view-hidden", id !== activeId);
   });
-  if (managementHome) managementHome.classList.remove("management-view-hidden");
-  if (managementNav) {
-    managementNav.querySelectorAll("a").forEach(function(link) {
-      link.removeAttribute("aria-current");
-    });
-  }
+  if (managementHome) managementHome.classList.toggle("management-view-hidden", activeId !== "managementHome");
+  const account = $("adminAccount");
+  if (account) account.classList.toggle("management-view-hidden", activeId !== "dashboardOverview");
+}
+function addManagementBackButton(section) {
+  if (!section || section.querySelector(".management-home-button")) return;
+  const back = document.createElement("button");
+  back.type = "button";
+  back.className = "secondary management-home-button";
+  back.textContent = "← Back to Management";
+  back.addEventListener("click", showManagementHome);
+  section.insertBefore(back, section.firstChild);
+}
+function showManagementHome() {
+  setManagementVisibility("managementHome");
+  if (managementNav) managementNav.querySelectorAll("a").forEach(function(link) { link.removeAttribute("aria-current"); });
   window.scrollTo({top:0,behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
 }
 function showManagementSection(id, link) {
-  const isExisting = id === "existingContent";
-  managementSectionIds.concat(existingListIds).forEach(function(sectionId) {
-    const section = $(sectionId);
-    if (section) section.classList.toggle("management-view-hidden", isExisting ? !existingListIds.includes(sectionId) : sectionId !== id);
-  });
-  if (managementHome) managementHome.classList.add("management-view-hidden");
-  if (managementNav) {
-    managementNav.querySelectorAll("a").forEach(function(item) {
-      item.removeAttribute("aria-current");
-    });
-  }
+  if (!managementSectionIds.includes(id)) return;
+  setManagementVisibility(id);
+  if (managementNav) managementNav.querySelectorAll("a").forEach(function(item) { item.removeAttribute("aria-current"); });
   if (link) link.setAttribute("aria-current","page");
-  const firstShown = isExisting ? $(existingListIds[0]) : $(id);
-  if (firstShown && !firstShown.querySelector(".management-home-button")) {
-    const back = document.createElement("button");
-    back.type = "button";
-    back.className = "secondary management-home-button";
-    back.textContent = "← Back to Management";
-    back.addEventListener("click",showManagementHome);
-    firstShown.insertBefore(back,firstShown.firstChild);
-  }
+  addManagementBackButton($(id));
   window.scrollTo({top:0,behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
 }
 if (managementNav) {
@@ -2032,12 +2034,12 @@ if (managementNav) {
     const link = event.target.closest("a");
     if (!link) return;
     const id = (link.getAttribute("href") || "").slice(1);
-    if (!managementSectionIds.includes(id) && id !== "existingContent") return;
+    if (!managementSectionIds.includes(id)) return;
     event.preventDefault();
     showManagementSection(id,link);
   });
 }
-/* Start with a clean management landing page after login. */
+/* Start with the Management landing page only. Dashboard is a separate workspace. */
 showManagementHome();
 
 /* Safe Back navigation: stay on this site; default to Home. */
