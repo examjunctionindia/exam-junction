@@ -187,6 +187,8 @@ button:disabled{filter:none;transform:none}
         <div class="dashboard-stat"><strong id="statBatches">—</strong><span>Batches loaded</span></div>
         <div class="dashboard-stat"><strong id="statStudents">—</strong><span>Students loaded</span></div>
         <div class="dashboard-stat"><strong id="statBooks">—</strong><span>Books / Notes loaded</span></div>
+        <div class="dashboard-stat"><strong id="statBanners">—</strong><span>Banners loaded</span></div>
+        <div class="dashboard-stat"><strong id="statChapterNotes">—</strong><span>Chapter notes loaded</span></div>
         <div class="dashboard-stat"><strong id="statChapters">—</strong><span>Chapters loaded</span></div>
         <div class="dashboard-stat"><strong id="statLectures">—</strong><span>Lectures loaded</span></div>
         <div class="dashboard-stat"><strong id="statNotifications">—</strong><span>Notifications loaded</span></div>
@@ -700,6 +702,8 @@ function updateDashboardCounts(){
     statBatches: cache.batches.length,
     statStudents: cache.students.length,
     statBooks: cache.books.length,
+    statBanners: cache.banners.length,
+    statChapterNotes: cache.notes.length,
     statChapters: cache.chapters.length,
     statLectures: cache.lectures.length,
     statNotifications: cache.notifications.length,
