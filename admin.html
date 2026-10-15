@@ -521,7 +521,7 @@ button:disabled{filter:none;transform:none}
         <input id="notesId" type="hidden">
         <label for="notesChapter">Select Chapter *</label><select id="notesChapter" required><option value="">Select Chapter</option></select><label for="notesLecture">Notes location *</label><select id="notesLecture"><option value="">Chapter Notes (under chapter)</option></select><label for="notesEnabled">Do you want to add notes?</label><select id="notesEnabled" required><option value="yes">Yes, add notes</option><option value="no">No notes for this chapter/lecture</option></select>
         <div id="notesContentFields"><label for="notesTitle">Notes Title *</label><input id="notesTitle" maxlength="200" placeholder="Percentage PDF Notes">
-        <label for="notesSource">Notes Source *</label><select id="notesSource" required><option value="drive">Google Drive Link (recommended)</option><option value="storage">Supabase Storage (future option)</option></select><label for="notesUrl">Google Drive Link / Storage File URL *</label><input id="notesUrl" type="url" required placeholder="https://drive.google.com/file/d/..."><p class="small" id="notesSourceHelp">Abhi Google Drive link use karein. Storage select karne par bhi file upload automatic nahi hota; pehle Storage bucket/configuration set karna hoga.</p></div>
+        <label for="notesSource">Notes Source *</label><select id="notesSource" required><option value="drive">Google Drive Link</option><option value="external">External Website PDF Link</option><option value="storage">Supabase Storage (future option)</option></select><label for="notesUrl">PDF / Notes URL *</label><input id="notesUrl" type="url" required placeholder="https://..."><p class="small" id="notesSourceHelp">Google Drive PDF ya kisi external website ka direct PDF link paste karein. External server PDF embed block kar sakta hai; aise mein Open PDF separately button ka use hoga. Storage select karne par file upload automatic nahi hota.</p></div>
         <div class="actions"><button id="notesSave" type="submit">Save Notes Link</button><button id="notesCancel" class="secondary hidden" type="button">Cancel Edit</button></div>
       </form>
       <hr class="divider"><h3>Existing Chapter Notes</h3>
@@ -1963,6 +1963,7 @@ $("notesForm").addEventListener("submit",async function(e){
   let parsed;
   try{parsed=new URL(url)}catch(_){message("Valid HTTPS link paste karein.",true);return;}
   if(source==="drive" && !["drive.google.com","docs.google.com"].includes(parsed.hostname.toLowerCase())){message("Google Drive ya Google Docs link hi paste karein.",true);return;}
+   if(source==="external" && !/^https:\/\//i.test(url)){message("External PDF link HTTPS hona chahiye.",true);return;}
   if(source==="storage" && !["supabase.co","supabase.in"].some(host=>parsed.hostname.toLowerCase()===host||parsed.hostname.toLowerCase().endsWith("."+host))){message("Supabase Storage ka file URL paste karein. Storage bucket pehle configure hona chahiye.",true);return;}
   if(!$("notesChapter").value){message("Notes ke liye chapter select karein.",true);return;}
   // Same title is blocked only within the same chapter and same notes location.
