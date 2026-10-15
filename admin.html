@@ -505,7 +505,7 @@ button:disabled{filter:none;transform:none}
       <p class="small">Existing chapter_notes table ka use karke chapter ke saath notes link save karein. Yahan file upload nahi hota, link save hota hai.</p>
       <form id="notesForm">
         <input id="notesId" type="hidden">
-        <label for="notesChapter">Select Chapter *</label><select id="notesChapter" required><option value="">Select Chapter</option></select><label for="notesLecture">Notes apply to *</label><select id="notesLecture"><option value="">Chapter Notes</option></select><label for="notesEnabled">Do you want to add notes?</label><select id="notesEnabled" required><option value="yes">Yes, add notes</option><option value="no">No notes for this chapter/lecture</option></select>
+        <label for="notesChapter">Select Chapter *</label><select id="notesChapter" required><option value="">Select Chapter</option></select><label for="notesLecture">Notes location *</label><select id="notesLecture"><option value="">Chapter Notes (under chapter)</option></select><label for="notesEnabled">Do you want to add notes?</label><select id="notesEnabled" required><option value="yes">Yes, add notes</option><option value="no">No notes for this chapter/lecture</option></select>
         <div id="notesContentFields"><label for="notesTitle">Notes Title *</label><input id="notesTitle" maxlength="200" placeholder="Percentage PDF Notes">
         <label for="notesSource">Notes Source *</label><select id="notesSource" required><option value="drive">Google Drive Link (recommended)</option><option value="storage">Supabase Storage (future option)</option></select><label for="notesUrl">Google Drive Link / Storage File URL *</label><input id="notesUrl" type="url" required placeholder="https://drive.google.com/file/d/..."><p class="small" id="notesSourceHelp">Abhi Google Drive link use karein. Storage select karne par bhi file upload automatic nahi hota; pehle Storage bucket/configuration set karna hoga.</p></div>
         <div class="actions"><button id="notesSave" type="submit">Save Notes Link</button><button id="notesCancel" class="secondary hidden" type="button">Cancel Edit</button></div>
@@ -1896,6 +1896,7 @@ $("chapterForm").addEventListener("submit",async function(e){
 
 /* LECTURE SAVE */
 
+$("notesLecture").addEventListener("change",function(){const v=$("notesLecture").value;const title=$("notesTitle");if(v){title.placeholder="Lecture ke notes ka title";}else{title.placeholder="Chapter ke notes ka title";}});
 $("notesEnabled").addEventListener("change",function(){const enabled=$("notesEnabled").value==="yes";$("notesContentFields").classList.toggle("hidden",!enabled);$("notesTitle").required=enabled;$("notesUrl").required=enabled;$("notesSource").required=enabled;});
 $("notesSource").addEventListener("change",function(){const source=$("notesSource").value;const input=$("notesUrl");const help=$("notesSourceHelp");if(source==="storage"){input.placeholder="Supabase Storage file URL (future setup)";help.textContent="Storage mode tabhi kaam karega jab Supabase Storage bucket aur access policies configure hon. Is option se upload automatically nahi hota.";}else{input.placeholder="https://drive.google.com/file/d/...";help.textContent="Abhi Google Drive link use karein. Storage select karne par bhi file upload automatic nahi hota; pehle Storage bucket/configuration set karna hoga.";}});
 $("notesChapter").addEventListener("change",async function(){
@@ -1912,7 +1913,8 @@ $("notesChapter").addEventListener("change",async function(){
 $("notesForm").addEventListener("submit",async function(e){
   e.preventDefault();
   const url=$("notesUrl").value.trim();
-  if($("notesEnabled").value==="no"){message("Notes na hone ka option set karne ke liye database mein alag record nahi banega. Is chapter/lecture ke liye notes skip kar diye jayenge.");$("notesForm").reset();$("notesContentFields").classList.remove("hidden");return;}
+  if($("notesEnabled").value==="no"){message("Notes skip kiye gaye. Kisi bhi doosre chapter ya lecture ke notes alag se add kar sakte hain.");$("notesForm").reset();$("notesContentFields").classList.remove("hidden");$("notesTitle").required=false;$("notesUrl").required=false;$("notesSource").required=false;return;}
+  if(!$("notesTitle").value.trim()){message("Notes title bharein.",true);return;}
   if(!/^https:\/\//i.test(url)){message("Notes link HTTPS se shuru hona chahiye.",true);return;}
   const source=$("notesSource").value;
   let parsed;
