@@ -24,12 +24,12 @@
     h1{margin:8px 0;color:#10274c;font-size:29px}
     .subtitle{color:#718096;font-size:14px;line-height:1.6}
     .search{width:100%;margin:20px 0 14px;padding:15px;border:1px solid #e0e6ef;border-radius:13px;background:white;font-size:15px}
-    .filters{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:20px}
+    .toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 16px}.result-count{font-size:12px;color:#718096;font-weight:700}.sort{padding:11px 12px;border:1px solid #dfe6f0;border-radius:11px;background:#fff;color:#243955;font-size:13px}.filters{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px}
     .filter{padding:9px 14px;border:1px solid #dfe6f0;border-radius:30px;background:white;color:#52627a;font-size:12px;font-weight:bold;cursor:pointer}
     .filter.active{background:#173b73;color:white;border-color:#173b73}
     .batch-list{display:grid;gap:14px}
-    .card{overflow:hidden;border:1px solid #e6ebf2;border-radius:17px;background:white}
-    .cover{padding:20px;background:linear-gradient(120deg,#eaf1ff,#f4f7ff)}
+    .card{overflow:hidden;border:1px solid #e6ebf2;border-radius:17px;background:white;box-shadow:0 5px 18px rgba(16,39,76,.045);transition:transform .18s ease,box-shadow .18s ease}.card:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(16,39,76,.09)}.card[hidden]{display:none!important}
+    .cover{position:relative;min-height:132px;padding:22px;background:radial-gradient(circle at 88% 20%,rgba(255,255,255,.8),transparent 30%),linear-gradient(120deg,#e4edff,#f7f9ff)}.cover:after{content:"∑";position:absolute;right:20px;bottom:-18px;font-size:104px;font-weight:900;color:rgba(23,59,115,.08);pointer-events:none}.cover h2{position:relative;z-index:1;max-width:82%}
     .tag{display:inline-block;padding:6px 9px;border-radius:7px;background:#dbe7ff;color:#214f9b;font-size:10px;font-weight:bold}
     .cover h2{margin:13px 0 4px;font-size:20px;color:#10274c}
     .body{padding:17px}
@@ -79,7 +79,7 @@
       <button class="filter" data-filter="restricted">Restricted</button>
     </div>
 
-    <section class="batch-list" id="batch-list">
+    <div class="toolbar"><span class="result-count" id="result-count" aria-live="polite">Loading batches…</span><select class="sort" id="sort" aria-label="Sort batches"><option value="newest">Newest first</option><option value="az">Title: A–Z</option></select></div>\n\n    <section class="batch-list" id="batch-list">
       <div class="empty" style="grid-column:1/-1">
         <h2>Batches will appear here</h2>
         <p>Published batches will appear here when the database and admin panel are connected.</p>
@@ -108,7 +108,7 @@
     }
   });
 
-  let selectedFilter = "all";
+  let selectedFilter = "all";\n  const batchList = document.getElementById("batch-list");\n  const resultCount = document.getElementById("result-count");\n  document.getElementById("sort").addEventListener("change", sortBatches);\n  function sortBatches(){const cards=[...batchList.querySelectorAll(".card")];cards.sort((a,b)=>{if(document.getElementById("sort").value==="az")return a.dataset.title.localeCompare(b.dataset.title);return Number(b.dataset.created||0)-Number(a.dataset.created||0)});cards.forEach(card=>batchList.append(card));filterBatches()}
 
   document.querySelectorAll(".filter").forEach(button => {
     button.addEventListener("click", () => {
@@ -124,7 +124,7 @@
   document.getElementById("search").addEventListener("input", filterBatches);
 
   function filterBatches() {
-    document.querySelectorAll("#batch-list .card").forEach(card => {
+    let visible=0;\n    document.querySelectorAll("#batch-list .card").forEach(card => {
       const matchesText = card.textContent.toLowerCase().includes(
         document.getElementById("search").value.toLowerCase()
       );
@@ -147,7 +147,7 @@
       list.replaceChildren();
       if(!data||!data.length){list.innerHTML='<div class="empty" style="grid-column:1/-1"><h2>Abhi koi published batch nahi hai</h2><p>Admin Panel se batch publish hone par yahan dikhega.</p></div>';return;}
       data.forEach(b=>{
-        const card=document.createElement("article");card.className="card";card.dataset.type=b.access_type==="restricted"?"restricted":"free";
+        const card=document.createElement("article");card.className="card";card.dataset.type=b.access_type==="restricted"?"restricted":"free";card.dataset.title=(b.title||"Maths Batch").toLowerCase();card.dataset.created=Date.parse(b.created_at||"")||0;
         const cover=document.createElement("div");cover.className="cover";
         const tag=document.createElement("span");tag.className="tag";tag.textContent=b.access_type==="restricted"?"🔒 SELECTED STUDENTS":"FREE MATHS BATCH";
         const title=document.createElement("h2");title.textContent=b.title||"Maths Batch";cover.append(tag,title);
