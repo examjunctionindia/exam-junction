@@ -953,7 +953,7 @@
             status.textContent = batch.access_type === "restricted" ? "Restricted" : "Free";
             const open = document.createElement("a");
             open.className = "batch-button";
-            open.href = "batch.html?id=" + encodeURIComponent(batch.id);
+            open.href = "batch-detail.html?id=" + encodeURIComponent(batch.id);
             open.textContent = "Open Batch →";
             footer.append(status, open);
             body.append(footer);
