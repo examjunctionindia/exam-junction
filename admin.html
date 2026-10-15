@@ -1500,7 +1500,13 @@ async function checkSession(){
   $("dashboard").classList.remove("hidden");
   message("Admin verified. Data load ho raha hai.");
 
-  await loadLists();
+  try {
+    await loadLists();
+    message("Admin verified. Data loading complete. Agar kisi section mein error hai, usi section mein dikhaya gaya hai.");
+  } catch(error) {
+    console.error("Admin data loading failed:", error);
+    message("Admin verified, lekin data poori tarah load nahi ho paya. Page refresh karke dobara try karein.", true);
+  }
 }
 
 /* GENERIC INSERT / UPDATE */
