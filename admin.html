@@ -104,6 +104,32 @@ button:disabled{filter:none;transform:none}
 @media(max-width:600px){main{padding-bottom:36px}.card{box-shadow:0 4px 14px rgba(21,45,83,.045)}.actions>button,.actions>.button{flex:1 1 auto}.dashboard-stat{padding:12px}.dashboard-stat strong{font-size:23px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important;animation:none!important}}
 
+
+/* Professional management landing page refinement */
+#managementHome{padding:clamp(18px,3vw,30px);background:linear-gradient(145deg,#fff 0%,#f8fbff 100%);border-color:#d8e5f6}
+#managementHome>h2{font-size:clamp(22px,3vw,28px);color:#102b55;margin-bottom:8px}
+#managementHome>p.management-help{margin:12px 0 20px;padding:15px 16px;background:#eef5ff;border-color:#d4e4fb;border-radius:12px}
+.management-nav{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:20px}
+.management-nav a{position:relative;min-height:86px;flex-direction:column;gap:7px;padding:15px 10px;background:#fff;border-color:#dce6f4;border-radius:14px;box-shadow:0 3px 10px rgba(16,43,85,.035);font-size:13px;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
+.management-nav a:hover{background:#f7faff;border-color:#9dbce8;box-shadow:0 8px 18px rgba(16,43,85,.08);transform:translateY(-2px)}
+.management-nav a:focus-visible{outline:3px solid rgba(37,99,184,.35);outline-offset:3px}
+.management-nav a[aria-current="page"]{background:#17458a;color:#fff;border-color:#17458a}
+.management-nav a[href="#batchManager"]:before{content:"01"}
+.management-nav a[href="#bookManager"]:before{content:"02"}
+.management-nav a[href="#chapterManager"]:before{content:"03"}
+.management-nav a[href="#lectureManager"]:before{content:"04"}
+.management-nav a[href="#batchAccessManager"]:before{content:"05"}
+.management-nav a[href="#bookAccessManager"]:before{content:"06"}
+.management-nav a[href="#reportsManager"]:before{content:"07"}
+.management-nav a[href="#notificationManager"]:before{content:"08"}
+.management-nav a[href="#existingContent"]:before{content:"09"}
+.management-nav a:before{font-size:10px;letter-spacing:1px;font-weight:800;color:#7992b4}
+.management-nav a[aria-current="page"]:before{color:#d8e8ff}
+.management-home-button{border:1px solid #d7e2f2;margin-bottom:16px}
+.management-view-hidden{display:none!important}
+@media(max-width:600px){#managementHome{padding:17px 14px}.management-nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.management-nav a{min-height:78px;padding:12px 7px;font-size:12px}}
+@media(min-width:900px){#managementHome{max-width:920px;margin:0 auto;width:100%}.management-nav{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
 </style>
 </head>
 
