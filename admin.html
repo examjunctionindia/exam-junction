@@ -213,6 +213,7 @@ button:disabled{filter:none;transform:none}
         <a href="#bannerManager">🖼️ Banners</a>
         <a href="#chapterManager">📖 Chapters</a>
         <a href="#chapterNotesManager">📄 Chapter Notes</a>
+        <a href="#lectureNotesManager">📝 Lecture Notes</a>
         <a href="#lectureManager">▶️ Lectures</a>
         <a href="#batchAccessManager">🔐 Batch Access</a>
         <a href="#bookAccessManager">🔐 Book Access</a>
@@ -497,6 +498,19 @@ button:disabled{filter:none;transform:none}
                   type="button">Cancel Edit</button>
         </div>
       </form>
+    </section>
+
+    <!-- LECTURE NOTES MANAGEMENT -->
+    <section class="card" id="lectureNotesManager">
+      <h2>📝 Lecture Notes Management</h2>
+      <p class="small">Har lecture ke neeche alag notes attach kar sakte hain. Chapter Notes aur Lecture Notes independent hain—ek add karne se doosra zaroori nahi hota. PDF Google Drive link se use hoti hai; Supabase Storage future option hai.</p>
+      <ol class="small">
+        <li>“Open Lecture Notes Form” dabayein.</li>
+        <li>Chapter select karein, phir Notes location mein us lecture ko select karein.</li>
+        <li>“Yes, add notes” select karke title aur link save karein.</li>
+      </ol>
+      <button type="button" class="primary" id="openLectureNotesForm">➕ Add Lecture Notes</button>
+      <p class="small">Agar lecture ke notes nahi dene, to is section mein kuch save karna zaroori nahi. Chapter Notes alag section se manage hote hain.</p>
     </section>
 
     <!-- CHAPTER NOTES MANAGEMENT -->
@@ -1899,6 +1913,7 @@ $("chapterForm").addEventListener("submit",async function(e){
 $("notesLecture").addEventListener("change",function(){const v=$("notesLecture").value;const title=$("notesTitle");if(v){title.placeholder="Lecture ke notes ka title";}else{title.placeholder="Chapter ke notes ka title";}});
 $("notesEnabled").addEventListener("change",function(){const enabled=$("notesEnabled").value==="yes";$("notesContentFields").classList.toggle("hidden",!enabled);$("notesTitle").required=enabled;$("notesUrl").required=enabled;$("notesSource").required=enabled;});
 $("notesSource").addEventListener("change",function(){const source=$("notesSource").value;const input=$("notesUrl");const help=$("notesSourceHelp");if(source==="storage"){input.placeholder="Supabase Storage file URL (future setup)";help.textContent="Storage mode tabhi kaam karega jab Supabase Storage bucket aur access policies configure hon. Is option se upload automatically nahi hota.";}else{input.placeholder="https://drive.google.com/file/d/...";help.textContent="Abhi Google Drive link use karein. Storage select karne par bhi file upload automatic nahi hota; pehle Storage bucket/configuration set karna hoga.";}});
+const openLectureNotesBtn=$("openLectureNotesForm");if(openLectureNotesBtn)openLectureNotesBtn.addEventListener("click",function(){const location=$("notesLecture");if(location){location.value="";location.dispatchEvent(new Event("change"));}const enabled=$("notesEnabled");if(enabled){enabled.value="yes";enabled.dispatchEvent(new Event("change"));}const form=$("notesForm");if(form)form.scrollIntoView({behavior:"smooth",block:"start"});const heading=$("notesHeading");if(heading)heading.textContent="📝 Add Lecture Notes — select chapter and lecture";});
 $("notesChapter").addEventListener("change",async function(){
   const select=$("notesLecture");
   if(!select||!db)return;
