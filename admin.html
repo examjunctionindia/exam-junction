@@ -201,6 +201,7 @@ button:disabled{filter:none;transform:none}
       <nav class="management-nav" aria-label="Admin management sections">
         <a href="#batchManager">➕ Batches</a>
         <a href="#bookManager">📚 Books / Notes</a>
+        <a href="#studentManager">👥 Students & Activity</a>
         <a href="#bannerManager">🖼️ Banners</a>
         <a href="#chapterManager">📖 Chapters</a>
         <a href="#lectureManager">▶️ Lectures</a>
@@ -211,6 +212,22 @@ button:disabled{filter:none;transform:none}
         <a href="#existingContent">📋 Existing Content</a>
         <a href="#requestManager">📨 Batch Requests</a>
       </nav>
+    </section>
+
+    <!-- STUDENT DIRECTORY AND ACTIVITY (READ-ONLY) -->
+    <section class="card" id="studentManager">
+      <h2>👥 Students & Activity</h2>
+      <p class="small">Student directory aur recorded activity ka read-only overview. Student profile data ya activity records yahan edit/delete nahi hote.</p>
+      <h3>Student Directory</h3>
+      <label class="list-search-label" for="searchStudents">Search students</label>
+      <input id="searchStudents" class="list-search" type="search" data-list-search="studentDirectoryList" placeholder="Student name ya ID search karein">
+      <div id="studentDirectoryList" class="small">Students load hone par yahan dikh jayenge.</div>
+      <hr class="divider">
+      <h3>Recent Student Activity</h3>
+      <div class="actions"><button id="refreshActivityButton" type="button" class="secondary">Refresh Activity</button></div>
+      <label class="list-search-label" for="searchActivity">Search activity</label>
+      <input id="searchActivity" class="list-search" type="search" data-list-search="studentActivityList" placeholder="Student, event ya page search karein">
+      <div id="studentActivityList" class="small">Activity load hone par yahan dikh jayegi.</div>
     </section>
 
     <!-- BATCH FORM -->
@@ -831,6 +848,7 @@ async function loadLists(){
   await loadBatchAccess();
   await loadBatchRequests();
   await loadProblemReports();
+  await loadStudentActivityAndDirectory();
 }
 /* STUDENT BOOK ACCESS */
 
@@ -1290,6 +1308,58 @@ async function loadProblemReports(){
 $("refreshReportsButton").addEventListener("click",async function(){
   await loadProblemReports();
   message("Problem reports refresh ho gayi.");
+});
+
+/* Student directory and activity overview — read-only, existing tables only. */
+async function loadStudentActivityAndDirectory(){
+  if(!db) return;
+  const studentRoot=$("studentDirectoryList"), activityRoot=$("studentActivityList");
+  if(!studentRoot || !activityRoot) return;
+  studentRoot.textContent="Students load ho rahe hain...";
+  activityRoot.textContent="Student activity load ho rahi hai...";
+  try{
+    const [studentsResult,activityResult]=await Promise.all([
+      db.from("profiles").select("id,full_name,role,created_at").eq("role","student").order("full_name").limit(500),
+      db.from("student_activity_events").select("id,student_id,event_type,page_path,lecture_id,duration_seconds,created_at").order("created_at",{ascending:false}).limit(100)
+    ]);
+    if(studentsResult.error) throw studentsResult.error;
+    if(activityResult.error) throw activityResult.error;
+    const students=studentsResult.data||[], events=activityResult.data||[];
+    cache.students=students;
+    studentRoot.replaceChildren();
+    if(!students.length){studentRoot.textContent="Koi student profile nahi mila.";}
+    else students.forEach(student=>{
+      const item=document.createElement("div"); item.className="item";
+      const title=document.createElement("div"); title.textContent=student.full_name||"Unnamed Student";
+      const detail=document.createElement("div"); detail.className="small";
+      detail.textContent="Student ID: "+student.id+" | Joined: "+(student.created_at?new Date(student.created_at).toLocaleString():"—");
+      item.append(title,detail); studentRoot.appendChild(item);
+    });
+    activityRoot.replaceChildren();
+    if(!events.length){activityRoot.textContent="Abhi student activity events available nahi hain.";} 
+    else events.forEach(event=>{
+      const student=students.find(s=>s.id===event.student_id);
+      const item=document.createElement("div"); item.className="item";
+      const lines=[
+        ["Student",student?.full_name||event.student_id],
+        ["Event",event.event_type||"—"],
+        ["Page",event.page_path||"—"],
+        ["Lecture ID",event.lecture_id||"—"],
+        ["Duration",Number.isFinite(event.duration_seconds)?event.duration_seconds+" seconds":"—"],
+        ["Time",event.created_at?new Date(event.created_at).toLocaleString():"—"]
+      ];
+      lines.forEach(([label,value])=>{const line=document.createElement("div");line.textContent=label+": "+String(value??"—");item.appendChild(line);});
+      activityRoot.appendChild(item);
+    });
+  }catch(error){
+    console.error("Student/activity overview error:",error);
+    studentRoot.textContent="Student directory load nahi hui: "+(error.message||"database permission/connection check karein.");
+    activityRoot.textContent="Activity load nahi hui: "+(error.message||"database permission/connection check karein.");
+  }
+}
+$("refreshActivityButton").addEventListener("click",async function(){
+  await loadStudentActivityAndDirectory();
+  message("Student directory aur activity refresh ki gayi.");
 });
 
 /* SESSION AND ADMIN VERIFICATION */
@@ -1856,7 +1926,7 @@ const managementNav = document.querySelector(".management-nav");
 const managementHome = $("managementHome");
 const managementDashboard = $("dashboard");
 const managementSectionIds = [
-  "batchManager","bookManager","bookAccessManager","batchAccessManager",
+  "batchManager","bookManager","bookAccessManager","batchAccessManager","studentManager","bannerManager",
   "reportsManager","notificationManager","chapterManager","lectureManager","requestManager"
 ];
 const existingListIds = [
