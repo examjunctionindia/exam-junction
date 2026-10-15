@@ -35,7 +35,7 @@
     .body{padding:17px}
     .description{color:#718096;font-size:13px;line-height:1.7}
     .footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid #e6ebf2}
-    .status{font-size:12px;font-weight:bold;color:#16855d}
+    .status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:#16855d}.status.restricted{color:#b45309}.card-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.meta-pill{display:inline-flex;align-items:center;padding:7px 10px;border:1px solid #e6ebf2;border-radius:9px;background:#fbfcff;color:#52627a;font-size:11px;font-weight:700}.teacher-line{margin:12px 0 0;color:#52627a;font-size:13px;font-weight:700}.open{display:inline-flex;align-items:center;justify-content:center;min-height:42px;white-space:nowrap}
     .open{padding:12px 15px;border:0;border-radius:10px;background:#173b73;color:white;font-weight:bold;font-size:12px}
     .empty{padding:32px 20px;text-align:center;background:white;border:1px dashed #cbd6e5;border-radius:16px}
     .empty h2{font-size:17px;color:#10274c}
@@ -157,7 +157,7 @@
       if(error)throw error;
       list.replaceChildren();
       if(!data||!data.length){if(resultCount)resultCount.textContent="0 batches found";list.innerHTML='<div class="empty" style="grid-column:1/-1"><h2>Abhi koi published batch nahi hai</h2><p>Admin Panel se batch publish hone par yahan dikhega.</p></div>';return;}
-      data.forEach(b=>{
+      let chapterCounts={};\n      try{const {data:chapterRows,error:chapterError}=await window.EXAM_JUNCTION.supabase.from("chapters").select("batch_id");if(!chapterError){(chapterRows||[]).forEach(row=>{chapterCounts[row.batch_id]=(chapterCounts[row.batch_id]||0)+1})}}catch(_){}\n      data.forEach(b=>{
         const card=document.createElement("article");card.className="card";card.dataset.type=b.access_type==="restricted"?"restricted":"free";card.dataset.title=(b.title||"Maths Batch").toLowerCase();card.dataset.created=Date.parse(b.created_at||"")||0;
         const cover=document.createElement("div");cover.className="cover";
         const tag=document.createElement("span");tag.className="tag";tag.textContent=b.access_type==="restricted"?"🔒 SELECTED STUDENTS":"FREE MATHS BATCH";
@@ -168,7 +168,7 @@
         const footer=document.createElement("div");footer.className="footer";
         const status=document.createElement("span");status.className="status";status.textContent=b.access_type==="restricted"?"Access required":"Free";
         const open=document.createElement("a");open.className="open";open.href="batch-detail.html?id="+encodeURIComponent(b.id);open.textContent="Open Batch →";
-        footer.append(status,open);body.append(desc,teacher,footer);card.append(cover,body);list.append(card);
+        footer.append(status,open);body.append(desc,teacher,meta,footer);card.append(cover,body);list.append(card);
       });
       const noResults=document.createElement("div");noResults.id="no-results";noResults.className="empty";noResults.style.gridColumn="1/-1";noResults.hidden=true;noResults.innerHTML="<h2>No matching batches</h2><p>Search ya filter badal kar dobara dekhein.</p>";list.append(noResults);
       sortBatches();
