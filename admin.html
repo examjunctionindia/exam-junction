@@ -1911,6 +1911,9 @@ $("notesForm").addEventListener("submit",async function(e){
   e.preventDefault();
   const url=$("notesUrl").value.trim();
   if(!/^https:\/\//i.test(url)){message("Notes link HTTPS se shuru hona chahiye.",true);return;}
+  let driveUrl;
+  try{driveUrl=new URL(url)}catch(_){message("Google Drive ka valid share link paste karein.",true);return;}
+  if(!["drive.google.com","docs.google.com"].includes(driveUrl.hostname.toLowerCase())){message("Notes ke liye Google Drive ya Google Docs link hi use karein. PDF upload nahi hota.",true);return;}
   if(!$("notesChapter").value){message("Notes ke liye chapter select karein.",true);return;}
   await saveRecord("notesForm","notesSave","chapter_notes","notes",{
     chapter_id:$("notesChapter").value,
