@@ -128,6 +128,9 @@ button:disabled{filter:none;transform:none}
 .management-nav a[aria-current="page"]:before{color:#d8e8ff}
 .management-home-button{border:1px solid #d7e2f2;margin-bottom:16px}
 .management-view-hidden{display:none!important}
+.list-search-label{margin-top:12px;color:#425a79}
+.list-search{margin:0 0 12px;background:#fbfdff}
+.list-search:focus{outline:3px solid rgba(37,99,184,.18);border-color:#2563b8}
 @media(max-width:600px){#managementHome{padding:17px 14px}.management-nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.management-nav a{min-height:78px;padding:12px 7px;font-size:12px}}
 @media(min-width:900px){#managementHome{max-width:920px;margin:0 auto;width:100%}.management-nav{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
@@ -327,6 +330,8 @@ button:disabled{filter:none;transform:none}
 
       <h3>Existing Permissions</h3>
 
+      <label class="list-search-label" for="searchBookAccess">Search student / book access</label>
+      <input id="searchBookAccess" class="list-search" type="search" data-list-search="bookAccessList" placeholder="Student ya book ka naam search karein">
       <div id="bookAccessList" class="small">
         Permissions load ho rahi hain...
       </div>
@@ -348,6 +353,8 @@ button:disabled{filter:none;transform:none}
       </form>
       <hr class="divider">
       <h3>Existing Batch Permissions</h3>
+      <label class="list-search-label" for="searchBatchAccess">Search student / batch access</label>
+      <input id="searchBatchAccess" class="list-search" type="search" data-list-search="batchAccessList" placeholder="Student ya batch ka naam search karein">
       <div id="batchAccessList" class="small">Permissions load ho rahi hain...</div>
     </section>
 
@@ -355,6 +362,8 @@ button:disabled{filter:none;transform:none}
       <h2>📨 Student Batch Requests</h2>
       <p class="small">Pending batch requests review karein. Approve karne par published restricted batch ka access grant hoga.</p>
       <div class="actions"><button id="refreshRequestsButton" class="secondary" type="button">Refresh Requests</button></div>
+      <label class="list-search-label" for="searchBatchRequests">Search batch requests</label>
+      <input id="searchBatchRequests" class="list-search" type="search" data-list-search="batchRequestsList" placeholder="Student, batch ya status search karein">
       <div id="batchRequestsList" class="small">Requests load ho rahi hain...</div>
     </section>
 
@@ -365,6 +374,8 @@ button:disabled{filter:none;transform:none}
       <div class="actions">
         <button id="refreshReportsButton" class="secondary" type="button">Refresh Reports</button>
       </div>
+      <label class="list-search-label" for="searchProblemReports">Search student reports</label>
+      <input id="searchProblemReports" class="list-search" type="search" data-list-search="problemReportsList" placeholder="Student, category, status ya problem search karein">
       <div id="problemReportsList" class="small">Reports load ho rahi hain...</div>
     </section>
 
@@ -466,26 +477,36 @@ button:disabled{filter:none;transform:none}
     
     <section class="card" id="existingBatches">
       <h2>Existing Batches</h2>
+      <label class="list-search-label" for="searchBatches">Search batches</label>
+      <input id="searchBatches" class="list-search" type="search" data-list-search="batchList" placeholder="Batch name, teacher ya status search karein">
       <div id="batchList" class="small">Loading...</div>
     </section>
 
     <section class="card" id="existingBooks">
       <h2>Existing Books</h2>
+      <label class="list-search-label" for="searchBooks">Search books / notes</label>
+      <input id="searchBooks" class="list-search" type="search" data-list-search="bookList" placeholder="Book, author ya access search karein">
       <div id="bookList" class="small">Loading...</div>
     </section>
 
     <section class="card" id="existingNotifications">
       <h2>Recent Notifications</h2>
+      <label class="list-search-label" for="searchNotices">Search notifications</label>
+      <input id="searchNotices" class="list-search" type="search" data-list-search="noticeList" placeholder="Notification title ya status search karein">
       <div id="noticeList" class="small">Loading...</div>
     </section>
 
     <section class="card" id="existingChapters">
       <h2>Existing Chapters</h2>
+      <label class="list-search-label" for="searchChapters">Search chapters</label>
+      <input id="searchChapters" class="list-search" type="search" data-list-search="chapterList" placeholder="Chapter ya batch search karein">
       <div id="chapterList" class="small">Loading...</div>
     </section>
 
     <section class="card" id="existingLectures">
       <h2>Existing Lectures</h2>
+      <label class="list-search-label" for="searchLectures">Search lectures</label>
+      <input id="searchLectures" class="list-search" type="search" data-list-search="lectureList" placeholder="Lecture title ya YouTube link search karein">
       <div id="lectureList" class="small">Loading...</div>
     </section>
   </div>
@@ -578,6 +599,19 @@ function showList(elementId,rows,type,lines,emptyText){
 
   rows.forEach(row => makeItem(root,row,type,lines));
 }
+
+/* Live search for existing records, access grants, requests and reports. */
+document.addEventListener("input",function(event){
+  const input=event.target.closest("[data-list-search]");
+  if(!input) return;
+  const root=$(input.dataset.listSearch);
+  if(!root) return;
+  const query=input.value.trim().toLocaleLowerCase();
+  Array.from(root.children).forEach(function(item){
+    if(!item.classList.contains("item")) return;
+    item.hidden=!!query && !item.textContent.toLocaleLowerCase().includes(query);
+  });
+});
 
 function findById(type,id){
   return (cache[type] || []).find(row => String(row.id) === String(id));
