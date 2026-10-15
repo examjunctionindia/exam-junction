@@ -483,6 +483,16 @@
         setMode("login");
     });
 
+    function getSafeNextUrl() {
+        const requested = new URLSearchParams(window.location.search).get("next");
+        if (!requested) return "profile.html";
+        try {
+            const target = new URL(requested, window.location.href);
+            if (target.origin !== window.location.origin || !target.pathname.endsWith(".html")) return "profile.html";
+            return target.pathname.split("/").pop() + target.search + target.hash;
+        } catch (_) { return "profile.html"; }
+    }
+
     async function getClient() {
         if (!window.EXAM_JUNCTION) {
             throw new Error("Website system load nahi hua. Page reload karein.");
@@ -639,7 +649,7 @@
                     );
 
                     window.setTimeout(() => {
-                        window.location.replace("profile.html");
+                        window.location.replace(getSafeNextUrl());
                     }, 900);
                 } else {
                     showMessage(
