@@ -703,7 +703,7 @@
             </div>
 
 
-            <!-- REAL BATCHES WILL BE LOADED FROM SUPABASE LATER -->
+            <!-- Published batches are loaded from Supabase below. -->
 
             <div class="batch-list" id="batch-list">
 
@@ -851,6 +851,119 @@
     } catch (error) {
         console.error("Account link update failed:", error);
         accountLink.href = "login.html";
+    }
+})();
+</script>
+<script>
+/* Home batch list: read published batches from Supabase; RLS remains authoritative. */
+(async function loadHomeBatches() {
+    const list = document.getElementById("batch-list");
+    const count = document.getElementById("batch-count");
+    if (!list || !count) return;
+
+    const showMessage = (title, detail) => {
+        list.replaceChildren();
+        const box = document.createElement("div");
+        box.className = "empty-state";
+        box.style.gridColumn = "1 / -1";
+        const heading = document.createElement("h3");
+        heading.textContent = title;
+        const paragraph = document.createElement("p");
+        paragraph.textContent = detail;
+        box.append(heading, paragraph);
+        list.append(box);
+    };
+
+    try {
+        if (!window.EXAM_JUNCTION || !window.EXAM_JUNCTION.init) {
+            showMessage("Batches abhi load nahi ho pa rahe", "Connection setup available nahi hai. Thodi der baad refresh karein.");
+            return;
+        }
+        const ready = await window.EXAM_JUNCTION.init();
+        if (!ready || !window.EXAM_JUNCTION.supabase) {
+            showMessage("Connection unavailable", "Internet connection check karke page refresh karein.");
+            return;
+        }
+
+        const client = window.EXAM_JUNCTION.supabase;
+        const { data, error } = await client
+            .from("batches")
+            .select("id,title,description,platform_name,access_type,is_published,created_at")
+            .eq("is_published", true)
+            .order("created_at", { ascending: false })
+            .limit(100);
+
+        if (error) throw error;
+
+        const batches = data || [];
+        count.textContent = batches.length + (batches.length === 1 ? " Batch" : " Batches");
+        list.replaceChildren();
+
+        if (!batches.length) {
+            showMessage("Abhi koi published batch nahi hai", "Naye batches publish hote hi yahan dikhne lagenge.");
+            return;
+        }
+
+        batches.forEach((batch) => {
+            const card = document.createElement("article");
+            card.className = "batch-card";
+
+            const cover = document.createElement("div");
+            cover.className = "batch-cover";
+            const coverContent = document.createElement("div");
+            coverContent.className = "batch-cover-content";
+            const category = document.createElement("span");
+            category.className = "batch-category";
+            category.textContent = batch.access_type === "restricted" ? "SELECTED STUDENTS" : "FREE MATHS BATCH";
+            const title = document.createElement("h3");
+            title.textContent = batch.title || "Maths Batch";
+            coverContent.append(category, title);
+
+            const symbol = document.createElement("div");
+            symbol.className = "batch-symbol";
+            symbol.setAttribute("aria-hidden", "true");
+            symbol.textContent = "∑";
+            cover.append(coverContent, symbol);
+
+            const body = document.createElement("div");
+            body.className = "batch-body";
+            const description = document.createElement("p");
+            description.className = "batch-description";
+            description.textContent = batch.description || "Batch details aur available learning content dekhne ke liye open karein.";
+            body.append(description);
+
+            const meta = document.createElement("div");
+            meta.className = "batch-meta";
+            if (batch.platform_name) {
+                const teacher = document.createElement("span");
+                teacher.className = "meta-chip";
+                teacher.textContent = "Teacher: " + batch.platform_name;
+                meta.append(teacher);
+            }
+            const access = document.createElement("span");
+            access.className = "meta-chip";
+            access.textContent = batch.access_type === "restricted" ? "🔒 Permission required" : "✓ Free access";
+            meta.append(access);
+            body.append(meta);
+
+            const footer = document.createElement("div");
+            footer.className = "batch-footer";
+            const status = document.createElement("span");
+            status.className = "access-label";
+            status.textContent = batch.access_type === "restricted" ? "Restricted" : "Free";
+            const open = document.createElement("a");
+            open.className = "batch-button";
+            open.href = "batch.html?id=" + encodeURIComponent(batch.id);
+            open.textContent = "Open Batch →";
+            footer.append(status, open);
+            body.append(footer);
+
+            card.append(cover, body);
+            list.append(card);
+        });
+    } catch (error) {
+        console.error("Home batches failed to load:", error);
+        showMessage("Batches load nahi ho paaye", "Please internet check karke dobara refresh karein.");
     }
 })();
 </script>
