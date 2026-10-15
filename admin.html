@@ -1814,6 +1814,8 @@ $("bookForm").addEventListener("submit",async function(e){
       author:$("bookAuthor").value.trim(),
       description:$("bookDescription").value.trim(),
       external_url:url,
+      download_url:$("bookDownloadUrl").value.trim() || null,
+      download_allowed:$("bookDownloadAllowed").value==="true",
       storage_path:$("bookStorageUrl").value.trim() || url,
       cover_path:$("bookCoverUrl").value.trim(),
       access_type:$("bookAccess").value,
@@ -1932,6 +1934,9 @@ $("lectureForm").addEventListener("submit",async function(e){
       chapter_id:$("lectureChapter").value,
       title:$("lectureTitle").value.trim(),
       youtube_url:url,
+      teacher_name:$("lectureTeacher").value.trim() || null,
+      download_url:$("lectureDownloadUrl").value.trim() || null,
+      download_allowed:$("lectureDownloadAllowed").value==="true",
       position:Number($("lecturePosition").value || 0)
     }
   );
