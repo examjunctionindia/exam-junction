@@ -156,7 +156,7 @@
         .eq("is_published",true).order("created_at",{ascending:false}).limit(100);
       if(error)throw error;
       list.replaceChildren();
-      if(!data||!data.length){list.innerHTML='<div class="empty" style="grid-column:1/-1"><h2>Abhi koi published batch nahi hai</h2><p>Admin Panel se batch publish hone par yahan dikhega.</p></div>';return;}
+      if(!data||!data.length){if(resultCount)resultCount.textContent="0 batches found";list.innerHTML='<div class="empty" style="grid-column:1/-1"><h2>Abhi koi published batch nahi hai</h2><p>Admin Panel se batch publish hone par yahan dikhega.</p></div>';return;}
       data.forEach(b=>{
         const card=document.createElement("article");card.className="card";card.dataset.type=b.access_type==="restricted"?"restricted":"free";card.dataset.title=(b.title||"Maths Batch").toLowerCase();card.dataset.created=Date.parse(b.created_at||"")||0;
         const cover=document.createElement("div");cover.className="cover";
