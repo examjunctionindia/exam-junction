@@ -298,8 +298,14 @@ button:disabled{filter:none;transform:none}
         <label for="bookDescription">Description</label>
         <textarea id="bookDescription" maxlength="5000"></textarea>
 
-        <label for="bookUrl">PDF / Google Drive Link</label>
-        <input id="bookUrl" type="url" placeholder="https://...">
+        <label for="bookUrl">PDF / Google Drive Link *</label>
+        <input id="bookUrl" type="url" required placeholder="https://...">
+
+        <label for="bookStorageUrl">Storage / Source Link</label>
+        <input id="bookStorageUrl" type="url" placeholder="Blank = use PDF link">
+
+        <label for="bookCoverUrl">Cover Image URL (optional)</label>
+        <input id="bookCoverUrl" type="url" placeholder="https://...">
 
         <label for="bookAccess">Access</label>
         <select id="bookAccess">
@@ -1616,6 +1622,8 @@ function editRecord(type,id){
     $("bookAuthor").value=row.author || "";
     $("bookDescription").value=row.description || "";
     $("bookUrl").value=row.external_url || "";
+    $("bookStorageUrl").value=row.storage_path || "";
+    $("bookCoverUrl").value=row.cover_path || "";
     $("bookAccess").value=row.access_type || "free";
     $("bookPublished").value=String(!!row.is_published);
   }
@@ -1806,6 +1814,8 @@ $("bookForm").addEventListener("submit",async function(e){
       author:$("bookAuthor").value.trim(),
       description:$("bookDescription").value.trim(),
       external_url:url,
+      storage_path:$("bookStorageUrl").value.trim() || url,
+      cover_path:$("bookCoverUrl").value.trim(),
       access_type:$("bookAccess").value,
       is_published:$("bookPublished").value==="true"
     }
