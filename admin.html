@@ -451,7 +451,7 @@ button:disabled{filter:none;transform:none}
         <label for="bannerTeacher">Teacher / Label</label><input id="bannerTeacher" maxlength="150">
         <label for="bannerDescription">Description</label><textarea id="bannerDescription" maxlength="3000"></textarea>
         <label for="bannerType">Banner Type</label><select id="bannerType"><option value="general">General</option><option value="batch">Batch</option><option value="book">Book</option><option value="announcement">Announcement</option></select>
-        <label for="bannerImage">Image URL</label><input id="bannerImage" type="url" placeholder="https://...">
+        <label for="bannerImage">Image URL *</label><input id="bannerImage" type="url" required placeholder="https://...">
         <label for="bannerTarget">Target Link</label><input id="bannerTarget" type="url" placeholder="https://...">
         <label for="bannerPublished">Publish</label><select id="bannerPublished"><option value="false">Draft</option><option value="true">Published</option></select>
         <div class="actions"><button id="bannerSave" type="submit">Save Banner</button><button id="bannerCancel" class="secondary hidden" type="button">Cancel Edit</button></div>
@@ -1559,7 +1559,6 @@ const forms = {
     editHeading:"✏️ Edit Notification",
     editButton:"Update Notification"
   },
-  notes:{form:"notesForm",id:"notesId",heading:"notesHeading",save:"notesSave",cancel:"notesCancel",addHeading:"📄 Add Chapter Notes / PDF Link",addButton:"Save Notes Link",editHeading:"✏️ Edit Chapter Notes",editButton:"Update Notes Link"},
   chapters:{
     form:"chapterForm",
     id:"chapterId",
@@ -1780,8 +1779,8 @@ $("batchForm").addEventListener("submit",async function(e){
     "batchForm","batchSave","batches","batches",
     {
       title:$("batchTitle").value.trim(),
-      description:$("batchDescription").value.trim() || null,
-      platform_name:$("batchTeacher").value.trim() || null,
+      description:$("batchDescription").value.trim(),
+      platform_name:$("batchTeacher").value.trim(),
       access_type:$("batchAccess").value,
       is_published:$("batchPublished").value==="true"
     }
@@ -1804,9 +1803,9 @@ $("bookForm").addEventListener("submit",async function(e){
     "bookForm","bookSave","books","books",
     {
       title:$("bookTitle").value.trim(),
-      author:$("bookAuthor").value.trim() || null,
-      description:$("bookDescription").value.trim() || null,
-      external_url:url || null,
+      author:$("bookAuthor").value.trim(),
+      description:$("bookDescription").value.trim(),
+      external_url:url,
       access_type:$("bookAccess").value,
       is_published:$("bookPublished").value==="true"
     }
@@ -1820,7 +1819,7 @@ $("bannerForm").addEventListener("submit",async function(e){
   await saveRecord("bannerForm","bannerSave","banners","banners",{
     title:$("bannerTitle").value.trim(),teacher_name:$("bannerTeacher").value.trim()||null,
     description:$("bannerDescription").value.trim()||null,banner_type:$("bannerType").value,
-    image_url:$("bannerImage").value.trim()||null,target_url:$("bannerTarget").value.trim()||null,
+    image_url:$("bannerImage").value.trim(),target_url:$("bannerTarget").value.trim()||null,
     is_published:$("bannerPublished").value==="true"
   });
 });
@@ -1840,7 +1839,7 @@ $("notificationForm").addEventListener("submit",async function(e){
     {
       title:$("noticeTitle").value.trim(),
       message:$("noticeMessage").value.trim(),
-      target_url:url || null,
+      target_url:url || "",
       is_published:$("noticePublished").value==="true"
     }
   );
