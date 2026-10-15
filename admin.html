@@ -201,6 +201,7 @@ button:disabled{filter:none;transform:none}
       <nav class="management-nav" aria-label="Admin management sections">
         <a href="#batchManager">➕ Batches</a>
         <a href="#bookManager">📚 Books / Notes</a>
+        <a href="#bannerManager">🖼️ Banners</a>
         <a href="#chapterManager">📖 Chapters</a>
         <a href="#lectureManager">▶️ Lectures</a>
         <a href="#batchAccessManager">🔐 Batch Access</a>
@@ -410,6 +411,26 @@ button:disabled{filter:none;transform:none}
       </form>
     </section>
 
+    <!-- BANNER MANAGEMENT -->
+    <section class="card" id="bannerManager">
+      <h2 id="bannerHeading">🖼️ Add Website Banner</h2>
+      <p class="small">Website banners ko yahan add, edit, publish ya draft karein.</p>
+      <form id="bannerForm">
+        <input id="bannerId" type="hidden">
+        <label for="bannerTitle">Banner Title *</label><input id="bannerTitle" maxlength="200" required>
+        <label for="bannerTeacher">Teacher / Label</label><input id="bannerTeacher" maxlength="150">
+        <label for="bannerDescription">Description</label><textarea id="bannerDescription" maxlength="3000"></textarea>
+        <label for="bannerType">Banner Type</label><select id="bannerType"><option value="general">General</option><option value="batch">Batch</option><option value="book">Book</option><option value="announcement">Announcement</option></select>
+        <label for="bannerImage">Image URL</label><input id="bannerImage" type="url" placeholder="https://...">
+        <label for="bannerTarget">Target Link</label><input id="bannerTarget" type="url" placeholder="https://...">
+        <label for="bannerPublished">Publish</label><select id="bannerPublished"><option value="false">Draft</option><option value="true">Published</option></select>
+        <div class="actions"><button id="bannerSave" type="submit">Save Banner</button><button id="bannerCancel" class="secondary hidden" type="button">Cancel Edit</button></div>
+      </form>
+      <hr class="divider"><h3>Existing Banners</h3>
+      <label class="list-search-label" for="searchBanners">Search banners</label><input id="searchBanners" class="list-search" type="search" data-list-search="bannerList" placeholder="Title, teacher, type ya status search karein">
+      <div id="bannerList" class="small">Loading...</div>
+    </section>
+
     <!-- CHAPTER FORM -->
     <section class="card" id="chapterManager">
       <h2 id="chapterHeading">📖 Add Chapter</h2>
@@ -534,6 +555,7 @@ const cache = {
   batches: [],
   books: [],
   notifications: [],
+  banners: [],
   chapters: [],
   lectures: []
 };
@@ -649,7 +671,8 @@ function updateDashboardCounts(){
     statDrafts: [
       ...cache.batches,
       ...cache.books,
-      ...cache.notifications
+      ...cache.notifications,
+      ...cache.banners
     ].filter(row => row.is_published === false).length
   };
   Object.entries(counts).forEach(([id,value]) => {
@@ -730,6 +753,11 @@ async function loadLists(){
         }
       ],
       empty:"Abhi koi notification nahi hai."
+    },
+    {
+      table:"banners",key:"banners",element:"bannerList",order:"created_at",
+      lines:[{key:"title",label:"Banner"},{key:"teacher_name",label:"Teacher / Label"},{key:"banner_type",label:"Type"},{key:"is_published",label:"Published"},{key:"image_url",label:"Image URL"}],
+      empty:"Abhi koi banner nahi hai."
     },
     {
       table:"chapters",
@@ -1402,6 +1430,7 @@ const forms = {
     editHeading:"✏️ Edit Book / Notes",
     editButton:"Update Book"
   },
+  banners:{form:"bannerForm",id:"bannerId",heading:"bannerHeading",save:"bannerSave",cancel:"bannerCancel",addHeading:"🖼️ Add Website Banner",addButton:"Save Banner",editHeading:"✏️ Edit Website Banner",editButton:"Update Banner"},
   notifications:{
     form:"notificationForm",
     id:"noticeId",
@@ -1471,6 +1500,17 @@ function editRecord(type,id){
     $("bookUrl").value=row.external_url || "";
     $("bookAccess").value=row.access_type || "free";
     $("bookPublished").value=String(!!row.is_published);
+  }
+
+  if(type==="banners"){
+    $("bannerId").value=row.id;
+    $("bannerTitle").value=row.title || "";
+    $("bannerTeacher").value=row.teacher_name || "";
+    $("bannerDescription").value=row.description || "";
+    $("bannerType").value=row.banner_type || "general";
+    $("bannerImage").value=row.image_url || "";
+    $("bannerTarget").value=row.target_url || "";
+    $("bannerPublished").value=String(!!row.is_published);
   }
 
   if(type==="notifications"){
@@ -1648,6 +1688,16 @@ $("bookForm").addEventListener("submit",async function(e){
 });
 
 /* NOTIFICATION SAVE */
+
+$("bannerForm").addEventListener("submit",async function(e){
+  e.preventDefault();
+  await saveRecord("bannerForm","bannerSave","banners","banners",{
+    title:$("bannerTitle").value.trim(),teacher_name:$("bannerTeacher").value.trim()||null,
+    description:$("bannerDescription").value.trim()||null,banner_type:$("bannerType").value,
+    image_url:$("bannerImage").value.trim()||null,target_url:$("bannerTarget").value.trim()||null,
+    is_published:$("bannerPublished").value==="true"
+  });
+});
 
 $("notificationForm").addEventListener("submit",async function(e){
   e.preventDefault();
