@@ -133,6 +133,35 @@
       card.hidden = !(matchesText && matchesType);
     });
   }
+
+  (async function loadPublishedBatches(){
+    const list=document.getElementById("batch-list");
+    if(!list||!window.EXAM_JUNCTION)return;
+    try{
+      const ready=await window.EXAM_JUNCTION.init();
+      if(!ready)throw new Error("Supabase unavailable");
+      const {data,error}=await window.EXAM_JUNCTION.supabase.from("batches")
+        .select("id,title,description,platform_name,access_type,is_published,created_at")
+        .eq("is_published",true).order("created_at",{ascending:false}).limit(100);
+      if(error)throw error;
+      list.replaceChildren();
+      if(!data||!data.length){list.innerHTML='<div class="empty" style="grid-column:1/-1"><h2>Abhi koi published batch nahi hai</h2><p>Admin Panel se batch publish hone par yahan dikhega.</p></div>';return;}
+      data.forEach(b=>{
+        const card=document.createElement("article");card.className="card";card.dataset.type=b.access_type==="restricted"?"restricted":"free";
+        const cover=document.createElement("div");cover.className="cover";
+        const tag=document.createElement("span");tag.className="tag";tag.textContent=b.access_type==="restricted"?"🔒 SELECTED STUDENTS":"FREE MATHS BATCH";
+        const title=document.createElement("h2");title.textContent=b.title||"Maths Batch";cover.append(tag,title);
+        const body=document.createElement("div");body.className="body";
+        const desc=document.createElement("p");desc.className="description";desc.textContent=b.description||"Batch ke chapters aur lectures dekhne ke liye open karein.";
+        const teacher=document.createElement("p");teacher.className="description";teacher.textContent=b.platform_name?"Teacher: "+b.platform_name:"";
+        const footer=document.createElement("div");footer.className="footer";
+        const status=document.createElement("span");status.className="status";status.textContent=b.access_type==="restricted"?"Access required":"Free";
+        const open=document.createElement("a");open.className="open";open.href="batch-detail.html?id="+encodeURIComponent(b.id);open.textContent="Open Batch →";
+        footer.append(status,open);body.append(desc,teacher,footer);card.append(cover,body);list.append(card);
+      });
+      filterBatches();
+    }catch(e){console.error("Batch list load failed",e);list.innerHTML='<div class="empty" style="grid-column:1/-1"><h2>Batches load nahi ho paaye</h2><p>Internet check karke refresh karein.</p></div>';}
+  })();
 </script>
 </body>
 </html>
