@@ -123,6 +123,7 @@ button:disabled{filter:none;transform:none}
 .management-nav a[href="#reportsManager"]:before{content:"07"}
 .management-nav a[href="#notificationManager"]:before{content:"08"}
 .management-nav a[href="#existingContent"]:before{content:"09"}
+.management-nav a[href="#requestManager"]:before{content:"10"}
 .management-nav a:before{font-size:10px;letter-spacing:1px;font-weight:800;color:#7992b4}
 .management-nav a[aria-current="page"]:before{color:#d8e8ff}
 .management-home-button{border:1px solid #d7e2f2;margin-bottom:16px}
@@ -187,6 +188,7 @@ button:disabled{filter:none;transform:none}
         <div class="dashboard-stat"><strong id="statLectures">—</strong><span>Lectures loaded</span></div>
         <div class="dashboard-stat"><strong id="statNotifications">—</strong><span>Notifications loaded</span></div>
         <div class="dashboard-stat"><strong id="statDrafts">—</strong><span>Draft items loaded</span></div>
+        <div class="dashboard-stat"><strong id="statRequests">—</strong><span>Pending batch requests</span></div>
       </div>
     </section>
 
@@ -203,6 +205,7 @@ button:disabled{filter:none;transform:none}
         <a href="#reportsManager">🛟 Student Reports</a>
         <a href="#notificationManager">🔔 Notifications</a>
         <a href="#existingContent">📋 Existing Content</a>
+        <a href="#requestManager">📨 Batch Requests</a>
       </nav>
     </section>
 
@@ -346,6 +349,13 @@ button:disabled{filter:none;transform:none}
       <hr class="divider">
       <h3>Existing Batch Permissions</h3>
       <div id="batchAccessList" class="small">Permissions load ho rahi hain...</div>
+    </section>
+
+    <section class="card" id="requestManager">
+      <h2>📨 Student Batch Requests</h2>
+      <p class="small">Pending batch requests review karein. Approve karne par published restricted batch ka access grant hoga.</p>
+      <div class="actions"><button id="refreshRequestsButton" class="secondary" type="button">Refresh Requests</button></div>
+      <div id="batchRequestsList" class="small">Requests load ho rahi hain...</div>
     </section>
 
     <!-- STUDENT PROBLEM REPORTS -->
@@ -757,6 +767,7 @@ async function loadLists(){
    refreshDropdowns();
   await loadBookAccess();
   await loadBatchAccess();
+  await loadBatchRequests();
   await loadProblemReports();
 }
 /* STUDENT BOOK ACCESS */
@@ -1042,6 +1053,56 @@ $("batchAccessForm").addEventListener("submit",async function(e){e.preventDefaul
 $("refreshBatchAccessButton").addEventListener("click",async function(){await loadBatchAccess();message("Batch permissions refresh ho gayi.");});
 
 /* STUDENT PROBLEM REPORTS — admin-only data, existing Supabase schema */
+/* STUDENT BATCH REQUEST MANAGEMENT */
+async function loadBatchRequests(){
+  const root=$("batchRequestsList");
+  if(!root||!db)return;
+  root.textContent="Batch requests load ho rahi hain...";
+  try{
+    const results=await Promise.all([
+      db.from("batch_join_requests").select("id,student_id,batch_id,status,created_at").order("created_at",{ascending:false}).limit(200),
+      db.from("profiles").select("id,full_name").eq("role","student").order("full_name"),
+      db.from("batches").select("id,title,access_type,is_published").order("title")
+    ]);
+    for(const result of results){if(result.error)throw result.error;}
+    const requests=results[0].data||[], students=results[1].data||[], batches=results[2].data||[];
+    $("statRequests").textContent=String(requests.filter(r=>r.status==="pending").length);
+    root.replaceChildren();
+    if(!requests.length){root.textContent="Abhi koi batch join request nahi hai.";return;}
+    requests.forEach(request=>{
+      const item=document.createElement("div");item.className="item";
+      const student=students.find(x=>x.id===request.student_id), batch=batches.find(x=>x.id===request.batch_id);
+      [["Student",student?.full_name||request.student_id],["Batch",batch?.title||request.batch_id],["Status",request.status],["Requested",request.created_at?new Date(request.created_at).toLocaleString():"—"]].forEach(([label,value])=>{
+        const line=document.createElement("div");line.style.marginBottom="6px";const strong=document.createElement("strong");strong.textContent=label+": ";line.append(strong,document.createTextNode(String(value??"—")));item.appendChild(line);
+      });
+      if(request.status==="pending"){
+        const actions=document.createElement("div");actions.className="actions";
+        const approve=document.createElement("button");approve.type="button";approve.textContent="Approve + Grant Access";
+        const reject=document.createElement("button");reject.type="button";reject.className="danger";reject.textContent="Reject Request";
+        async function decide(approved){
+          if(!window.confirm(approved?"Approve request and grant batch access?":"Reject this batch request?"))return;
+          approve.disabled=true;reject.disabled=true;
+          try{
+            if(approved){
+              if(!batch||batch.access_type!=="restricted"||batch.is_published!==true)throw new Error("Sirf published restricted batch ko approve kar sakte hain.");
+              const existing=await db.from("batch_access").select("id").eq("student_id",request.student_id).eq("batch_id",request.batch_id).maybeSingle();
+              if(existing.error)throw existing.error;
+              if(!existing.data){const grant=await db.from("batch_access").insert({student_id:request.student_id,batch_id:request.batch_id});if(grant.error)throw grant.error;}
+            }
+            const update=await db.from("batch_join_requests").update({status:approved?"approved":"rejected"}).eq("id",request.id).eq("status","pending");
+            if(update.error)throw update.error;
+            message(approved?"Request approved; batch access granted.":"Batch request rejected.");
+            await loadBatchRequests();await loadBatchAccess();
+          }catch(error){console.error("Batch request action failed:",error);message("Request update nahi hui: "+(error?.message||"permission/connection check karein."),true);approve.disabled=false;reject.disabled=false;}
+        }
+        approve.addEventListener("click",()=>decide(true));reject.addEventListener("click",()=>decide(false));actions.append(approve,reject);item.appendChild(actions);
+      }
+      root.appendChild(item);
+    });
+  }catch(error){console.error("Batch requests load error:",error);root.textContent="Batch requests load nahi hui"+(error?.code?" ("+error.code+")":"")+": "+(error?.message||"connection aur admin permission check karein.");}
+}
+$("refreshRequestsButton").addEventListener("click",async function(){await loadBatchRequests();message("Batch requests refresh ho gayi.");});
+
 async function loadProblemReports(){
   const root = $("problemReportsList");
   if(!root || !db) return;
@@ -1712,7 +1773,7 @@ const managementHome = $("managementHome");
 const managementDashboard = $("dashboard");
 const managementSectionIds = [
   "batchManager","bookManager","bookAccessManager","batchAccessManager",
-  "reportsManager","notificationManager","chapterManager","lectureManager"
+  "reportsManager","notificationManager","chapterManager","lectureManager","requestManager"
 ];
 const existingListIds = [
   "existingBatches","existingBooks","existingNotifications","existingChapters","existingLectures"
