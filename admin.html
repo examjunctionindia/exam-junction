@@ -531,7 +531,7 @@ button:disabled{filter:none;transform:none}
 
     <!-- LECTURE FORM -->
     <section class="card" id="lectureManager">
-      <h2 id="lectureHeading">▶️ Add YouTube Lecture</h2>
+      <h2 id="lectureHeading">▶️ Add Lecture / External Link</h2>
 
       <form id="lectureForm">
         <input id="lectureId" type="hidden">
@@ -550,9 +550,10 @@ button:disabled{filter:none;transform:none}
         <input id="lectureTitle" maxlength="200" required
                placeholder="Percentage Class 1">
 
-        <label for="lectureUrl">YouTube URL *</label>
+        <label for="lectureUrl">Lecture URL (YouTube or External Link) *</label>
         <input id="lectureUrl" type="url" required
-               placeholder="https://www.youtube.com/watch?v=...">
+               placeholder="https://...">
+        <p class="small">YouTube link ya kisi trusted external lecture page ka HTTPS link paste karein. YouTube videos website ke andar play honge; doosre platforms ke links external page mein khulenge.</p>
 
         <label for="lectureTeacher">Teacher Name</label>
         <input id="lectureTeacher" maxlength="150" placeholder="Rahul Sir">
@@ -606,7 +607,7 @@ button:disabled{filter:none;transform:none}
     <section class="card" id="existingLectures">
       <h2>Existing Lectures</h2>
       <label class="list-search-label" for="searchLectures">Search lectures</label>
-      <input id="searchLectures" class="list-search" type="search" data-list-search="lectureList" placeholder="Lecture title ya YouTube link search karein">
+      <input id="searchLectures" class="list-search" type="search" data-list-search="lectureList" placeholder="Lecture title ya external link search karein">
       <div id="lectureList" class="small">Loading...</div>
     </section>
   </div>
@@ -1724,6 +1725,7 @@ async function editRecord(type,id){
   }
 
   if(type==="lectures"){
+    $("lectureHeading").textContent="✏️ Edit Lecture / External Link";
     $("lectureId").value=row.id;
     $("lectureTitle").value=row.title || "";
     $("lectureUrl").value=row.youtube_url || "";
@@ -1997,7 +1999,7 @@ $("lectureForm").addEventListener("submit",async function(e){
   const url=$("lectureUrl").value.trim();
 
   if(!/^https:\/\//i.test(url)){
-    message("YouTube link HTTPS se shuru hona chahiye.",true);
+    message("Lecture link HTTPS (https://) se shuru hona chahiye.",true);
     return;
   }
 
@@ -2006,20 +2008,14 @@ $("lectureForm").addEventListener("submit",async function(e){
   try{
     parsedUrl=new URL(url);
   }catch(error){
-    message("YouTube URL sahi nahi hai.",true);
+    message("Lecture URL sahi nahi hai. Valid HTTPS link paste karein.",true);
     return;
   }
 
   const host=parsedUrl.hostname.toLowerCase();
 
-  const validYouTube =
-    host==="youtube.com" ||
-    host.endsWith(".youtube.com") ||
-    host==="youtu.be" ||
-    host.endsWith(".youtu.be");
-
-  if(!validYouTube){
-    message("Kripya valid YouTube ya youtu.be link daalein.",true);
+  if(parsedUrl.protocol!=="https:" || !host || host==="localhost" || host==="127.0.0.1"){
+    message("Kripya valid public HTTPS lecture link daalein.",true);
     return;
   }
 
