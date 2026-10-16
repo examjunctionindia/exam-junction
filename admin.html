@@ -262,6 +262,17 @@ button:disabled{filter:none;transform:none}
         <label for="batchTeacher">Teacher / Platform Name</label>
         <input id="batchTeacher" maxlength="150" placeholder="Rahul Sir">
 
+        <label for="batchThumbnail">Batch Thumbnail Image URL (optional)</label>
+        <input id="batchThumbnail" type="url" maxlength="2000" placeholder="https://example.com/batch-cover.jpg">
+        <div id="batchThumbnailPreviewWrap" class="hidden" style="margin-top:10px">
+          <img id="batchThumbnailPreview" alt="Batch thumbnail preview" style="display:block;width:100%;max-height:190px;object-fit:cover;border-radius:12px;border:1px solid #dce5f1">
+        </div>
+        <p class="small">Image ka direct HTTPS link dein. Khali chhodne par default EXAM JUNCTION design dikhega.</p>
+
+        <label for="batchPosition">Display Position</label>
+        <input id="batchPosition" type="number" min="0" max="9999" step="1" value="0" inputmode="numeric" required>
+        <p class="small">0 sabse pehle; phir 1, 2, 3... Same position hone par latest batch pehle dikhega.</p>
+
         <label for="batchAccess">Access</label>
         <select id="batchAccess">
           <option value="free">Free</option>
@@ -827,12 +838,15 @@ async function loadLists(){
       table:"batches",
       key:"batches",
       element:"batchList",
-      order:"created_at",
+      order:"display_position",
+      order2:"created_at",
       lines:[
         {key:"title",label:"Batch"},
         {key:"platform_name",label:"Teacher"},
         {key:"access_type",label:"Access"},
-        {key:"is_published",label:"Published"}
+        {key:"is_published",label:"Published",value:row=>row.is_published ? "Published" : "Draft"},
+        {key:"display_position",label:"Display Position"},
+        {key:"created_at",label:"Created",value:row=>row.created_at ? new Date(row.created_at).toLocaleDateString("en-IN") : "—"}
       ],
       empty:"Abhi koi batch nahi hai."
     },
@@ -916,10 +930,11 @@ async function loadLists(){
   ];
 
   for(const job of jobs){
-    const result = await db.from(job.table)
+    let listQuery = db.from(job.table)
       .select("*")
-      .order(job.order,{ascending:true})
-      .limit(200);
+      .order(job.order,{ascending:true});
+    if(job.order2) listQuery = listQuery.order(job.order2,{ascending:false});
+    const result = await listQuery.limit(200);
 
     if(result.error){
   $(job.element).textContent = formatAdminError(
@@ -1696,6 +1711,9 @@ async function editRecord(type,id){
     $("batchTitle").value=row.title || "";
     $("batchDescription").value=row.description || "";
     $("batchTeacher").value=row.platform_name || "";
+    $("batchThumbnail").value=row.thumbnail_url || "";
+    $("batchPosition").value=String(row.display_position ?? 0);
+    updateBatchThumbnailPreview();
     $("batchAccess").value=row.access_type || "free";
     $("batchPublished").value=String(!!row.is_published);
   }
@@ -1874,10 +1892,40 @@ $("loginForm").addEventListener("submit",async function(e){
   }
 });
 
+function updateBatchThumbnailPreview(){
+  const input=$("batchThumbnail"), wrap=$("batchThumbnailPreviewWrap"), img=$("batchThumbnailPreview");
+  if(!input||!wrap||!img) return;
+  const value=input.value.trim();
+  if(/^https:\/\//i.test(value)){
+    img.src=value;
+    img.onload=()=>wrap.classList.remove("hidden");
+    img.onerror=()=>wrap.classList.add("hidden");
+  }else{
+    img.removeAttribute("src");
+    wrap.classList.add("hidden");
+  }
+}
+$("batchThumbnail").addEventListener("input",updateBatchThumbnailPreview);
+
+$("batchForm").addEventListener("reset",function(){
+  setTimeout(updateBatchThumbnailPreview,0);
+});
+
 /* BATCH SAVE */
 
 $("batchForm").addEventListener("submit",async function(e){
   e.preventDefault();
+
+  const thumbnail=$("batchThumbnail").value.trim();
+  const position=Number($("batchPosition").value);
+  if(thumbnail && !/^https:\/\//i.test(thumbnail)){
+    message("Batch thumbnail link HTTPS se shuru hona chahiye.",true);
+    return;
+  }
+  if(!Number.isInteger(position)||position<0||position>9999){
+    message("Display Position 0 se 9999 tak poora number hona chahiye.",true);
+    return;
+  }
 
   await saveRecord(
     "batchForm","batchSave","batches","batches",
@@ -1885,6 +1933,8 @@ $("batchForm").addEventListener("submit",async function(e){
       title:$("batchTitle").value.trim(),
       description:$("batchDescription").value.trim(),
       platform_name:$("batchTeacher").value.trim(),
+      thumbnail_url:$("batchThumbnail").value.trim(),
+      display_position:Number($("batchPosition").value),
       access_type:$("batchAccess").value,
       is_published:$("batchPublished").value==="true"
     }
