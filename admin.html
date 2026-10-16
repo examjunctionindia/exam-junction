@@ -215,7 +215,7 @@ button:disabled{filter:none;transform:none}
 
     <section class="card" id="adminErrorTracker" aria-labelledby="adminErrorHeading">
       <h2 id="adminErrorHeading">🧰 Error Tracker — Admin Only</h2>
-      <p class="small">Admin panel ke errors yahan location aur details ke saath save honge. Error fix/test karne ke baad hi Mark Resolved dabayein. History isi browser/device mein save hoti hai.</p>
+      <p class="small">Errors sirf abhi ke open Admin session mein dikhaye jayenge. Koi error history browser, database ya Supabase Storage mein save nahi hogi. Page reload/close hone par list reset ho jayegi.</p>
       <div class="issue-summary" aria-live="polite">
         <div class="issue-stat"><strong id="issueTotalCount">0</strong><span>Total recorded</span></div>
         <div class="issue-stat resolved"><strong id="issueResolvedCount">0</strong><span>Resolved</span></div>
@@ -226,7 +226,7 @@ button:disabled{filter:none;transform:none}
         <button id="issueFilterAll" class="secondary" type="button">All Errors</button>
         <button id="issueFilterPending" class="secondary" type="button">Pending Only</button>
         <button id="issueFilterResolved" class="secondary" type="button">Resolved Only</button>
-        <button id="issueClearResolved" class="secondary" type="button">Clear Resolved History</button>
+        <button id="issueClearResolved" class="secondary" type="button">Clear Current Error List</button>
       </div>
       <p id="issueScanStatus" class="small" aria-live="polite">Automatic scan login ke baad chalega.</p>
       <div id="adminErrorList" aria-live="polite" class="small" style="margin-top:12px">Abhi koi error record nahi hua.</div>
@@ -694,8 +694,11 @@ function message(text,isError=false){
 }
 
 /* Admin-only diagnostics. Keep secrets/tokens redacted before displaying details. */
-const ADMIN_ISSUE_STORAGE_KEY = "exam_junction_admin_error_history_v1";
+// Session-only issue list: intentionally do not persist error history anywhere.
+let adminIssueItems = [];
 let adminIssueFilter = "all";
+// Remove only the old tracker key from previous versions; do not touch other site data.
+try { localStorage.removeItem("exam_junction_admin_error_history_v1"); } catch (_) {}
 function redactAdminText(value){
   return String(value ?? "")
     .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g,"[REDACTED TOKEN]")
@@ -712,14 +715,12 @@ function getCurrentAdminSection(){
   return "Admin Dashboard / Background Load";
 }
 function readAdminIssues(){
-  try{
-    const value=JSON.parse(localStorage.getItem(ADMIN_ISSUE_STORAGE_KEY)||"[]");
-    return Array.isArray(value) ? value.filter(x=>x&&typeof x==="object") : [];
-  }catch(_){return []}
+  return adminIssueItems;
 }
 function writeAdminIssues(items){
-  try{localStorage.setItem(ADMIN_ISSUE_STORAGE_KEY,JSON.stringify(items.slice(-150)));return true}
-  catch(error){console.warn("Could not save local admin error history:",error);return false}
+  // Keep the tracker in memory for this page session only; never write error history to storage.
+  adminIssueItems = Array.isArray(items) ? items.slice(-150) : [];
+  return true;
 }
 function recordAdminIssue(detail,section="Admin Dashboard"){
   const safeDetail=redactAdminText(detail).slice(0,5000);
@@ -2352,8 +2353,8 @@ $("issueFilterAll").addEventListener("click",()=>{adminIssueFilter="all";renderA
 $("issueFilterPending").addEventListener("click",()=>{adminIssueFilter="pending";renderAdminIssues()});
 $("issueFilterResolved").addEventListener("click",()=>{adminIssueFilter="resolved";renderAdminIssues()});
 $("issueClearResolved").addEventListener("click",()=>{
-  if(!confirm("Resolved error history isi browser se clear karni hai? Pending errors safe rahenge.")) return;
-  writeAdminIssues(readAdminIssues().filter(x=>x.status!=="resolved"));
+  if(!confirm("Is current page ki saari error list clear karni hai? Ye sirf display list clear karega.")) return;
+  writeAdminIssues([]);
   renderAdminIssues();
 });
 renderAdminIssues();
