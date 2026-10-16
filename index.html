@@ -336,6 +336,8 @@
         }
 
         .batch-cover {
+            position: relative;
+            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -346,8 +348,23 @@
         }
 
         .batch-cover-content {
+            position: relative;
+            z-index: 1;
             min-width: 0;
         }
+        .batch-cover-image {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: .22;
+            pointer-events: none;
+        }
+        .batch-cover.has-thumbnail {
+            background: linear-gradient(120deg,rgba(234,241,255,.9),rgba(244,247,255,.82));
+        }
+        .batch-symbol { position: relative; z-index: 1; }
 
         .batch-category {
             display: inline-block;
@@ -888,8 +905,9 @@
         const client = window.EXAM_JUNCTION.supabase;
         const { data, error } = await client
             .from("batches")
-            .select("id,title,description,platform_name,access_type,is_published,created_at")
+            .select("id,title,description,platform_name,access_type,is_published,thumbnail_url,display_position,created_at")
             .eq("is_published", true)
+            .order("display_position", { ascending: true })
             .order("created_at", { ascending: false })
             .limit(100);
 
@@ -910,6 +928,18 @@
 
             const cover = document.createElement("div");
             cover.className = "batch-cover";
+            const thumbnailUrl = String(batch.thumbnail_url || "").trim();
+            if (/^https:\/\//i.test(thumbnailUrl)) {
+                const thumbnail = document.createElement("img");
+                thumbnail.className = "batch-cover-image";
+                thumbnail.src = thumbnailUrl;
+                thumbnail.alt = "";
+                thumbnail.loading = "lazy";
+                thumbnail.referrerPolicy = "no-referrer";
+                thumbnail.onerror = () => thumbnail.remove();
+                cover.append(thumbnail);
+                cover.classList.add("has-thumbnail");
+            }
             const coverContent = document.createElement("div");
             coverContent.className = "batch-cover-content";
             const category = document.createElement("span");
