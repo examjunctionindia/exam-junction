@@ -293,12 +293,16 @@ button:disabled{filter:none;transform:none}
         <label for="batchTeacher">Teacher / Platform Name</label>
         <input id="batchTeacher" maxlength="150" placeholder="Rahul Sir">
 
-        <label for="batchThumbnail">Batch Thumbnail Image URL (optional)</label>
-        <input id="batchThumbnail" type="url" maxlength="2000" placeholder="https://example.com/batch-cover.jpg">
+        <label for="batchThumbnailFile">Batch Thumbnail — Phone Gallery se upload karein (optional)</label>
+        <input id="batchThumbnailFile" type="file" accept="image/jpeg,image/png,image/webp" capture="environment">
+        <button id="batchThumbnailUpload" class="secondary" type="button" style="margin-top:8px">📤 Upload Selected Image</button>
+        <p id="batchThumbnailUploadStatus" class="small" aria-live="polite">JPG, PNG ya WebP; maximum 5 MB. Upload karne ke baad Save Batch dabayein.</p>
+        <label for="batchThumbnail">Thumbnail Image URL (optional)</label>
+        <input id="batchThumbnail" type="url" maxlength="2000" placeholder="Gallery upload ke baad link yahan aayega; ya HTTPS link paste karein">
         <div id="batchThumbnailPreviewWrap" class="hidden" style="margin-top:10px">
           <img id="batchThumbnailPreview" alt="Batch thumbnail preview" style="display:block;width:100%;max-height:190px;object-fit:cover;border-radius:12px;border:1px solid #dce5f1">
         </div>
-        <p class="small">Image ka direct HTTPS link dein. Khali chhodne par default EXAM JUNCTION design dikhega.</p>
+        <p class="small">Gallery upload ke liye existing public ej-banners storage bucket use hota hai. Purani uploaded images automatically delete nahi hongi.</p>
 
         <label for="batchPosition">Display Position</label>
         <input id="batchPosition" type="number" min="0" max="9999" step="1" value="0" inputmode="numeric" required>
@@ -2030,6 +2034,40 @@ function updateBatchThumbnailPreview(){
   }
 }
 $("batchThumbnail").addEventListener("input",updateBatchThumbnailPreview);
+
+$("batchThumbnailUpload").addEventListener("click",async function(){
+  const file=$("batchThumbnailFile").files?.[0];
+  const status=$("batchThumbnailUploadStatus");
+  const button=$("batchThumbnailUpload");
+  if(!file){message("Pehle phone gallery se thumbnail image select karein.",true);return;}
+  const allowedTypes=["image/jpeg","image/png","image/webp"];
+  if(!allowedTypes.includes(file.type)){message("Sirf JPG, PNG ya WebP image upload karein.",true);return;}
+  if(file.size>5*1024*1024){message("Image 5 MB se chhoti honi chahiye.",true);return;}
+  if(!db?.storage){message("Storage connection ready nahi hai. Login aur internet check karein.",true);return;}
+  const originalText=button.textContent;
+  button.disabled=true;button.textContent="Uploading...";
+  if(status)status.textContent="Image upload ho rahi hai...";
+  try{
+    const ext=file.type==="image/jpeg"?"jpg":file.type==="image/png"?"png":"webp";
+    const safeBase=String(file.name||"batch-thumbnail").replace(/\\.[^.]*$/,"").toLowerCase().replace(/[^a-z0-9-]+/g,"-").replace(/^-+|-+$/g,"").slice(0,50)||"batch-thumbnail";
+    const unique=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,10);
+    const path="batch-thumbnails/"+safeBase+"-"+unique+"."+ext;
+    const {data,error}=await db.storage.from("ej-banners").upload(path,file,{cacheControl:"3600",contentType:file.type,upsert:false});
+    if(error)throw error;
+    const {data:publicData}=db.storage.from("ej-banners").getPublicUrl(data.path);
+    const publicUrl=publicData?.publicUrl;
+    if(!publicUrl)throw new Error("Upload hua, lekin public image URL nahi mila.");
+    $("batchThumbnail").value=publicUrl;
+    updateBatchThumbnailPreview();
+    if(status)status.textContent="Upload successful. Ab Save Batch / Update Batch dabayein.";
+    message("Thumbnail upload ho gaya. Batch save karna abhi baaki hai.");
+  }catch(error){
+    if(status)status.textContent="Upload nahi hua. Admin permission, internet aur Storage configuration check karein.";
+    message("Thumbnail upload fail hua. Admin access aur storage policy check karein. "+(error?.message||""),true);
+  }finally{
+    button.disabled=false;button.textContent=originalText;
+  }
+});
 
 $("batchForm").addEventListener("reset",function(){
   setTimeout(updateBatchThumbnailPreview,0);
