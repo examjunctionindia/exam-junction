@@ -561,6 +561,9 @@ button:disabled{filter:none;transform:none}
         <input id="lectureDownloadUrl" type="url" placeholder="Google Drive video link">
         <label for="lectureDownloadAllowed">Download Permission</label>
         <select id="lectureDownloadAllowed"><option value="false">Disabled</option><option value="true">Allow eligible students</option></select>
+        <label for="lectureOriginalLinkAllowed">Show Original Link to Students</label>
+        <select id="lectureOriginalLinkAllowed"><option value="false">No — hide original link</option><option value="true">Yes — show original link</option></select>
+        <p class="small">Default is No. Turn this on only when you want students to see the source link.</p>
         <p class="small">Download URL is a separate link. If the file host makes it public, eligible students can still share that link.</p>
 
         <label for="lecturePosition">Position</label>
@@ -1757,6 +1760,7 @@ async function editRecord(type,id){
     $("lectureTeacher").value=row.teacher_name || "";
     $("lectureDownloadUrl").value=row.download_url || "";
     $("lectureDownloadAllowed").value=String(!!row.download_allowed);
+    $("lectureOriginalLinkAllowed").value=String(!!row.original_link_allowed);
     $("lecturePosition").value=String(row.position ?? 0);
 
     const chapter=findById("chapters",row.chapter_id);
@@ -2058,6 +2062,7 @@ $("lectureForm").addEventListener("submit",async function(e){
       teacher_name:$("lectureTeacher").value.trim() || null,
       download_url:$("lectureDownloadUrl").value.trim() || null,
       download_allowed:$("lectureDownloadAllowed").value==="true",
+      original_link_allowed:$("lectureOriginalLinkAllowed").value==="true",
       position:Number($("lecturePosition").value || 0)
     }
   );
