@@ -293,10 +293,10 @@ button:disabled{filter:none;transform:none}
         <label for="batchTeacher">Teacher / Platform Name</label>
         <input id="batchTeacher" maxlength="150" placeholder="Rahul Sir">
 
-        <label for="batchThumbnailFile">Batch Thumbnail — Phone Gallery se upload karein (optional)</label>
-        <input id="batchThumbnailFile" type="file" accept="image/jpeg,image/png,image/webp" capture="environment">
-        <button id="batchThumbnailUpload" class="secondary" type="button" style="margin-top:8px">📤 Upload Selected Image</button>
-        <p id="batchThumbnailUploadStatus" class="small" aria-live="polite">JPG, PNG ya WebP; maximum 5 MB. Upload karne ke baad Save Batch dabayein.</p>
+        <label for="batchThumbnailFile">Batch Thumbnail — Phone Gallery se select karein (optional)</label>
+        <input id="batchThumbnailFile" type="file" accept="image/*">
+        <button id="batchThumbnailUpload" class="secondary" type="button" style="margin-top:8px">📤 Upload / Retry Image</button>
+        <p id="batchThumbnailUploadStatus" class="small" aria-live="polite">Gallery se image select karte hi upload shuru hoga. JPG, PNG ya WebP; maximum 5 MB. Upload ke baad Save Batch dabayein.</p>
         <label for="batchThumbnail">Thumbnail Image URL (optional)</label>
         <input id="batchThumbnail" type="url" maxlength="2000" placeholder="Gallery upload ke baad link yahan aayega; ya HTTPS link paste karein">
         <div id="batchThumbnailPreviewWrap" class="hidden" style="margin-top:10px">
@@ -2034,6 +2034,10 @@ function updateBatchThumbnailPreview(){
   }
 }
 $("batchThumbnail").addEventListener("input",updateBatchThumbnailPreview);
+
+$("batchThumbnailFile").addEventListener("change",function(){
+  if(this.files?.[0]) $("batchThumbnailUpload").click();
+});
 
 $("batchThumbnailUpload").addEventListener("click",async function(){
   const file=$("batchThumbnailFile").files?.[0];
