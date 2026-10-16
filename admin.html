@@ -215,7 +215,7 @@ button:disabled{filter:none;transform:none}
 
     <section class="card" id="adminErrorTracker" aria-labelledby="adminErrorHeading">
       <h2 id="adminErrorHeading">🧰 Error Tracker — Admin Only</h2>
-      <p class="small">Error history is admin-browser ke local storage mein limited list (maximum 150 records) ke roop mein save hoti hai, isliye same browser/device par reload ke baad bhi reh sakti hai. Ye history Supabase/database mein sync nahi hoti; browser data clear karne ya device badalne par history nahi milegi. Sensitive tokens/passwords redact kiye jaate hain.</p>
+      <p class="small">Yahan sirf current Admin session ke detected errors dikhte hain. Error history kahin save nahi hoti. Error fix karke relevant scan dobara chalayein; current list clear karne par records isi session se hat jayenge. Browser reload/close par list reset hogi. Student ko simple message, admin ko safe technical detail dikhane ka uddeshya hai; secrets redact kiye jaate hain.</p>
       <div class="issue-summary" aria-live="polite">
         <div class="issue-stat"><strong id="issueTotalCount">0</strong><span>Total recorded</span></div>
         <div class="issue-stat resolved"><strong id="issueResolvedCount">0</strong><span>Resolved</span></div>
@@ -694,11 +694,9 @@ function message(text,isError=false){
   if(isError) recordAdminIssue(String(text || "Unknown admin error"),getCurrentAdminSection());
 }
 
-/* Admin-only diagnostics. Redact secrets and persist a bounded history on this browser only. */
-const ADMIN_ISSUES_STORAGE_KEY = "exam_junction_admin_error_history_v1";
+/* Admin-only diagnostics. Current-session errors only; never persist the error list. */
 let adminIssueItems = [];
 let adminIssueFilter = "all";
-let adminIssueStorageAvailable = true;
 function redactAdminText(value){
   return String(value ?? "")
     .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g,"[REDACTED TOKEN]")
@@ -718,41 +716,12 @@ function readAdminIssues(){
   return adminIssueItems;
 }
 function writeAdminIssues(items){
+  // Deliberately session-only: no localStorage, database, or Storage writes.
   adminIssueItems = Array.isArray(items) ? items.slice(-150) : [];
-  try {
-    localStorage.setItem(ADMIN_ISSUES_STORAGE_KEY, JSON.stringify(adminIssueItems));
-    adminIssueStorageAvailable = true;
-  } catch (_) {
-    adminIssueStorageAvailable = false;
-  }
-  return adminIssueStorageAvailable;
+  return true;
 }
-function loadAdminIssues(){
-  try {
-    const raw = localStorage.getItem(ADMIN_ISSUES_STORAGE_KEY);
-    if (!raw) return;
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      adminIssueItems = parsed.filter(item => item && typeof item === "object")
-        .slice(-150)
-        .map(item => ({
-          id: String(item.id || Date.now()),
-          section: redactAdminText(item.section || "Admin Dashboard").slice(0,180),
-          detail: redactAdminText(item.detail || "").slice(0,5000),
-          status: item.status === "resolved" ? "resolved" : "pending",
-          createdAt: Number(item.createdAt) || Date.now(),
-          lastSeen: Number(item.lastSeen) || Number(item.createdAt) || Date.now(),
-          occurrences: Math.max(1, Number(item.occurrences) || 1),
-          ...(item.resolvedAt ? {resolvedAt:Number(item.resolvedAt)} : {}),
-          ...(item.autoResolvedByScan ? {autoResolvedByScan:true} : {})
-        }));
-    }
-  } catch (_) {
-    adminIssueStorageAvailable = false;
-    adminIssueItems = [];
-  }
-}
-loadAdminIssues();
+// Remove only the tracker-specific key written by the earlier version of this error tracker.
+try { localStorage.removeItem("exam_junction_admin_error_history_v1"); } catch (_) {}
 function recordAdminIssue(detail,section="Admin Dashboard"){
   const safeDetail=redactAdminText(detail).slice(0,5000);
   const items=readAdminIssues();
