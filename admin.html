@@ -223,6 +223,7 @@ button:disabled{filter:none;transform:none}
       </div>
       <div class="actions">
         <button id="issueScanNow" class="secondary" type="button">🔎 Scan Website Now</button>
+        <button id="issueFullAudit" class="secondary" type="button">🧪 Full Website Audit</button>
         <button id="issueFilterAll" class="secondary" type="button">All Errors</button>
         <button id="issueFilterPending" class="secondary" type="button">Pending Only</button>
         <button id="issueFilterResolved" class="secondary" type="button">Resolved Only</button>
@@ -2347,7 +2348,42 @@ async function runAdminHealthScan(){
   }
 }
 
-/* Persistent admin error tracker controls */
+/* Full website audit: read-only, no error-history persistence. */
+const EJ_AUDIT_PAGES=["index.html","batch.html","batch-detail.html","books.html","login.html","notifications.html","leaderboard.html","profile.html","admin.html"];
+async function runFullWebsiteAudit(){
+ const button=$("issueFullAudit"),status=$("issueScanStatus");if(button){button.disabled=true;button.textContent="Auditing..."}
+ if(status)status.textContent="Full website audit: pages, links, scripts aur assets check ho rahe hain...";
+ let passed=0,failed=0;const seen=new Set();const origin=location.origin;
+ const add=(ok,section,detail)=>{if(ok)passed++;else{failed++;recordAdminIssue(detail,section)}};
+ try{
+  for(const page of EJ_AUDIT_PAGES){
+   const pageUrl=new URL(page,origin+"/");
+   try{
+    const res=await fetch(pageUrl.href,{cache:"no-store",credentials:"same-origin"});
+    if(!res.ok){add(false,"Page: "+page,"HTTP "+res.status+" loading page");continue}
+    const html=await res.text();const doc=new DOMParser().parseFromString(html,"text/html");
+    if(!doc.body||!doc.documentElement)add(false,"Page: "+page,"HTML document structure missing");else add(true,"Page: "+page,"HTTP "+res.status+"; HTML document loaded");
+    const refs=[];
+    doc.querySelectorAll('script[src],link[rel~="stylesheet"][href],img[src],source[src]').forEach(el=>{
+     const raw=el.getAttribute("src")||el.getAttribute("href");if(!raw||raw.startsWith("data:")||raw.startsWith("blob:"))return;
+     try{const u=new URL(raw,pageUrl.href);if(u.origin===origin)refs.push({url:u.href,js:el.tagName==="SCRIPT",page})}catch(_){add(false,"Asset: "+page,"Invalid asset URL: "+raw)}
+    });
+    for(const ref of refs){const key="asset:"+ref.url;if(seen.has(key))continue;seen.add(key);
+     try{const ar=await fetch(ref.url,{cache:"no-store",credentials:"same-origin"});if(!ar.ok){add(false,"Asset: "+page,"HTTP "+ar.status+" for "+new URL(ref.url).pathname);continue}
+      if(ref.js){const code=await ar.text();try{new Function(code);add(true,"JavaScript: "+new URL(ref.url).pathname,"HTTP "+ar.status+"; syntax OK")}catch(e){add(false,"JavaScript: "+new URL(ref.url).pathname,"Syntax check failed: "+e.message)}}
+      else add(true,"Asset: "+page,"HTTP "+ar.status+" for "+new URL(ref.url).pathname);
+     }catch(e){add(false,"Asset: "+page,"Fetch failed: "+ref.url+" — "+e.message)}
+    }
+    const links=[];doc.querySelectorAll("a[href]").forEach(el=>{const raw=(el.getAttribute("href")||"").trim();if(!raw||raw.startsWith("#")||/^(mailto:|tel:|javascript:|data:)/i.test(raw))return;try{const u=new URL(raw,pageUrl.href);if(u.origin===origin&&(/\.(html?|css|js|png|jpe?g|webp|svg|ico|pdf)$/i.test(u.pathname)||u.pathname==="/"))links.push(u)}catch(_){add(false,"Link: "+page,"Invalid internal link: "+raw)}});
+    for(const u of links){const key="link:"+u.href;if(seen.has(key))continue;seen.add(key);try{const lr=await fetch(u.href,{method:"HEAD",cache:"no-store",credentials:"same-origin"});add(lr.ok,"Link: "+page,"HTTP "+lr.status+" for "+u.pathname)}catch(e){add(false,"Link: "+page,"Could not check "+u.pathname+": "+e.message)}}
+    doc.querySelectorAll("script:not([src])").forEach((el,i)=>{const code=el.textContent||"";if(!code.trim())return;try{new Function(code);add(true,"Inline JavaScript: "+page+" #"+(i+1),"Syntax OK")}catch(e){if((e.message||"").includes("await is only valid")){try{new (Object.getPrototypeOf(async function(){}).constructor)(code);add(true,"Inline JavaScript: "+page+" #"+(i+1),"Async syntax OK")}catch(x){add(false,"Inline JavaScript: "+page+" #"+(i+1),x.message)}}else add(false,"Inline JavaScript: "+page+" #"+(i+1),e.message)}});
+   }catch(e){add(false,"Page: "+page,"Page request failed: "+e.message)}
+  }
+  if(status)status.textContent="Full audit complete: "+passed+" passed, "+failed+" failed across "+EJ_AUDIT_PAGES.length+" pages. Interactive login, playback, download and permission behaviour still needs functional tests.";
+ }finally{if(button){button.disabled=false;button.textContent="🧪 Full Website Audit"}renderAdminIssues()}
+}
+$("issueFullAudit").addEventListener("click",runFullWebsiteAudit);
+/* Existing database health scan */
 $("issueScanNow").addEventListener("click",runAdminHealthScan);
 $("issueFilterAll").addEventListener("click",()=>{adminIssueFilter="all";renderAdminIssues()});
 $("issueFilterPending").addEventListener("click",()=>{adminIssueFilter="pending";renderAdminIssues()});
