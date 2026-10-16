@@ -2353,11 +2353,11 @@ const EJ_AUDIT_PAGES=["index.html","batch.html","batch-detail.html","books.html"
 async function runFullWebsiteAudit(){
  const button=$("issueFullAudit"),status=$("issueScanStatus");if(button){button.disabled=true;button.textContent="Auditing..."}
  if(status)status.textContent="Full website audit: pages, links, scripts aur assets check ho rahe hain...";
- let passed=0,failed=0;const seen=new Set();const origin=location.origin;
+ let passed=0,failed=0;const seen=new Set();const origin=location.origin;const auditBase=new URL(".",location.href);
  const add=(ok,section,detail)=>{if(ok)passed++;else{failed++;recordAdminIssue(detail,section)}};
  try{
   for(const page of EJ_AUDIT_PAGES){
-   const pageUrl=new URL(page,origin+"/");
+   const pageUrl=new URL(page,auditBase.href);
    try{
     const res=await fetch(pageUrl.href,{cache:"no-store",credentials:"same-origin"});
     if(!res.ok){add(false,"Page: "+page,"HTTP "+res.status+" loading page");continue}
@@ -2374,7 +2374,7 @@ async function runFullWebsiteAudit(){
       else add(true,"Asset: "+page,"HTTP "+ar.status+" for "+new URL(ref.url).pathname);
      }catch(e){add(false,"Asset: "+page,"Fetch failed: "+ref.url+" — "+e.message)}
     }
-    const links=[];doc.querySelectorAll("a[href]").forEach(el=>{const raw=(el.getAttribute("href")||"").trim();if(!raw||raw.startsWith("#")||/^(mailto:|tel:|javascript:|data:)/i.test(raw))return;try{const u=new URL(raw,pageUrl.href);if(u.origin===origin&&(/\.(html?|css|js|png|jpe?g|webp|svg|ico|pdf)$/i.test(u.pathname)||u.pathname==="/"))links.push(u)}catch(_){add(false,"Link: "+page,"Invalid internal link: "+raw)}});
+    const links=[];doc.querySelectorAll("a[href]").forEach(el=>{const raw=(el.getAttribute("href")||"").trim();if(!raw||raw.startsWith("#")||/^(mailto:|tel:|javascript:|data:)/i.test(raw))return;try{const u=new URL(raw,pageUrl.href);if(u.origin===origin&&(/\.(html?|css|js|png|jpe?g|webp|svg|ico|pdf)$/i.test(u.pathname)||u.pathname===auditBase.pathname))links.push(u)}catch(_){add(false,"Link: "+page,"Invalid internal link: "+raw)}});
     for(const u of links){const key="link:"+u.href;if(seen.has(key))continue;seen.add(key);try{const lr=await fetch(u.href,{method:"HEAD",cache:"no-store",credentials:"same-origin"});add(lr.ok,"Link: "+page,"HTTP "+lr.status+" for "+u.pathname)}catch(e){add(false,"Link: "+page,"Could not check "+u.pathname+": "+e.message)}}
     doc.querySelectorAll("script:not([src])").forEach((el,i)=>{const code=el.textContent||"";if(!code.trim())return;try{new Function(code);add(true,"Inline JavaScript: "+page+" #"+(i+1),"Syntax OK")}catch(e){if((e.message||"").includes("await is only valid")){try{new (Object.getPrototypeOf(async function(){}).constructor)(code);add(true,"Inline JavaScript: "+page+" #"+(i+1),"Async syntax OK")}catch(x){add(false,"Inline JavaScript: "+page+" #"+(i+1),x.message)}}else add(false,"Inline JavaScript: "+page+" #"+(i+1),e.message)}});
    }catch(e){add(false,"Page: "+page,"Page request failed: "+e.message)}
