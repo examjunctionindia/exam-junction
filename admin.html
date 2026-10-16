@@ -1567,6 +1567,20 @@ async function saveRecord(formId,buttonId,table,type,payload){
     const hiddenId = $(forms[type].id);
     const id = hiddenId ? hiddenId.value.trim() : "";
 
+    // Prevent duplicate batch names (case-insensitive), while allowing edits to the same record.
+    if(type==="batches"){
+      const title=String(payload.title||"").trim();
+      if(!title){message("Batch Name zaroori hai.",true);return;}
+      let duplicateQuery=db.from("batches").select("id,title").ilike("title",title);
+      if(id) duplicateQuery=duplicateQuery.neq("id",id);
+      const {data:duplicateRows,error:duplicateError}=await duplicateQuery.limit(1);
+      if(duplicateError){message("Duplicate batch check nahi ho paya. Dobara try karein.",true);return;}
+      if((duplicateRows||[]).length){
+        message("Is naam ka batch pehle se hai. Duplicate banane ke bajay existing batch ko Edit karein.",true);
+        return;
+      }
+    }
+
     // Scoped duplicate protection: chapter positions within a batch; lecture positions within a chapter.
     if(type==="chapters" || type==="lectures"){
       const parentKey=type==="chapters"?"batch_id":"chapter_id";
