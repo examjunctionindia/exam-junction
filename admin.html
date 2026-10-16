@@ -293,10 +293,10 @@ button:disabled{filter:none;transform:none}
         <label for="batchTeacher">Teacher / Platform Name</label>
         <input id="batchTeacher" maxlength="150" placeholder="Rahul Sir">
 
-        <label for="batchThumbnailFile">Batch Thumbnail — Phone Gallery se select karein (optional)</label>
-        <input id="batchThumbnailFile" type="file" accept="image/*">
-        <button id="batchThumbnailUpload" class="secondary" type="button" style="margin-top:8px">📤 Upload / Retry Image</button>
-        <p id="batchThumbnailUploadStatus" class="small" aria-live="polite">Gallery se image select karte hi upload shuru hoga. JPG, PNG ya WebP; maximum 5 MB. Upload ke baad Save Batch dabayein.</p>
+        <label for="batchThumbnailFile">Batch Thumbnail — Phone Gallery se choose karein (optional)</label>
+        <input id="batchThumbnailFile" type="file" accept="image/*" style="display:block;width:100%;margin:8px 0 10px;padding:12px;background:#f7faff;border:2px dashed #9bb6dc;border-radius:12px">
+        <button id="batchThumbnailUpload" class="secondary" type="button" style="margin-top:4px">📸 Select from Phone Gallery / Upload</button>
+        <p id="batchThumbnailUploadStatus" class="small" aria-live="polite">Button dabayein → Gallery se image choose karein → image upload hogi. JPG, PNG ya WebP; maximum 5 MB. Upload ke baad Save Batch dabayein.</p>
         <label for="batchThumbnail">Thumbnail Image URL (optional)</label>
         <input id="batchThumbnail" type="url" maxlength="2000" placeholder="Gallery upload ke baad link yahan aayega; ya HTTPS link paste karein">
         <div id="batchThumbnailPreviewWrap" class="hidden" style="margin-top:10px">
@@ -2043,7 +2043,12 @@ $("batchThumbnailUpload").addEventListener("click",async function(){
   const file=$("batchThumbnailFile").files?.[0];
   const status=$("batchThumbnailUploadStatus");
   const button=$("batchThumbnailUpload");
-  if(!file){message("Pehle phone gallery se thumbnail image select karein.",true);return;}
+  if(!file){
+    // Open Android/iOS file picker from the website button instead of showing an error.
+    $("batchThumbnailFile").click();
+    if(status)status.textContent="Phone Gallery khulni chahiye. Image select karein; selection ke baad upload automatic shuru hoga.";
+    return;
+  }
   const allowedTypes=["image/jpeg","image/png","image/webp"];
   if(!allowedTypes.includes(file.type)){message("Sirf JPG, PNG ya WebP image upload karein.",true);return;}
   if(file.size>5*1024*1024){message("Image 5 MB se chhoti honi chahiye.",true);return;}
