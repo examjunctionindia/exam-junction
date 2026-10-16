@@ -62,6 +62,17 @@ button:active{transform:translateY(1px)}
 .dashboard-stat{border:1px solid #dce7f6;border-radius:12px;padding:14px;background:linear-gradient(145deg,#fff,#f4f8ff);min-width:0}
 .dashboard-stat strong{display:block;font-size:25px;line-height:1.2;color:#17458a}
 .dashboard-stat span{display:block;margin-top:5px;font-size:12px;color:#526783}
+.issue-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:14px 0}
+.issue-stat{padding:12px;border-radius:11px;border:1px solid #dce5f1;background:#f8faff;min-width:0}
+.issue-stat strong{display:block;font-size:25px;line-height:1.2;color:#17458a;font-variant-numeric:tabular-nums}
+.issue-stat span{display:block;margin-top:5px;font-size:12px;color:#526783}
+.issue-stat.pending{background:#fff5f4;border-color:#f2cfcc}.issue-stat.pending strong{color:#b42318}
+.issue-stat.resolved{background:#f0fbf4;border-color:#cbe9d5}.issue-stat.resolved strong{color:#167647}
+.issue-row{border:1px solid #e0e7f0;border-radius:11px;padding:12px;margin:10px 0;background:#fff;overflow-wrap:anywhere}
+.issue-row.pending{border-left:4px solid #c9362b}.issue-row.resolved{border-left:4px solid #16804a;opacity:.88}
+.issue-title{font-weight:750;margin-bottom:5px}.issue-meta{font-size:12px;color:#64748b;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.issue-detail{font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere;background:#f6f8fc;border-radius:8px;padding:9px;margin-top:8px;max-height:180px;overflow:auto}
+@media(max-width:420px){.issue-summary{gap:6px}.issue-stat{padding:9px}.issue-stat strong{font-size:21px}.issue-stat span{font-size:11px}}
 @media(max-width:480px){.dashboard-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 /* Management workspace navigation */
 .management-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:16px}
@@ -200,6 +211,23 @@ button:disabled{filter:none;transform:none}
         <div class="dashboard-stat"><strong id="statDrafts">—</strong><span>Draft items loaded</span></div>
         <div class="dashboard-stat"><strong id="statRequests">—</strong><span>Pending batch requests</span></div>
       </div>
+    </section>
+
+    <section class="card" id="adminErrorTracker" aria-labelledby="adminErrorHeading">
+      <h2 id="adminErrorHeading">🧰 Error Tracker — Admin Only</h2>
+      <p class="small">Admin panel ke errors yahan location aur details ke saath save honge. Error fix/test karne ke baad hi Mark Resolved dabayein. History isi browser/device mein save hoti hai.</p>
+      <div class="issue-summary" aria-live="polite">
+        <div class="issue-stat"><strong id="issueTotalCount">0</strong><span>Total recorded</span></div>
+        <div class="issue-stat resolved"><strong id="issueResolvedCount">0</strong><span>Resolved</span></div>
+        <div class="issue-stat pending"><strong id="issuePendingCount">0</strong><span>Pending</span></div>
+      </div>
+      <div class="actions">
+        <button id="issueFilterAll" class="secondary" type="button">All Errors</button>
+        <button id="issueFilterPending" class="secondary" type="button">Pending Only</button>
+        <button id="issueFilterResolved" class="secondary" type="button">Resolved Only</button>
+        <button id="issueClearResolved" class="secondary" type="button">Clear Resolved History</button>
+      </div>
+      <div id="adminErrorList" aria-live="polite" class="small" style="margin-top:12px">Abhi koi error record nahi hua.</div>
     </section>
 
     <section class="card" id="managementHome" aria-labelledby="managementNavHeading">
@@ -660,9 +688,85 @@ function message(text,isError=false){
   $("status").style.background = isError ? "#fff0f0" : "#edf3ff";
   $("status").style.color = isError ? "#a12727" : "#173b73";
   $("status").classList.remove("hidden");
+  if(isError) recordAdminIssue(String(text || "Unknown admin error"),getCurrentAdminSection());
 }
 
 /* Admin-only diagnostics. Keep secrets/tokens redacted before displaying details. */
+const ADMIN_ISSUE_STORAGE_KEY = "exam_junction_admin_error_history_v1";
+let adminIssueFilter = "all";
+function redactAdminText(value){
+  return String(value ?? "")
+    .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g,"[REDACTED TOKEN]")
+    .replace(/(access_token|refresh_token|password|service_role|api[_-]?key)\s*[:=]\s*["']?[^,\s"']+/gi,"$1=[REDACTED]");
+}
+function getCurrentAdminSection(){
+  const hash=(location.hash||"").replace(/^#/,"");
+  const target=hash ? document.getElementById(hash) : null;
+  if(target){
+    const section=target.closest("section[id]") || target;
+    const label=section.getAttribute("aria-labelledby");
+    return (label && $(label)?.textContent.trim()) || section.id || "Admin Dashboard";
+  }
+  return "Admin Dashboard / Background Load";
+}
+function readAdminIssues(){
+  try{
+    const value=JSON.parse(localStorage.getItem(ADMIN_ISSUE_STORAGE_KEY)||"[]");
+    return Array.isArray(value) ? value.filter(x=>x&&typeof x==="object") : [];
+  }catch(_){return []}
+}
+function writeAdminIssues(items){
+  try{localStorage.setItem(ADMIN_ISSUE_STORAGE_KEY,JSON.stringify(items.slice(-150)));return true}
+  catch(error){console.warn("Could not save local admin error history:",error);return false}
+}
+function recordAdminIssue(detail,section="Admin Dashboard"){
+  const safeDetail=redactAdminText(detail).slice(0,5000);
+  const items=readAdminIssues();
+  const now=Date.now();
+  const duplicate=items.find(x=>x.status==="pending"&&x.section===section&&x.detail===safeDetail&&now-(Number(x.lastSeen)||Number(x.createdAt)||0)<60000);
+  if(duplicate){
+    duplicate.lastSeen=now;
+    duplicate.occurrences=(Number(duplicate.occurrences)||1)+1;
+    writeAdminIssues(items);
+    renderAdminIssues();
+    return;
+  }
+  items.push({id:String(now)+"-"+Math.random().toString(36).slice(2,8),section:redactAdminText(section).slice(0,180),detail:safeDetail,status:"pending",createdAt:now,lastSeen:now,occurrences:1});
+  writeAdminIssues(items);
+  renderAdminIssues();
+}
+function renderAdminIssues(){
+  const items=readAdminIssues();
+  const pending=items.filter(x=>x.status!=="resolved").length;
+  const resolved=items.length-pending;
+  if($("issueTotalCount")) $("issueTotalCount").textContent=String(items.length);
+  if($("issueResolvedCount")) $("issueResolvedCount").textContent=String(resolved);
+  if($("issuePendingCount")) $("issuePendingCount").textContent=String(pending);
+  const list=$("adminErrorList");
+  if(!list) return;
+  const shown=items.filter(x=>adminIssueFilter==="all"||(adminIssueFilter==="pending"?x.status!=="resolved":x.status==="resolved")).sort((x,y)=>(Number(y.lastSeen)||0)-(Number(x.lastSeen)||0));
+  list.replaceChildren();
+  if(!shown.length){list.textContent=adminIssueFilter==="resolved"?"Koi resolved error history nahi hai.":adminIssueFilter==="pending"?"Koi pending error nahi hai.":"Abhi koi error record nahi hua.";return}
+  shown.forEach(issue=>{
+    const row=document.createElement("article");
+    row.className="issue-row "+(issue.status==="resolved"?"resolved":"pending");
+    const title=document.createElement("div");title.className="issue-title";title.textContent=(issue.status==="resolved"?"Resolved: ":"Pending: ")+issue.section;row.append(title);
+    const meta=document.createElement("div");meta.className="issue-meta";
+    meta.textContent="First seen: "+new Date(Number(issue.createdAt)||Date.now()).toLocaleString("en-IN")+"\nLast seen: "+new Date(Number(issue.lastSeen)||Number(issue.createdAt)||Date.now()).toLocaleString("en-IN")+"\nOccurrences: "+(Number(issue.occurrences)||1);row.append(meta);
+    const detail=document.createElement("div");detail.className="issue-detail";detail.textContent=issue.detail||"No extra details";row.append(detail);
+    const actions=document.createElement("div");actions.className="actions";
+    if(issue.status!=="resolved"){
+      const resolve=document.createElement("button");resolve.type="button";resolve.className="secondary";resolve.textContent="Mark Resolved";resolve.addEventListener("click",()=>{
+        const current=readAdminIssues();const item=current.find(x=>x.id===issue.id);if(item){item.status="resolved";item.resolvedAt=Date.now();writeAdminIssues(current);renderAdminIssues()}
+      });actions.append(resolve);
+    }else{
+      const reopen=document.createElement("button");reopen.type="button";reopen.className="secondary";reopen.textContent="Reopen";reopen.addEventListener("click",()=>{
+        const current=readAdminIssues();const item=current.find(x=>x.id===issue.id);if(item){item.status="pending";delete item.resolvedAt;writeAdminIssues(current);renderAdminIssues()}
+      });actions.append(reopen);
+    }
+    row.append(actions);list.append(row);
+  });
+}
 function formatAdminError(error,context="Admin error"){
   const redact = value => String(value ?? "")
     .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g,"[REDACTED TOKEN]")
@@ -675,7 +779,9 @@ function formatAdminError(error,context="Admin error"){
       lines.push(key+": "+redact(error[key]));
     }
   }
-  return lines.join("\n");
+  const formatted=lines.join("\n");
+  recordAdminIssue(formatted,context);
+  return formatted;
 }
 
 function escapeText(value){
@@ -2163,6 +2269,17 @@ Object.keys(forms).forEach(type=>{
     message("Edit cancel kar diya gaya.");
   });
 });
+
+/* Persistent admin error tracker controls */
+$("issueFilterAll").addEventListener("click",()=>{adminIssueFilter="all";renderAdminIssues()});
+$("issueFilterPending").addEventListener("click",()=>{adminIssueFilter="pending";renderAdminIssues()});
+$("issueFilterResolved").addEventListener("click",()=>{adminIssueFilter="resolved";renderAdminIssues()});
+$("issueClearResolved").addEventListener("click",()=>{
+  if(!confirm("Resolved error history isi browser se clear karni hai? Pending errors safe rahenge.")) return;
+  writeAdminIssues(readAdminIssues().filter(x=>x.status!=="resolved"));
+  renderAdminIssues();
+});
+renderAdminIssues();
 
 /* REFRESH / LOGOUT */
 
