@@ -222,11 +222,13 @@ button:disabled{filter:none;transform:none}
         <div class="issue-stat pending"><strong id="issuePendingCount">0</strong><span>Pending</span></div>
       </div>
       <div class="actions">
+        <button id="issueScanNow" class="secondary" type="button">🔎 Scan Website Now</button>
         <button id="issueFilterAll" class="secondary" type="button">All Errors</button>
         <button id="issueFilterPending" class="secondary" type="button">Pending Only</button>
         <button id="issueFilterResolved" class="secondary" type="button">Resolved Only</button>
         <button id="issueClearResolved" class="secondary" type="button">Clear Resolved History</button>
       </div>
+      <p id="issueScanStatus" class="small" aria-live="polite">Automatic scan login ke baad chalega.</p>
       <div id="adminErrorList" aria-live="polite" class="small" style="margin-top:12px">Abhi koi error record nahi hua.</div>
     </section>
 
@@ -1643,6 +1645,7 @@ async function checkSession(){
   try {
     await loadLists();
     message("Admin verified. Data loading complete. Agar kisi section mein error hai, usi section mein dikhaya gaya hai.");
+    await runAdminHealthScan();
   } catch(error) {
     console.error("Admin data loading failed:", error);
     message(
@@ -2270,7 +2273,81 @@ Object.keys(forms).forEach(type=>{
   });
 });
 
+/* Automatic error capture: uncaught JavaScript errors and rejected promises */
+window.addEventListener("error",function(event){
+  const detail="Automatic JavaScript error\\nMessage: "+(event.message||"Unknown script error")+
+    "\\nFile: "+(event.filename||"unknown")+"\\nLine: "+(event.lineno||"?")+":"+ (event.colno||"?");
+  recordAdminIssue(detail,"Automatic Browser Error");
+});
+window.addEventListener("unhandledrejection",function(event){
+  const reason=event.reason;
+  recordAdminIssue("Automatic unhandled promise rejection\\n"+(reason&&reason.stack?reason.stack:(reason&&reason.message?reason.message:String(reason||"Unknown rejection"))),"Automatic Promise Error");
+});
+
+let adminScanRunning=false;
+async function runAdminHealthScan(){
+  if(adminScanRunning) return;
+  if(!db){
+    recordAdminIssue("Automatic health scan could not run: Supabase client is not initialized or admin is not verified.","Health Scan");
+    if($("issueScanStatus")) $("issueScanStatus").textContent="Scan nahi chala: admin/database connection ready nahi hai.";
+    return;
+  }
+  adminScanRunning=true;
+  const button=$("issueScanNow");
+  if(button){button.disabled=true;button.textContent="Scanning..."}
+  const status=$("issueScanStatus");
+  if(status) status.textContent="Read-only scan chal raha hai: database tables aur access check ho rahe hain...";
+  const checks=[
+    ["batches","Batch management"],
+    ["books","Books management"],
+    ["notifications","Notifications"],
+    ["banners","Banners"],
+    ["chapters","Chapters"],
+    ["chapter_notes","Chapter PDFs / Notes"],
+    ["lectures","Lectures"],
+    ["profiles","Student profiles / Admin role"],
+    ["book_access","Student book access"],
+    ["batch_access","Student batch access"],
+    ["batch_join_requests","Batch access requests"],
+    ["problem_reports","Student problem reports"],
+    ["student_activity_events","Student activity tracking"]
+  ];
+  let passed=0,failed=0;
+  try{
+    for(const [table,label] of checks){
+      try{
+        const result=await db.from(table).select("*").limit(1);
+        if(result.error){
+          failed++;
+          recordAdminIssue("Automatic database check failed\\nSection: "+label+"\\nTable: "+table+"\\n"+formatAdminError(result.error,"Database health scan"),"Database: "+table);
+        }else{
+          passed++;
+          const prior=readAdminIssues();
+          let changed=false;
+          prior.forEach(issue=>{
+            if(issue.status!=="resolved" && issue.section==="Database: "+table){
+              issue.status="resolved";issue.resolvedAt=Date.now();issue.autoResolvedByScan=true;changed=true;
+            }
+          });
+          if(changed) writeAdminIssues(prior);
+        }
+      }catch(error){
+        failed++;
+        recordAdminIssue("Automatic database check threw an error\\nTable: "+table+"\\n"+(error&&error.stack?error.stack:String(error)),"Database: "+table);
+      }
+    }
+    renderAdminIssues();
+    if(status) status.textContent="Scan complete: "+passed+" checks passed, "+failed+" checks failed. Failed tables ke details neeche dekho. Ye read-only check tha.";
+    if(failed) recordAdminIssue("Automatic health scan summary: "+failed+" of "+checks.length+" database checks failed. Review the individual Database errors below.","Health Scan Summary");
+  }finally{
+    adminScanRunning=false;
+    if(button){button.disabled=false;button.textContent="🔎 Scan Website Now"}
+    renderAdminIssues();
+  }
+}
+
 /* Persistent admin error tracker controls */
+$("issueScanNow").addEventListener("click",runAdminHealthScan);
 $("issueFilterAll").addEventListener("click",()=>{adminIssueFilter="all";renderAdminIssues()});
 $("issueFilterPending").addEventListener("click",()=>{adminIssueFilter="pending";renderAdminIssues()});
 $("issueFilterResolved").addEventListener("click",()=>{adminIssueFilter="resolved";renderAdminIssues()});
