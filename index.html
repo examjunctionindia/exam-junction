@@ -358,11 +358,35 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            opacity: .22;
+            opacity: 1;
             pointer-events: none;
+            z-index: 0;
         }
         .batch-cover.has-thumbnail {
-            background: linear-gradient(120deg,rgba(234,241,255,.9),rgba(244,247,255,.82));
+            background: #18345f;
+            isolation: isolate;
+        }
+        .batch-cover.has-thumbnail::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            background: linear-gradient(90deg,rgba(8,25,52,.78) 0%,rgba(8,25,52,.42) 62%,rgba(8,25,52,.12) 100%);
+            pointer-events: none;
+        }
+        .batch-cover.has-thumbnail .batch-category {
+            background: rgba(255,255,255,.92);
+            color: #173866;
+        }
+        .batch-cover.has-thumbnail h3 {
+            color: #fff;
+            text-shadow: 0 1px 3px rgba(0,0,0,.35);
+        }
+        .batch-cover.has-thumbnail .batch-symbol {
+            display: none;
+        }
+        .batch-cover.has-thumbnail .batch-cover-content {
+            z-index: 1;
         }
         .batch-symbol { position: relative; z-index: 1; }
 
