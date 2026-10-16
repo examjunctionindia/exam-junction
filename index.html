@@ -363,8 +363,23 @@
             z-index: 0;
         }
         .batch-cover.has-thumbnail {
+            /* Let the cover height follow the selected image's natural aspect ratio. */
+            display: block;
+            min-height: 0;
+            height: auto;
+            padding: 0;
             background: #18345f;
             isolation: isolate;
+        }
+        .batch-cover.has-thumbnail .batch-cover-image {
+            position: relative;
+            inset: auto;
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: none;
+            object-fit: contain;
+            opacity: 1;
         }
         .batch-cover.has-thumbnail::after {
             content: "";
@@ -386,7 +401,19 @@
             display: none;
         }
         .batch-cover.has-thumbnail .batch-cover-content {
+            position: absolute;
+            inset: 0;
             z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 20px;
+            pointer-events: none;
+        }
+        .batch-cover.has-thumbnail .batch-category,
+        .batch-cover.has-thumbnail h3 {
+            pointer-events: auto;
         }
         .batch-symbol { position: relative; z-index: 1; }
 
