@@ -148,9 +148,9 @@ const chapters=chapterResult.data||[];
 if(batch.show_content_counts===true){
  let lectureCount=0,countAvailable=true;
  if(chapters.length){
-  const {data:countRows,error:countError}=await db.from("lectures").select("id").in("chapter_id",chapters.map(ch=>ch.id)).eq("is_published",true);
+  const {count:countRows,error:countError}=await db.from("lectures").select("id",{count:"exact",head:true}).in("chapter_id",chapters.map(ch=>ch.id)).eq("is_published",true);
   if(countError){countAvailable=false;console.warn("Published lecture count unavailable",countError);}
-  else lectureCount=(countRows||[]).length;
+  else lectureCount=Number(countRows||0);
  }
  if(countAvailable){
   const countText=document.createElement("span");countText.className="batch-content-counts";
