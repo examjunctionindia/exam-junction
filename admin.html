@@ -567,7 +567,7 @@ button:disabled{filter:none;transform:none}
         <input id="notesId" type="hidden">
         <label for="notesChapter">Select Chapter *</label><select id="notesChapter" required><option value="">Select Chapter</option></select><label for="notesLecture">Notes location *</label><select id="notesLecture"><option value="">Chapter Notes (under chapter)</option></select><label for="notesEnabled">Do you want to add notes?</label><select id="notesEnabled" required><option value="yes">Yes, add notes</option><option value="no">No notes for this chapter/lecture</option></select>
         <div id="notesContentFields"><label for="notesTitle">Notes Title *</label><input id="notesTitle" maxlength="200" placeholder="Percentage PDF Notes">
-        <label for="notesSource">Notes Source *</label><select id="notesSource" required><option value="drive">Google Drive Link</option><option value="external">External Website PDF Link</option><option value="storage">Supabase Storage (future option)</option></select><label for="notesUrl">PDF / Notes URL *</label><input id="notesUrl" type="url" required placeholder="https://..."><p class="small" id="notesSourceHelp">Google Drive PDF ya kisi external website ka direct PDF link paste karein. External server PDF embed block kar sakta hai; aise mein Open PDF separately button ka use hoga. Storage select karne par file upload automatic nahi hota.</p></div>
+        <label for="notesSource">Notes Source *</label><select id="notesSource" required><option value="drive">Google Drive Link</option><option value="external">External Website PDF Link</option><option value="storage" disabled>Supabase Storage (not configured yet)</option></select><label for="notesUrl">PDF / Notes URL *</label><input id="notesUrl" type="url" required placeholder="https://..."><p class="small" id="notesSourceHelp">Google Drive PDF ya kisi external website ka direct PDF link paste karein. External server PDF embed block kar sakta hai; aise mein Open PDF separately button ka use hoga. Storage select karne par file upload automatic nahi hota.</p></div>
         <div class="actions"><button id="notesSave" type="submit">Save Notes Link</button><button id="notesCancel" class="secondary hidden" type="button">Cancel Edit</button></div>
       </form>
       <hr class="divider"><h3>Existing Chapter Notes</h3>
@@ -1018,7 +1018,7 @@ async function loadLists(){
     },
     {
       table:"chapter_notes",key:"notes",element:"chapterNotesList",order:"created_at",
-      lines:[{label:"Chapter",value:row=>{const ch=findById("chapters",row.chapter_id);return ch?ch.title:"Unknown chapter";}},{key:"title",label:"Notes"},{key:"storage_path",label:"PDF / Drive Link"}],
+      lines:[{label:"Chapter",value:row=>{const ch=findById("chapters",row.chapter_id);return ch?ch.title:"Unknown chapter";}},{label:"Notes location",value:row=>row.lecture_id?((findById("lectures",row.lecture_id)?.title||"Lecture") + " (lecture notes)"):"Chapter notes"},{key:"title",label:"Notes"},{key:"storage_path",label:"PDF / Drive Link"}],
       empty:"Abhi chapter notes add nahi hue."
     },
     {
@@ -1925,7 +1925,7 @@ async function editRecord(type,id){
   }
 
   const config=forms[type];
-  $(config.heading).textContent=config.editHeading;
+  $(config.heading).textContent=(type==="notes" && row.lecture_id)?"✏️ Edit Lecture Notes":"✏️ "+config.editHeading.replace(/^✏️\s*/,"");
   $(config.save).textContent=config.editButton;
   $(config.cancel).classList.remove("hidden");
 
