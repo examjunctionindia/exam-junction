@@ -45,14 +45,13 @@ function makeNoteRow(note){
   const urls=googlePdfUrls(raw);
   const actions=document.createElement("div");actions.className="media-actions";
   const view=document.createElement("button");view.className="btn";view.type="button";view.textContent="📖 View PDF";actions.append(view);
+  if(canShowOriginal(note)){const original=document.createElement("a");original.className="btn";original.href=urls.original||raw;original.target="_blank";original.rel="noopener noreferrer";original.textContent="↗ Open Original Link";actions.append(original);}
   const wrap=document.createElement("div");wrap.className="pdf-fullscreen hidden";
   const frame=document.createElement("iframe");frame.className="pdf";frame.title=note.title||"Notes PDF";frame.loading="lazy";frame.src=urls.view;frame.allow="fullscreen";wrap.append(frame);
   const fallback=document.createElement("div");fallback.className="fallback-box hidden";fallback.textContent="PDF website ke andar nahi khul pa raha. Dobara try karein ya original link use karein, agar allowed ho.";wrap.append(fallback);
   const retry=document.createElement("button");retry.className="btn";retry.type="button";retry.textContent="↻ Retry";retry.addEventListener("click",()=>{fallback.classList.add("hidden");frame.src=urls.view+"#retry="+Date.now();setTimeout(()=>fallback.classList.remove("hidden"),12000)});fallback.append(retry);
-  if(canShowOriginal(note)){const original=document.createElement("a");original.className="btn";original.href=urls.original||raw;original.target="_blank";original.rel="noopener noreferrer";original.textContent="↗ Open Original Link";fallback.append(original)}
   let timer=null;view.addEventListener("click",()=>{wrap.classList.remove("hidden");wrap.scrollIntoView({behavior:"smooth",block:"nearest"});if(timer)clearTimeout(timer);timer=setTimeout(()=>fallback.classList.remove("hidden"),12000)});
   frame.addEventListener("load",()=>{if(timer)clearTimeout(timer)});
-  actions.append(view);
   const downloadAllowed=getDownloadAllowed(note);
   const downloadUrl=safeUrl(note.download_url||urls.download||"");
   if(downloadAllowed&&downloadUrl){const dl=document.createElement("a");dl.className="btn";dl.href=downloadUrl;dl.target="_blank";dl.rel="noopener noreferrer";dl.textContent="⬇ Download";actions.append(dl)}
