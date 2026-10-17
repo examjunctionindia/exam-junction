@@ -861,12 +861,55 @@ document.addEventListener("input",function(event){
   if(!input) return;
   const root=$(input.dataset.listSearch);
   if(!root) return;
+  if(root.id==="batchList"){applyBatchFilters();return;}
   const query=input.value.trim().toLocaleLowerCase();
   Array.from(root.children).forEach(function(item){
     if(!item.classList.contains("item")) return;
     item.hidden=!!query && !item.textContent.toLocaleLowerCase().includes(query);
   });
 });
+
+function applyBatchFilters(){
+  const root=$("batchList");if(!root)return;
+  const query=($("searchBatches")?.value||"").trim().toLowerCase();
+  const access=$("filterBatchAccess")?.value||"all";
+  const status=$("filterBatchStatus")?.value||"all";
+  const contentFilter=$("filterBatchContent")?.value||"all";
+  const thumbnailFilter=$("filterBatchThumbnail")?.value||"all";
+  const sort=$("sortBatchList")?.value||"position";
+  const items=Array.from(root.querySelectorAll(".item"));
+  items.sort((a,b)=>{
+    const ra=findById("batches",a.dataset.recordId)||{},rb=findById("batches",b.dataset.recordId)||{};
+    if(sort==="name")return String(ra.title||"").localeCompare(String(rb.title||""));
+    if(sort==="newest")return (Date.parse(rb.created_at||"")||0)-(Date.parse(ra.created_at||"")||0);
+    return Number(ra.display_position||0)-Number(rb.display_position||0) || (Date.parse(rb.created_at||"")||0)-(Date.parse(ra.created_at||"")||0);
+  });
+  items.forEach(item=>root.append(item));
+  items.forEach(item=>{
+    const row=findById("batches",item.dataset.recordId)||{};
+    const rowStatus=row.publication_status||(row.is_published?"published":"draft");
+    const chapters=cache.chapters.filter(c=>c.batch_id===row.id&&c.is_published===true);
+    const chapterIds=new Set(chapters.map(c=>c.id));
+    const lectures=cache.lectures.filter(l=>chapterIds.has(l.chapter_id)&&l.is_published===true);
+    const searchText=[row.title,row.platform_name,row.description,row.access_type,rowStatus,row.thumbnail_url?"thumbnail available":"thumbnail missing"].join(" ").toLowerCase();
+    let ok=!query||searchText.includes(query);
+    if(access!=="all"&&row.access_type!==access)ok=false;
+    if(status!=="all"&&rowStatus!==status)ok=false;
+    if(thumbnailFilter==="has"&&!row.thumbnail_url)ok=false;
+    if(thumbnailFilter==="missing"&&row.thumbnail_url)ok=false;
+    if(contentFilter==="chapters"&&!chapters.length)ok=false;
+    if(contentFilter==="no-chapters"&&chapters.length)ok=false;
+    if(contentFilter==="lectures"&&!lectures.length)ok=false;
+    if(contentFilter==="no-lectures"&&lectures.length)ok=false;
+    item.hidden=!ok;
+  });
+  const visible=items.filter(i=>!i.hidden).length;
+  const noItems=root.querySelector(".batch-filter-empty");
+  if(noItems)noItems.remove();
+  if(items.length&&visible===0){const empty=document.createElement("p");empty.className="batch-filter-empty small";empty.textContent="Koi matching batch nahi mila.";root.append(empty)}
+}
+
+["filterBatchAccess","filterBatchStatus","filterBatchContent","filterBatchThumbnail","sortBatchList"].forEach(id=>$(id)?.addEventListener("change",applyBatchFilters));
 
 function findById(type,id){
   return (cache[type] || []).find(row => String(row.id) === String(id));
@@ -2124,7 +2167,48 @@ $("batchThumbnailUpload").addEventListener("click",async function(){
 });
 
 $("batchForm").addEventListener("reset",function(){
-  setTimeout(updateBatchThumbnailPreview,0);
+  setTimeout(()=>{updateBatchThumbnailPreview();const picker=$("batchThumbnailGalleryPicker");if(picker)picker.classList.add("hidden");},0);
+});
+
+$("batchThumbnailGallery").addEventListener("click",async function(){
+  const picker=$("batchThumbnailGalleryPicker"),status=$("batchThumbnailUploadStatus");
+  if(!picker)return;
+  if(!picker.classList.contains("hidden")){picker.classList.add("hidden");return;}
+  picker.classList.remove("hidden");picker.replaceChildren();status.textContent="Website gallery load ho rahi hai...";
+  try{
+    const {data:files,error}=await db.storage.from("ej-banners").list("batch-thumbnails",{limit:100,sortBy:{column:"created_at",order:"desc"}});
+    if(error)throw error;
+    const images=(files||[]).filter(file=>file.name&&!file.id?.startsWith("folder"));
+    if(!images.length){status.textContent="Gallery mein saved thumbnails nahi hain. Phone gallery se image upload karein.";return;}
+    status.textContent="Image select karein. Purani images automatically delete nahi hoti.";
+    for(const file of images){
+      const path="batch-thumbnails/"+file.name;
+      const {data:publicData}=db.storage.from("ej-banners").getPublicUrl(path);
+      const url=publicData?.publicUrl;if(!url)continue;
+      const tile=document.createElement("div");tile.style.cssText="border:1px solid #dce5f1;border-radius:12px;padding:8px;background:#fff;min-width:0";
+      const img=document.createElement("img");img.src=url;img.alt=file.name;img.loading="lazy";img.style.cssText="display:block;width:100%;aspect-ratio:16/9;object-fit:contain;background:#f2f6fc;border-radius:8px";
+      const name=document.createElement("p");name.className="small";name.textContent=file.name;name.style.wordBreak="break-word";
+      const choose=document.createElement("button");choose.type="button";choose.className="secondary";choose.textContent="Select";choose.addEventListener("click",()=>{$("batchThumbnail").value=url;updateBatchThumbnailPreview();status.textContent="Gallery thumbnail selected. Save Batch / Update Batch dabayein.";picker.classList.add("hidden")});
+      const remove=document.createElement("button");remove.type="button";remove.className="danger";remove.textContent="Delete unused image";remove.style.marginTop="6px";
+      remove.addEventListener("click",async()=>{
+        if($("batchThumbnail").value===url){message("Ye image abhi form mein selected hai. Pehle doosri thumbnail choose karein.",true);return;}
+        try{
+          const [batches,books,banners]=await Promise.all([
+            db.from("batches").select("id,title").eq("thumbnail_url",url).limit(10),
+            db.from("books").select("id,title").eq("cover_path",url).limit(10),
+            db.from("banners").select("id,title").eq("image_url",url).limit(10)
+          ]);
+          if(batches.error||books.error||banners.error)throw new Error("Image references check nahi ho paya.");
+          const refs=[...(batches.data||[]),...(books.data||[]),...(banners.data||[])];
+          if(refs.length){message("Image abhi content mein use ho rahi hai. Pehle us content ki thumbnail badlein.",true);return;}
+          if(!confirm("Unused thumbnail "+file.name+" ko permanently delete karna hai?"))return;
+          const {error:removeError}=await db.storage.from("ej-banners").remove([path]);if(removeError)throw removeError;
+          tile.remove();message("Unused thumbnail delete ho gayi.");
+        }catch(error){message("Image delete nahi hui. "+(error.message||""),true)}
+      });
+      tile.append(img,name,choose,remove);picker.append(tile);
+    }
+  }catch(error){status.textContent="Website gallery load nahi hui. Storage permission check karein.";message("Gallery load error: "+(error.message||""),true)}
 });
 
 /* BATCH SAVE */
@@ -2239,16 +2323,18 @@ $("chapterForm").addEventListener("submit",async function(e){
     return;
   }
 
-  await saveRecord(
-    "chapterForm","chapterSave","chapters","chapters",
-    {
-      batch_id:$("chapterBatch").value,
-      title:$("chapterTitle").value.trim(),
-      position:Number($("chapterPosition").value || 0),
-      publication_status:$("chapterPublished").value,
-      is_published:$("chapterPublished").value==="published"
-    }
-  );
+  const batchId=$("chapterBatch").value,position=Number($("chapterPosition").value||0),currentId=$("chapterId").value;
+  if(!Number.isInteger(position)||position<0||position>9999){message("Position 0 se 9999 tak poora number hona chahiye.",true);return;}
+  const current=findById("chapters",currentId);
+  if(!current||current.batch_id!==batchId||Number(current.position)!==position){
+    const {data:duplicates,error}=await db.from("chapters").select("id").eq("batch_id",batchId).eq("position",position).limit(2);
+    if(error){message("Position check nahi ho paya. Dobara try karein.",true);return;}
+    if((duplicates||[]).some(row=>row.id!==currentId)){message("Is batch mein ye Chapter Position pehle se use ho rahi hai. Doosra number choose karein.",true);return;}
+  }
+  await saveRecord("chapterForm","chapterSave","chapters","chapters",{
+    batch_id:batchId,title:$("chapterTitle").value.trim(),position,
+    publication_status:$("chapterPublished").value,is_published:$("chapterPublished").value==="published"
+  });
 });
 
 /* LECTURE SAVE */
@@ -2298,16 +2384,19 @@ $("notesForm").addEventListener("submit",async function(e){
    if(source==="external" && !/^https:\/\//i.test(url)){message("External PDF link HTTPS hona chahiye.",true);return;}
   if(source==="storage" && !["supabase.co","supabase.in"].some(host=>parsed.hostname.toLowerCase()===host||parsed.hostname.toLowerCase().endsWith("."+host))){message("Supabase Storage ka file URL paste karein. Storage bucket pehle configure hona chahiye.",true);return;}
   if(!$("notesChapter").value){message("Notes ke liye chapter select karein.",true);return;}
-  // Same title is blocked only within the same chapter and same notes location.
   const chapterId=$("notesChapter").value;
   const lectureId=$("notesLecture").value || null;
-  let duplicateQuery=db.from("chapter_notes").select("id,title").eq("chapter_id",chapterId).ilike("title",$("notesTitle").value.trim());
-  if(lectureId){duplicateQuery=duplicateQuery.eq("lecture_id",lectureId);}else{duplicateQuery=duplicateQuery.is("lecture_id",null);}
+  const position=Number($("notesPosition").value||0);
   const currentNoteId=$("notesId")?$("notesId").value:"";
-  if(currentNoteId)duplicateQuery=duplicateQuery.neq("id",currentNoteId);
-  const {data:duplicateNotes,error:duplicateError}=await duplicateQuery;
-  if(duplicateError){message("Duplicate notes check nahi ho paya. Dobara try karein.",true);return;}
-  if((duplicateNotes||[]).length){message("❌ Is chapter/lecture ke liye isi naam ke notes pehle se hain. Duplicate upload nahi ho sakta. Badlav ke liye existing notes ko Edit karein.",true);return;}
+  if(!Number.isInteger(position)||position<0||position>9999){message("Notes Position 0 se 9999 tak poora number hona chahiye.",true);return;}
+  const current=findById("notes",currentNoteId);
+  if(!current||current.chapter_id!==chapterId||(current.lecture_id||null)!==lectureId||Number(current.position)!==position){
+    let q=db.from("chapter_notes").select("id").eq("chapter_id",chapterId).eq("position",position);
+    q=lectureId?q.eq("lecture_id",lectureId):q.is("lecture_id",null);
+    const {data:duplicates,error}=await q.limit(3);
+    if(error){message("Notes position check nahi ho paya. Dobara try karein.",true);return;}
+    if((duplicates||[]).some(row=>row.id!==currentNoteId)){message("Is Chapter/lecture ke Notes Position par pehle se notes hain. Doosra number choose karein.",true);return;}
+  }
   await saveRecord("notesForm","notesSave","chapter_notes","notes",{
     chapter_id:$("notesChapter").value,
     lecture_id:$("notesLecture").value || null,
@@ -2352,6 +2441,14 @@ $("lectureForm").addEventListener("submit",async function(e){
   if(!$("lectureChapter").value){
     message("Lecture ke liye chapter select karein.",true);
     return;
+  }
+  const position=Number($("lecturePosition").value||0),currentId=$("lectureId").value,chapterId=$("lectureChapter").value;
+  if(!Number.isInteger(position)||position<0||position>9999){message("Position 0 se 9999 tak poora number hona chahiye.",true);return;}
+  const current=findById("lectures",currentId);
+  if(!current||current.chapter_id!==chapterId||Number(current.position)!==position){
+    const {data:duplicates,error}=await db.from("lectures").select("id").eq("chapter_id",chapterId).eq("position",position).limit(2);
+    if(error){message("Lecture position check nahi ho paya. Dobara try karein.",true);return;}
+    if((duplicates||[]).some(row=>row.id!==currentId)){message("Is chapter mein ye Lecture Position pehle se use hai. Doosra number choose karein.",true);return;}
   }
 
   await saveRecord(
