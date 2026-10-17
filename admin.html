@@ -209,6 +209,8 @@ button:disabled{filter:none;transform:none}
         <div class="dashboard-stat"><strong id="statLectures">—</strong><span>Lectures loaded</span></div>
         <div class="dashboard-stat"><strong id="statNotifications">—</strong><span>Notifications loaded</span></div>
         <div class="dashboard-stat"><strong id="statDrafts">—</strong><span>Draft items loaded</span></div>
+        <div class="dashboard-stat"><strong id="statPublished">—</strong><span>Published items loaded</span></div>
+        <div class="dashboard-stat"><strong id="statUnpublished">—</strong><span>Unpublished batches</span></div>
         <div class="dashboard-stat"><strong id="statRequests">—</strong><span>Pending batch requests</span></div>
       </div>
     </section>
@@ -947,10 +949,8 @@ function updateDashboardCounts(){
     statLectures: cache.lectures.length,
     statNotifications: cache.notifications.length,
     statDrafts: [
-      ...cache.batches,
-      ...cache.books,
-      ...cache.notifications,
-      ...cache.banners
+      ...cache.batches,...cache.books,...cache.notifications,...cache.banners,
+      ...cache.chapters,...cache.notes,...cache.lectures
     ].filter(row => row.is_published === false).length,
     statPublished: [...cache.batches,...cache.books,...cache.notifications,...cache.banners,...cache.chapters,...cache.notes,...cache.lectures].filter(row=>row.is_published===true).length,
     statUnpublished: cache.batches.filter(row=>(row.publication_status||"") === "unpublished").length
@@ -1040,13 +1040,11 @@ async function loadLists(){
       order:"created_at",
       lines:[
         {key:"title",label:"Title"},
-        {key:"is_published",label:"Published"},
-        {
-          label:"Created",
-          value:row => row.created_at
-            ? new Date(row.created_at).toLocaleString()
-            : "—"
-        }
+        {label:"Location",value:row=>row.batch_id?(findById("batches",row.batch_id)?.title||"Batch announcement"):"General website"},
+        {label:"Type",value:row=>row.is_important?"Important (manual delete)":"Normal (24-hour expiry)"},
+        {key:"publication_status",label:"Status",value:row=>row.publication_status||(row.is_published?"Published":"Draft")},
+        {label:"Expires",value:row=>row.is_important?"Never automatically":(row.expires_at?new Date(row.expires_at).toLocaleString("en-IN"):"After publish")},
+        {label:"Created",value:row=>row.created_at?new Date(row.created_at).toLocaleString("en-IN"):"—"}
       ],
       empty:"Abhi koi notification nahi hai."
     },
@@ -2178,7 +2176,7 @@ $("batchThumbnailGallery").addEventListener("click",async function(){
   try{
     const {data:files,error}=await db.storage.from("ej-banners").list("batch-thumbnails",{limit:100,sortBy:{column:"created_at",order:"desc"}});
     if(error)throw error;
-    const images=(files||[]).filter(file=>file.name&&!file.id?.startsWith("folder"));
+    const images=(files||[]).filter(file=>/\.(jpe?g|png|webp)$/i.test(file.name||""));
     if(!images.length){status.textContent="Gallery mein saved thumbnails nahi hain. Phone gallery se image upload karein.";return;}
     status.textContent="Image select karein. Purani images automatically delete nahi hoti.";
     for(const file of images){
