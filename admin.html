@@ -241,6 +241,7 @@ button:disabled{filter:none;transform:none}
       <nav class="management-nav" aria-label="Admin management sections">
         <a href="#dashboardOverview">📊 Dashboard</a>
         <a href="#batchManager">➕ Batches</a>
+        <a href="#batchSearchSettingsManager">🔎 Search Settings</a>
         <a href="#bookManager">📚 Books / Notes</a>
         <a href="#studentManager">👥 Students & Activity</a>
         <a href="#bannerManager">🖼️ Banners</a>
@@ -342,6 +343,21 @@ button:disabled{filter:none;transform:none}
     </section>
 
     <!-- BOOK FORM -->
+    <section class="card" id="batchSearchSettingsManager">
+      <h2>🔎 Batch Search Settings</h2>
+      <p class="small">Har batch ke liye chapter/lecture search aur announcements search ko yahan se ON/OFF karein. Ye settings sirf selected batch par apply hoti hain.</p>
+      <label for="batchSearchSettingsFilter">Search batch list</label>
+      <input id="batchSearchSettingsFilter" class="list-search" type="search" placeholder="Batch name search karein">
+      <label for="batchSearchSettingsBatch">Select Batch</label>
+      <select id="batchSearchSettingsBatch" required><option value="">Batches load ho rahe hain...</option></select>
+      <label for="batchSearchSettingsChapter">Chapter / Lecture Search</label>
+      <select id="batchSearchSettingsChapter"><option value="false">OFF</option><option value="true">ON</option></select>
+      <label for="batchSearchSettingsAnnouncements">Announcement Search</label>
+      <select id="batchSearchSettingsAnnouncements"><option value="false">OFF</option><option value="true">ON</option></select>
+      <div class="actions"><button id="saveBatchSearchSettings" type="button">Save Search Settings</button><button id="refreshBatchSearchSettings" class="secondary" type="button">Refresh Batches</button></div>
+      <p id="batchSearchSettingsStatus" class="small" role="status" aria-live="polite">Batch select karein.</p>
+    </section>
+
     <section class="card" id="bookManager">
       <h2 id="bookHeading">📚 Add Book / Notes</h2>
 
@@ -1157,8 +1173,62 @@ async function loadLists(){
   await loadBatchRequests();
   await loadProblemReports();
   await loadStudentActivityAndDirectory();
+  await loadBatchSearchSettings();
   applyBatchFilters();
 }
+/* PER-BATCH SEARCH SETTINGS */
+function fillBatchSearchSettings(){
+  const select=$("batchSearchSettingsBatch"),filter=$("batchSearchSettingsFilter");
+  if(!select)return;
+  const query=(filter?.value||"").trim().toLowerCase();
+  const current=select.value;
+  select.replaceChildren(new Option("Select Batch",""));
+  (cache.batches||[]).filter(row=>String(row.title||"").toLowerCase().includes(query)).forEach(row=>{
+    select.add(new Option((row.title||"Untitled Batch")+" — "+(row.is_published?"Published":"Draft"),row.id));
+  });
+  if(current&&Array.from(select.options).some(o=>o.value===current))select.value=current;
+  syncBatchSearchSettings();
+}
+function syncBatchSearchSettings(){
+  const id=$("batchSearchSettingsBatch")?.value;
+  const row=(cache.batches||[]).find(item=>item.id===id);
+  if(!row)return;
+  $("batchSearchSettingsChapter").value=String(row.chapter_search_enabled===true);
+  $("batchSearchSettingsAnnouncements").value=String(row.announcement_search_enabled===true);
+  $("batchSearchSettingsStatus").textContent="Selected: "+(row.title||"Batch")+". Save karne par student batch page par settings apply hongi.";
+}
+async function loadBatchSearchSettings(){
+  if(!db)return;
+  fillBatchSearchSettings();
+  const status=$("batchSearchSettingsStatus");
+  if(status)status.textContent=(cache.batches||[]).length?"Batch select karein.":"Batches load nahi hui. Refresh Data dabayein.";
+}
+$("batchSearchSettingsFilter")?.addEventListener("input",fillBatchSearchSettings);
+$("batchSearchSettingsBatch")?.addEventListener("change",syncBatchSearchSettings);
+$("refreshBatchSearchSettings")?.addEventListener("click",async()=>{await loadLists();if($("batchSearchSettingsStatus"))$("batchSearchSettingsStatus").textContent="Batch settings refresh ho gayi."});
+$("saveBatchSearchSettings")?.addEventListener("click",async()=>{
+  if(busy||!db)return;
+  const id=$("batchSearchSettingsBatch").value;
+  if(!id){message("Pehle batch select karein.",true);return;}
+  busy=true;const button=$("saveBatchSearchSettings"),old=button.textContent;button.disabled=true;button.textContent="Saving...";
+  try{
+    const {data,error}=await db.from("batches").update({
+      chapter_search_enabled:$("batchSearchSettingsChapter").value==="true",
+      announcement_search_enabled:$("batchSearchSettingsAnnouncements").value==="true"
+    }).eq("id",id).select("id").maybeSingle();
+    if(error)throw error;
+    if(!data?.id)throw new Error("Update confirm nahi hua. Admin permission/RLS check karein.");
+    message("Batch search settings save ho gayi.");
+    await loadLists();
+    syncBatchSearchSettings();
+    $("batchSearchSettingsStatus").textContent="Settings successfully saved.";
+  }catch(error){
+    console.error("Batch search settings save failed",error);
+    message("Search settings save nahi hui: "+(error?.message||"connection/policy check karein."),true);
+    $("batchSearchSettingsStatus").textContent="Save failed. Connection aur admin permission check karein.";
+  }finally{busy=false;button.disabled=false;button.textContent=old;}
+});
+
 /* STUDENT BOOK ACCESS */
 
 async function loadBookAccess(){
