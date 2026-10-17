@@ -1063,27 +1063,20 @@
                 teacher.textContent = "Teacher: " + batch.platform_name;
                 meta.append(teacher);
             }
-            const access = document.createElement("span");
-            access.className = "meta-chip";
-            access.textContent = batch.access_type === "restricted" ? "🔒 Permission required" : "✓ Free access";
-            meta.append(access);
             const canSeeCounts=batch.show_content_counts===true&&(batch.access_type==="free"||grantedBatchIds.has(batch.id));
             if(canSeeCounts){
                 const chapterChip=document.createElement("span");chapterChip.className="count-chip";chapterChip.textContent=(chapterCounts[batch.id]||0)+" Chapters";meta.append(chapterChip);
                 const lectureChip=document.createElement("span");lectureChip.className="count-chip";lectureChip.textContent=(lectureCounts[batch.id]||0)+" Lectures";meta.append(lectureChip);
             }
-            body.append(meta);
+            if(meta.childElementCount)body.append(meta);
 
             const footer = document.createElement("div");
             footer.className = "batch-footer";
-            const status = document.createElement("span");
-            status.className = "access-label";
-            status.textContent = batch.access_type === "restricted" ? "Restricted" : "Free";
             const open = document.createElement("a");
             open.className = "batch-button";
             open.href = "batch-detail.html?id=" + encodeURIComponent(batch.id);
             open.textContent = batch.access_type==="restricted"&&!(currentUser&&grantedBatchIds.has(batch.id)) ? (currentUser ? "Request Access" : "Login to Access") : "View Batch →";
-            footer.append(status, open);
+            footer.append(open);
             body.append(footer);
 
             card.append(cover, body);
