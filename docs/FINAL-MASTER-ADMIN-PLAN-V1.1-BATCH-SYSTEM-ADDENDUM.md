@@ -265,3 +265,48 @@ For every test, record Passed / Failed / Blocked. A feature is Blocked when requ
 - No assumption that public external links provide restricted security.
 - No claim that all features are implemented just because they are listed in this plan.
 
+---
+
+## 28. Search feature — every useful location
+
+Add a search field wherever users or Admins need to find an existing item. Search must be visible, usable on Android/mobile, and connected to real data—not a decorative input.
+
+### Admin Panel search
+Provide search on:
+- Dashboard (where practical: quick find / jump to management sections).
+- Batches list (batch name, teacher, and searchable description where appropriate).
+- Books & Notes list (title, author/teacher).
+- Chapters list (chapter title, with batch filter).
+- Lectures list (lecture title, with batch/chapter filters).
+- Chapter Notes list (notes title, chapter).
+- Lecture Notes list (notes title, lecture/chapter).
+- Student Access (student name/email and batch).
+- Batch Access Requests (student name/email, batch, request status).
+- Notifications list (title/message).
+- Banners list (title/type, if the list is present).
+- Student Problem Reports (student/report text/category/status, only fields permitted for Admin).
+- Gallery/media picker (image filename/title when available).
+- Settings or diagnostics only if there are enough entries to search; do not add pointless search boxes to simple settings forms.
+
+### Student Website search
+- Batch listing: search published batches by name and teacher where those fields are available.
+- Books: search published books/notes by title and author.
+- Chapters and lectures: provide contextual search inside an accessible batch, filtering only content the current visitor is authorized to see.
+- Notifications: search published notifications if a searchable notification list is available.
+- Do not expose draft content, private student data, restricted titles/records, or original protected URLs through search results, suggestions, result counts, or error messages.
+
+### Search behaviour and acceptance criteria
+- Search results must be scoped to the current section and its active batch/chapter/access filters.
+- Case-insensitive partial matching where practical; trim leading/trailing spaces.
+- Update results while typing or after an explicit Search action, consistently within a section.
+- Include a clear/reset action and a useful empty state (“No results found”).
+- Combine search with existing filters and sorting rather than resetting them unexpectedly.
+- Handle loading, network errors, and permission failures safely.
+- Prevent stale asynchronous results from overwriting newer queries.
+- Use pagination or bounded queries for large datasets; avoid downloading every student's/private record to the browser just to search.
+- Use server/database-side search when supported by the current schema and RLS. Otherwise use only the already-authorized records loaded for the visible list.
+- Never bypass RLS or widen access to make search easier.
+- Search must work by keyboard and mobile touch; labels/placeholders must identify what is being searched.
+- Test no-result, partial-match, mixed-case, whitespace, combined-filter, unauthorized-user, and slow-network cases.
+- Do not claim search is implemented until it has been wired to actual list data and functionally tested.
+
