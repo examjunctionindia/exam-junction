@@ -1246,7 +1246,7 @@ async function loadBookAccess(){
     const [studentsResult, booksResult, accessResult] =
       await Promise.all([
         db.from("profiles")
-          .select("id,full_name,role")
+          .select("id,full_name,email,role")
           .eq("role","student")
           .order("full_name"),
 
@@ -1276,7 +1276,7 @@ async function loadBookAccess(){
       "accessStudent",
       students,
       "Select Student",
-      student => student.full_name || "Unnamed Student"
+      student => (student.full_name || "Unnamed Student") + (student.email ? " · " + student.email : "")
     );
 
     fillSelect(
@@ -1445,7 +1445,7 @@ async function loadBatchAccess(){
   list.textContent="Batch permissions load ho rahi hain...";
   try{
     const [studentsResult,batchesResult,accessResult]=await Promise.all([
-      db.from("profiles").select("id,full_name").eq("role","student").order("full_name"),
+      db.from("profiles").select("id,full_name,email").eq("role","student").order("full_name"),
       db.from("batches").select("id,title,access_type,is_published").eq("access_type","restricted").eq("is_published",true).order("title"),
       db.from("batch_access").select("id,student_id,batch_id,granted_at").order("granted_at",{ascending:false}).limit(300)
     ]);
@@ -1453,7 +1453,7 @@ async function loadBatchAccess(){
     if(batchesResult.error) throw batchesResult.error;
     if(accessResult.error) throw accessResult.error;
     const students=studentsResult.data||[], batches=batchesResult.data||[], permissions=accessResult.data||[];
-    fillSelect("batchAccessStudent",students,"Select Student",s=>s.full_name||"Unnamed Student");
+    fillSelect("batchAccessStudent",students,"Select Student",s=>(s.full_name||"Unnamed Student")+(s.email?" · "+s.email:""));
     fillSelect("batchAccessBatch",batches,"Select Restricted Batch",b=>b.title);
     list.replaceChildren();
     if(!permissions.length){list.textContent="Abhi kisi student ko batch access nahi diya gaya.";return;}
@@ -1462,7 +1462,7 @@ async function loadBatchAccess(){
       const batch=batches.find(b=>b.id===permission.batch_id);
       const item=document.createElement("div"); item.className="item";
       const details=document.createElement("div");
-      details.textContent="Student: "+(student?.full_name||"Student ID: "+permission.student_id)+" | Batch: "+(batch?.title||"Batch ID: "+permission.batch_id)+" | Granted: "+(permission.granted_at?new Date(permission.granted_at).toLocaleString():"—");
+      details.textContent="Student: "+(student?.full_name||"Student ID: "+permission.student_id)+(student?.email?" ("+student.email+")":"")+" | Batch: "+(batch?.title||"Batch ID: "+permission.batch_id)+" | Granted: "+(permission.granted_at?new Date(permission.granted_at).toLocaleString():"—");
       item.appendChild(details);
       const actions=document.createElement("div"); actions.className="actions";
       actions.appendChild(makeButton("Revoke Access","revoke-batch-access","batch_access",permission.id,"danger"));
@@ -1520,7 +1520,7 @@ async function loadBatchRequests(){
   try{
     const results=await Promise.all([
       db.from("batch_join_requests").select("id,student_id,batch_id,status,created_at,request_reason").order("created_at",{ascending:false}).limit(200),
-      db.from("profiles").select("id,full_name").eq("role","student").order("full_name"),
+      db.from("profiles").select("id,full_name,email").eq("role","student").order("full_name"),
       db.from("batches").select("id,title,access_type,is_published").order("title")
     ]);
     for(const result of results){if(result.error)throw result.error;}
@@ -1531,7 +1531,7 @@ async function loadBatchRequests(){
     requests.forEach(request=>{
       const item=document.createElement("div");item.className="item";
       const student=students.find(x=>x.id===request.student_id), batch=batches.find(x=>x.id===request.batch_id);
-      [["Student",student?.full_name||request.student_id],["Batch",batch?.title||request.batch_id],["Status",request.status],["Requested",request.created_at?new Date(request.created_at).toLocaleString():"—"],["Reason",request.request_reason||"Not provided"]].forEach(([label,value])=>{
+      [["Student",(student?.full_name||request.student_id)+(student?.email?" ("+student.email+")":"")],["Batch",batch?.title||request.batch_id],["Status",request.status],["Requested",request.created_at?new Date(request.created_at).toLocaleString():"—"],["Reason",request.request_reason||"Not provided"]].forEach(([label,value])=>{
         const line=document.createElement("div");line.style.marginBottom="6px";const strong=document.createElement("strong");strong.textContent=label+": ";line.append(strong,document.createTextNode(String(value??"—")));item.appendChild(line);
       });
       if(request.status==="pending"){
@@ -1587,7 +1587,7 @@ async function loadProblemReports(){
         .order("created_at",{ascending:false})
         .limit(100),
       db.from("profiles")
-        .select("id,full_name")
+        .select("id,full_name,email")
         .eq("role","student")
     ]);
 
@@ -1608,7 +1608,7 @@ async function loadProblemReports(){
       item.className="item";
       const student=students.find(s=>s.id===report.student_id);
       const fields=[
-        ["Student",student?.full_name || report.student_id],
+        ["Student",(student?.full_name || report.student_id)+(student?.email?" ("+student.email+")":"")],
         ["Category",report.category],
         ["Status",report.status],
         ["Reported",report.created_at ? new Date(report.created_at).toLocaleString() : "—"],
@@ -1711,7 +1711,7 @@ async function loadStudentActivityAndDirectory(){
   activityRoot.textContent="Student activity load ho rahi hai...";
   try{
     const [studentsResult,activityResult]=await Promise.all([
-      db.from("profiles").select("id,full_name,role,created_at").eq("role","student").order("full_name").limit(500),
+      db.from("profiles").select("id,full_name,email,role,created_at").eq("role","student").order("full_name").limit(500),
       db.from("student_activity_events").select("id,student_id,event_type,page_path,lecture_id,duration_seconds,created_at").order("created_at",{ascending:false}).limit(100)
     ]);
     if(studentsResult.error) throw studentsResult.error;
@@ -1724,7 +1724,7 @@ async function loadStudentActivityAndDirectory(){
       const item=document.createElement("div"); item.className="item";
       const title=document.createElement("div"); title.textContent=student.full_name||"Unnamed Student";
       const detail=document.createElement("div"); detail.className="small";
-      detail.textContent="Student ID: "+student.id+" | Joined: "+(student.created_at?new Date(student.created_at).toLocaleString():"—");
+      detail.textContent=(student.email?"Email: "+student.email+" | ":"")+"Student ID: "+student.id+" | Joined: "+(student.created_at?new Date(student.created_at).toLocaleString():"—");
       item.append(title,detail); studentRoot.appendChild(item);
     });
     activityRoot.replaceChildren();
@@ -1733,7 +1733,7 @@ async function loadStudentActivityAndDirectory(){
       const student=students.find(s=>s.id===event.student_id);
       const item=document.createElement("div"); item.className="item";
       const lines=[
-        ["Student",student?.full_name||event.student_id],
+        ["Student",(student?.full_name||event.student_id)+(student?.email?" ("+student.email+")":"")],
         ["Event",event.event_type||"—"],
         ["Page",event.page_path||"—"],
         ["Lecture ID",event.lecture_id||"—"],
