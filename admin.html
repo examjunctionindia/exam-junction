@@ -2271,6 +2271,54 @@ $("batchForm").addEventListener("submit",async function(e){
 
 /* BOOK SAVE */
 
+async function uploadPrivatePdf(folder,file,statusId,buttonId){
+  if(!db?.storage)throw new Error("Storage connection ready nahi hai. Admin login aur internet check karein.");
+  if(!file)throw new Error("Pehle PDF file choose karein.");
+  if(file.type!=="application/pdf"&&!/\.pdf$/i.test(file.name||""))throw new Error("Sirf PDF file upload karein.");
+  if(file.size>50*1024*1024)throw new Error("PDF 50 MB se chhoti honi chahiye. Free storage quota bhi apply hota hai.");
+  const base=String(file.name||"document.pdf").replace(/[^a-zA-Z0-9._-]+/g,"_").slice(-100)||"document.pdf";
+  const unique=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,10);
+  const path=folder+"/"+unique+"-"+base;
+  const {data,error}=await db.storage.from("ej-private-content").upload(path,file,{cacheControl:"3600",contentType:"application/pdf",upsert:false});
+  if(error)throw error;
+  const status=$(statusId);if(status)status.textContent="Private PDF upload ho gaya. Ab form Save karein. File automatically public nahi hoti.";
+  return data.path||path;
+}
+
+$("bookPdfFile").addEventListener("change",function(){if(this.files?.[0])$("bookPdfUpload").click()});
+$("bookPdfUpload").addEventListener("click",async function(){
+  const file=$("bookPdfFile").files?.[0],status=$("bookPdfUploadStatus"),button=$("bookPdfUpload");
+  if(!file){$("bookPdfFile").click();if(status)status.textContent="Phone Gallery se PDF choose karein; phir upload shuru hoga.";return}
+  const old=button.textContent;button.disabled=true;button.textContent="Uploading...";
+  try{
+    const path=await uploadPrivatePdf("books",file,"bookPdfUploadStatus","bookPdfUpload");
+    $("bookStorageUrl").value=path;$("bookStorageBucket").value="ej-private-content";$("bookUrl").value="";
+    if(status)status.textContent="Private PDF uploaded. Ab Save Book dabayein. Purani files automatically delete nahi hoti.";
+    message("Book PDF private storage mein upload ho gaya. Save Book abhi baaki hai.");
+  }catch(error){if(status)status.textContent="PDF upload nahi hui. File type/size, Storage policy aur free quota check karein.";message("Private PDF upload fail: "+(error.message||""),true)}
+  finally{button.disabled=false;button.textContent=old}
+});
+$("bookUrl").addEventListener("input",function(){if(this.value.trim())$("bookStorageBucket").value=""});
+$("bookStorageUrl").addEventListener("input",function(){if(/^https:\/\//i.test(this.value.trim()))$("bookStorageBucket").value=""});
+
+$("notesPdfFile").addEventListener("change",function(){if(this.files?.[0])$("notesPdfUpload").click()});
+$("notesPdfUpload").addEventListener("click",async function(){
+  const file=$("notesPdfFile").files?.[0],status=$("notesPdfUploadStatus"),button=$("notesPdfUpload");
+  if(!file){$("notesPdfFile").click();if(status)status.textContent="Phone Gallery se PDF choose karein; phir upload shuru hoga.";return}
+  const old=button.textContent;button.disabled=true;button.textContent="Uploading...";
+  try{
+    const path=await uploadPrivatePdf("chapter-notes",file,"notesPdfUploadStatus","notesPdfUpload");
+    $("notesStoragePath").value=path;$("notesSource").value="storage";$("notesSource").dispatchEvent(new Event("change"));$("notesUrl").value="";
+    if(status)status.textContent="Private Notes PDF uploaded. Ab Save Notes dabayein. Purani files automatically delete nahi hoti.";
+    message("Notes PDF private storage mein upload ho gaya. Save Notes abhi baaki hai.");
+  }catch(error){if(status)status.textContent="PDF upload nahi hui. File type/size, Storage policy aur free quota check karein.";message("Private Notes PDF upload fail: "+(error.message||""),true)}
+  finally{button.disabled=false;button.textContent=old}
+});
+$("notesUrl").addEventListener("input",function(){if(this.value.trim()&&$("notesSource").value==="storage"){$("notesSource").value="external";$("notesSource").dispatchEvent(new Event("change"))}});
+
+$("bookForm").addEventListener("reset",function(){setTimeout(()=>{$("bookStorageBucket").value="";$("bookUrl").required=false;},0)});
+$("notesForm").addEventListener("reset",function(){setTimeout(()=>{$("notesStoragePath").value="";$("notesUrl").required=$("notesEnabled").value==="yes"&&$("notesSource").value!=="storage";if($("notesPdfUploadStatus"))$("notesPdfUploadStatus").textContent="PDF upload ke baad Save Notes dabayein. Purani files automatically delete nahi hoti.";},0)});
+
 $("bookForm").addEventListener("submit",async function(e){
   e.preventDefault();
   const url=$("bookUrl").value.trim(),storagePath=$("bookStorageUrl").value.trim(),storageBucket=$("bookStorageBucket").value.trim();
