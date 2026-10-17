@@ -1,1 +1,74 @@
-
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102b55">
+  <meta name="description" content="EXAM JUNCTION ke baare mein — maths exam preparation ke liye batches, lectures aur study notes.">
+  <title>About | EXAM JUNCTION</title>
+  <style>
+    *{box-sizing:border-box}
+    :root{--navy:#102b55;--blue:#173b73;--bg:#f5f7fb;--muted:#718096;--border:#e6ebf2}
+    body{margin:0;background:var(--bg);color:#17243a;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;padding-bottom:88px}
+    .app{max-width:760px;min-height:100vh;margin:auto}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:#fff;border-bottom:1px solid var(--border)}
+    a{color:inherit;text-decoration:none}
+    .brand{font-weight:900;color:var(--blue);letter-spacing:.2px}
+    .alerts{font-size:13px;font-weight:700;padding:9px 11px;border:1px solid var(--border);border-radius:10px}
+    main{padding:22px 16px}
+    .hero{padding:24px 20px;background:linear-gradient(135deg,#173b73,#10274c);color:#fff;border-radius:20px}
+    .eyebrow{font-size:11px;font-weight:800;letter-spacing:1.3px;color:#ffd17c}
+    h1{font-size:clamp(27px,6vw,36px);line-height:1.2;margin:12px 0}
+    .hero p{margin:0;color:#e0eafa;font-size:14px;line-height:1.75}
+    .card{margin-top:15px;padding:18px;background:#fff;border:1px solid var(--border);border-radius:16px}
+    h2{margin:0 0 9px;font-size:18px;color:var(--navy)}
+    .card p{margin:0;color:var(--muted);font-size:14px;line-height:1.8}
+    .links{display:grid;gap:10px;margin-top:13px}
+    .link{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px;border:1px solid var(--border);border-radius:12px;font-weight:750;font-size:14px}
+    .link span{color:var(--muted);font-weight:500;font-size:12px}
+    nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));width:100%;max-width:760px;padding:9px 4px calc(9px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--border)}
+    nav a{text-align:center;color:#8793a5;font-size:10px;font-weight:700;padding:7px 0}
+    nav a.active{color:var(--blue)}
+    footer{text-align:center;padding:18px 10px;color:#8793a5;font-size:11px}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a class="brand" href="index.html">← EXAM JUNCTION</a>
+    <a class="alerts" href="notifications.html">🔔 Alerts</a>
+  </header>
+  <main>
+    <section class="hero">
+      <div class="eyebrow">ABOUT US</div>
+      <h1>EXAM JUNCTION</h1>
+      <p>Maths exam preparation ke liye batches, lectures aur study notes ko ek simple, mobile-friendly jagah par access karein.</p>
+    </section>
+    <section class="card">
+      <h2>Hamare baare mein</h2>
+      <p>EXAM JUNCTION ka maqsad students ko study material aur learning content aasani se dhoondhne aur use karne mein madad dena hai. Content batch aur chapter ke hisaab se arrange kiya jata hai.</p>
+    </section>
+    <section class="card">
+      <h2>Content access</h2>
+      <p>Free content bina login ke available ho sakta hai. Selected Students content ke liye login aur admin approval zaroori hai. Har student ko sirf wahi restricted content milega jiska access uske liye approve hua hai.</p>
+    </section>
+    <section class="card">
+      <h2>Website par jaayein</h2>
+      <div class="links">
+        <a class="link" href="batch.html">Explore Batches <span>→</span></a>
+        <a class="link" href="books.html">Books &amp; Notes <span>→</span></a>
+        <a class="link" href="notifications.html">Notifications <span>→</span></a>
+      </div>
+    </section>
+  </main>
+  <footer>© EXAM JUNCTION</footer>
+  <nav aria-label="Main navigation">
+    <a href="index.html">⌂<br>Home</a>
+    <a href="batch.html">▤<br>Batch</a>
+    <a href="books.html">▣<br>Books</a>
+    <a href="leaderboard.html">♛<br>Leaderboard</a>
+    <a class="active" href="about.html" aria-current="page">ⓘ<br>About</a>
+  </nav>
+</div>
+</body>
+</html>
