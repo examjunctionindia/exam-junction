@@ -508,7 +508,7 @@ button:disabled{filter:none;transform:none}
         <label for="bannerTitle">Banner Title *</label><input id="bannerTitle" maxlength="200" required>
         <label for="bannerTeacher">Teacher / Label</label><input id="bannerTeacher" maxlength="150">
         <label for="bannerDescription">Description</label><textarea id="bannerDescription" maxlength="3000"></textarea>
-        <label for="bannerType">Banner Type</label><select id="bannerType"><option value="general">General</option><option value="batch">Batch</option><option value="book">Book</option><option value="announcement">Announcement</option></select>
+        <label for="bannerType">Banner Type</label><select id="bannerType"><option value="course">Course</option><option value="book">Book</option></select><p class="small">Banner type database ke supported values ke mutabik hai: Course ya Book.</p>
         <label for="bannerImage">Image URL *</label><input id="bannerImage" type="url" required placeholder="https://...">
         <label for="bannerTarget">Target Link</label><input id="bannerTarget" type="url" placeholder="https://...">
         <label for="bannerPublished">Publish</label><select id="bannerPublished"><option value="false">Draft</option><option value="true">Published</option></select>
@@ -1726,16 +1726,24 @@ async function saveRecord(formId,buttonId,table,type,payload){
     let query;
 
     if(id){
-      query = db.from(table).update(payload).eq("id",id);
+      query = db.from(table).update(payload).eq("id",id).select("id").maybeSingle();
     }else{
-      query = db.from(table).insert(payload);
+      query = db.from(table).insert(payload).select("id").maybeSingle();
     }
 
-    const {error} = await query;
+    const {data:savedRecord,error} = await query;
 
     if(error){
       console.error(table,error);
       message("Save nahi hua: " + error.message,true);
+      return;
+    }
+    // PostgREST can return zero rows for an UPDATE blocked by RLS/SELECT policy without an error.
+    // Do not claim success unless the database confirms the row was written.
+    if(!savedRecord?.id){
+      message(id
+        ? "Update nahi hua: record update karne ki permission/policy check karein. Koi data change confirm nahi hua."
+        : "Save confirm nahi hua: insert permission aur database policy check karein.",true);
       return;
     }
 
@@ -1921,7 +1929,15 @@ async function editRecord(type,id){
   $(config.save).textContent=config.editButton;
   $(config.cancel).classList.remove("hidden");
 
-  $(config.form).scrollIntoView({behavior:"smooth",block:"start"});
+  // Management view hides inactive sections. Switch to the matching form before scrolling,
+  // otherwise Edit fills a hidden form and appears not to work.
+  const formSectionByType={batches:"batchManager",books:"bookManager",banners:"bannerManager",notifications:"notificationManager",chapters:"chapterManager",notes:"chapterNotesManager",lectures:"lectureManager"};
+  const targetSectionId=formSectionByType[type];
+  if(targetSectionId && typeof showManagementSection==="function"){
+    const navLink=managementNav?.querySelector('a[href="#'+targetSectionId+'"]');
+    showManagementSection(targetSectionId,navLink);
+  }
+  $(config.form).scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
   message("Edit mode: changes save karne ke liye Update button dabayein.");
 }
 
@@ -1944,11 +1960,15 @@ async function deleteRecord(type,id){
   busy=true;
 
   try{
-    const {error}=await db.from(table).delete().eq("id",id);
+    const {data:deletedRecord,error}=await db.from(table).delete().eq("id",id).select("id").maybeSingle();
 
     if(error){
       console.error(error);
       message("Delete nahi hua: " + error.message,true);
+      return;
+    }
+    if(!deletedRecord?.id){
+      message("Delete confirm nahi hua: record par permission/policy check karein. Koi delete confirm nahi hua.",true);
       return;
     }
 
