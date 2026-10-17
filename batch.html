@@ -165,20 +165,20 @@
         grantedBatchIds=new Set((grants||[]).map(g=>g.batch_id));
       }
       const chapterCounts={},lectureCounts={};
+      let countsAvailable=false;
       try{
         const {data:chapterRows,error:chapterError}=await window.EXAM_JUNCTION.supabase.from("chapters").select("id,batch_id").eq("is_published",true);
-        if(!chapterError){
-          (chapterRows||[]).forEach(row=>{chapterCounts[row.batch_id]=(chapterCounts[row.batch_id]||0)+1});
-          const chapterIds=(chapterRows||[]).map(row=>row.id);
-          if(chapterIds.length){
-            const {data:lectureRows,error:lectureError}=await window.EXAM_JUNCTION.supabase.from("lectures").select("id,chapter_id").eq("is_published",true).in("chapter_id",chapterIds);
-            if(!lectureError){
-              const chapterToBatch=new Map((chapterRows||[]).map(row=>[row.id,row.batch_id]));
-              (lectureRows||[]).forEach(row=>{const bid=chapterToBatch.get(row.chapter_id);if(bid)lectureCounts[bid]=(lectureCounts[bid]||0)+1});
-            }
-          }
+        if(chapterError)throw chapterError;
+        (chapterRows||[]).forEach(row=>{chapterCounts[row.batch_id]=(chapterCounts[row.batch_id]||0)+1});
+        const chapterIds=(chapterRows||[]).map(row=>row.id);
+        if(chapterIds.length){
+          const {data:lectureRows,error:lectureError}=await window.EXAM_JUNCTION.supabase.from("lectures").select("id,chapter_id").eq("is_published",true).in("chapter_id",chapterIds);
+          if(lectureError)throw lectureError;
+          const chapterToBatch=new Map((chapterRows||[]).map(row=>[row.id,row.batch_id]));
+          (lectureRows||[]).forEach(row=>{const bid=chapterToBatch.get(row.chapter_id);if(bid)lectureCounts[bid]=(lectureCounts[bid]||0)+1});
         }
-      }catch(_){}
+        countsAvailable=true;
+      }catch(countError){console.warn("Published batch counts unavailable; hiding counts rather than showing incorrect totals.",countError)}
       data.forEach(b=>{
         const card=document.createElement("article");card.className="card";card.dataset.type=b.access_type==="restricted"?"restricted":"free";card.dataset.title=(b.title||"Maths Batch").toLowerCase();card.dataset.created=Date.parse(b.created_at||"")||0;
         const cover=document.createElement("div");cover.className="cover";
@@ -194,7 +194,7 @@
         const desc=document.createElement("p");desc.className="description";desc.textContent=b.description||"";if(!(b.show_description===true&&b.description))desc.hidden=true;
         const teacher=document.createElement("p");teacher.className="teacher-line";teacher.textContent=b.platform_name?"Teacher: "+b.platform_name:"";if(!b.platform_name)teacher.hidden=true;
         const meta=document.createElement("div");meta.className="card-meta";
-        const canSeeCounts=b.show_content_counts===true && (b.access_type==="free" || grantedBatchIds.has(b.id));
+        const canSeeCounts=b.show_content_counts===true && countsAvailable && (b.access_type==="free" || grantedBatchIds.has(b.id));
         if(canSeeCounts){
           const chapterPill=document.createElement("span");chapterPill.className="meta-pill";chapterPill.textContent=(chapterCounts[b.id]||0)+" Chapters";
           const lecturePill=document.createElement("span");lecturePill.className="meta-pill";lecturePill.textContent=(lectureCounts[b.id]||0)+" Lectures";
