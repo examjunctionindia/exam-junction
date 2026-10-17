@@ -29,11 +29,11 @@
     .filter.active{background:#173b73;color:white;border-color:#173b73}
     .batch-list{display:grid;gap:14px}
     .card{overflow:hidden;border:1px solid #e6ebf2;border-radius:17px;background:white;box-shadow:0 5px 18px rgba(16,39,76,.045);transition:transform .18s ease,box-shadow .18s ease}.card:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(16,39,76,.09)}.card[hidden]{display:none!important}
-    .cover{position:relative;min-height:132px;padding:22px;background:radial-gradient(circle at 88% 20%,rgba(255,255,255,.8),transparent 30%),linear-gradient(120deg,#e4edff,#f7f9ff)}.cover:after{content:"∑";position:absolute;right:20px;bottom:-18px;font-size:104px;font-weight:900;color:rgba(23,59,115,.08);pointer-events:none}.cover h2{position:relative;z-index:1;max-width:82%}
+    .cover{position:relative;padding:0;background:#f2f6fc;overflow:hidden}.cover-image{display:block;width:100%;aspect-ratio:16/9;object-fit:contain;background:#f2f6fc}.cover-content{padding:18px 20px 8px}.cover h2{max-width:100%}.cover:after{display:none}.cover h2{position:relative;z-index:1;max-width:82%}
     .tag{display:inline-block;padding:6px 9px;border-radius:7px;background:#dbe7ff;color:#214f9b;font-size:10px;font-weight:bold}
-    .cover h2{margin:13px 0 4px;font-size:20px;color:#10274c}
+    .cover h2{margin:10px 0 4px;font-size:20px;color:#10274c}
     .body{padding:17px}
-    .description{color:#718096;font-size:13px;line-height:1.7}
+    .description{color:#718096;font-size:13px;line-height:1.7}.new-badge{display:inline-block;margin-left:7px;padding:4px 7px;border-radius:6px;background:#e0f2e8;color:#176a46;font-size:10px;font-weight:800}
     .footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid #e6ebf2}
     .status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:#16855d}.status.restricted{color:#b45309}.card-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.meta-pill{display:inline-flex;align-items:center;padding:7px 10px;border:1px solid #e6ebf2;border-radius:9px;background:#fbfcff;color:#52627a;font-size:11px;font-weight:700}.teacher-line{margin:12px 0 0;color:#52627a;font-size:13px;font-weight:700}.open{display:inline-flex;align-items:center;justify-content:center;min-height:42px;white-space:nowrap}
     .open{padding:12px 15px;border:0;border-radius:10px;background:#173b73;color:white;font-weight:bold;font-size:12px}
@@ -116,9 +116,6 @@
   let selectedFilter = "all";
   const batchList = document.getElementById("batch-list");
   const resultCount = document.getElementById("result-count");
-  document.getElementById("sort").addEventListener("change", sortBatches);
-  function sortBatches(){const cards=[...batchList.querySelectorAll(".card")];cards.sort((a,b)=>{if(document.getElementById("sort").value==="az")return a.dataset.title.localeCompare(b.dataset.title);return Number(b.dataset.created||0)-Number(a.dataset.created||0)});cards.forEach(card=>batchList.append(card));filterBatches()}
-
   document.querySelectorAll(".filter").forEach(button => {
     button.addEventListener("click", () => {
       document.querySelectorAll(".filter").forEach(item =>
@@ -155,29 +152,60 @@
       const ready=await window.EXAM_JUNCTION.init();
       if(!ready)throw new Error("Supabase unavailable");
       const {data,error}=await window.EXAM_JUNCTION.supabase.from("batches")
-        .select("id,title,description,platform_name,access_type,is_published,created_at")
-        .eq("is_published",true).order("created_at",{ascending:false}).limit(100);
+        .select("id,title,description,platform_name,access_type,is_published,created_at,published_at,thumbnail_url,display_position,show_content_counts")
+        .eq("is_published",true).order("display_position",{ascending:true}).order("created_at",{ascending:false}).limit(100);
       if(error)throw error;
       list.replaceChildren();
       if(!data||!data.length){if(resultCount)resultCount.textContent="0 batches found";list.innerHTML='<div class="empty" style="grid-column:1/-1"><h2>Abhi koi published batch nahi hai</h2><p>Admin Panel se batch publish hone par yahan dikhega.</p></div>';return;}
-      let chapterCounts={};
-      try{const {data:chapterRows,error:chapterError}=await window.EXAM_JUNCTION.supabase.from("chapters").select("batch_id");if(!chapterError){(chapterRows||[]).forEach(row=>{chapterCounts[row.batch_id]=(chapterCounts[row.batch_id]||0)+1})}}catch(_){}
+      const currentUserResult=await window.EXAM_JUNCTION.supabase.auth.getUser();
+      const currentUser=currentUserResult?.data?.user||null;
+      let grantedBatchIds=new Set();
+      if(currentUser){
+        const {data:grants}=await window.EXAM_JUNCTION.supabase.from("batch_access").select("batch_id").eq("student_id",currentUser.id);
+        grantedBatchIds=new Set((grants||[]).map(g=>g.batch_id));
+      }
+      const chapterCounts={},lectureCounts={};
+      try{
+        const {data:chapterRows,error:chapterError}=await window.EXAM_JUNCTION.supabase.from("chapters").select("id,batch_id").eq("is_published",true);
+        if(!chapterError){
+          (chapterRows||[]).forEach(row=>{chapterCounts[row.batch_id]=(chapterCounts[row.batch_id]||0)+1});
+          const chapterIds=(chapterRows||[]).map(row=>row.id);
+          if(chapterIds.length){
+            const {data:lectureRows,error:lectureError}=await window.EXAM_JUNCTION.supabase.from("lectures").select("id,chapter_id").eq("is_published",true).in("chapter_id",chapterIds);
+            if(!lectureError){
+              const chapterToBatch=new Map((chapterRows||[]).map(row=>[row.id,row.batch_id]));
+              (lectureRows||[]).forEach(row=>{const bid=chapterToBatch.get(row.chapter_id);if(bid)lectureCounts[bid]=(lectureCounts[bid]||0)+1});
+            }
+          }
+        }
+      }catch(_){}
       data.forEach(b=>{
         const card=document.createElement("article");card.className="card";card.dataset.type=b.access_type==="restricted"?"restricted":"free";card.dataset.title=(b.title||"Maths Batch").toLowerCase();card.dataset.created=Date.parse(b.created_at||"")||0;
         const cover=document.createElement("div");cover.className="cover";
-        const tag=document.createElement("span");tag.className="tag";tag.textContent=b.access_type==="restricted"?"🔒 SELECTED STUDENTS":"FREE MATHS BATCH";
-        const title=document.createElement("h2");title.textContent=b.title||"Maths Batch";cover.append(tag,title);
+        if(b.thumbnail_url){
+          const img=document.createElement("img");img.className="cover-image";img.src=b.thumbnail_url;img.alt=(b.title||"Batch")+" thumbnail";img.loading="lazy";img.onerror=()=>img.remove();cover.append(img);
+        }
+        const coverContent=document.createElement("div");coverContent.className="cover-content";
+        const tag=document.createElement("span");tag.className="tag";tag.textContent=b.access_type==="restricted"?"SELECTED STUDENTS":"FREE";
+        const title=document.createElement("h2");title.textContent=b.title||"Maths Batch";coverContent.append(tag,title);
+        if(b.published_at && (Date.now()-Date.parse(b.published_at))<7*24*60*60*1000){const fresh=document.createElement("span");fresh.className="new-badge";fresh.textContent="NEW";title.append(fresh)}
+        cover.append(coverContent);
         const body=document.createElement("div");body.className="body";
-        const desc=document.createElement("p");desc.className="description";desc.textContent=b.description||"Batch ke chapters aur lectures dekhne ke liye open karein.";
+        const desc=document.createElement("p");desc.className="description";desc.textContent=b.description||"";if(!b.description)desc.hidden=true;
         const teacher=document.createElement("p");teacher.className="teacher-line";teacher.textContent=b.platform_name?"👨‍🏫 Teacher: "+b.platform_name:"👨‍🏫 Mathematics Batch";
-        const meta=document.createElement("div");meta.className="card-meta";const chapterPill=document.createElement("span");chapterPill.className="meta-pill";chapterPill.textContent="▤ "+(chapterCounts[b.id]||0)+" Chapters";const accessPill=document.createElement("span");accessPill.className="meta-pill";accessPill.textContent=b.access_type==="restricted"?"🔒 Restricted access":"✓ Free access";meta.append(chapterPill,accessPill);
+        const meta=document.createElement("div");meta.className="card-meta";
+        const canSeeCounts=b.show_content_counts===true && (b.access_type==="free" || grantedBatchIds.has(b.id));
+        if(canSeeCounts){
+          const chapterPill=document.createElement("span");chapterPill.className="meta-pill";chapterPill.textContent=(chapterCounts[b.id]||0)+" Chapters";
+          const lecturePill=document.createElement("span");lecturePill.className="meta-pill";lecturePill.textContent=(lectureCounts[b.id]||0)+" Lectures";
+          meta.append(chapterPill,lecturePill);
+        }
         const footer=document.createElement("div");footer.className="footer";
         const status=document.createElement("span");status.className="status"+(b.access_type==="restricted"?" restricted":"");status.textContent=b.access_type==="restricted"?"🔒 Restricted":"✓ Free";
         const open=document.createElement("a");open.className="open";open.href="batch-detail.html?id="+encodeURIComponent(b.id);open.textContent="Open Batch →";
         footer.append(status,open);body.append(desc,teacher,meta,footer);card.append(cover,body);list.append(card);
       });
       const noResults=document.createElement("div");noResults.id="no-results";noResults.className="empty";noResults.style.gridColumn="1/-1";noResults.hidden=true;noResults.innerHTML="<h2>No matching batches</h2><p>Search ya filter badal kar dobara dekhein.</p>";list.append(noResults);
-      sortBatches();
       filterBatches();
     }catch(e){console.error("Batch list load failed",e);list.innerHTML='<div class="empty" style="grid-column:1/-1"><h2>Batches load nahi ho paaye</h2><p>Internet check karke refresh karein.</p></div>';}
   })();
