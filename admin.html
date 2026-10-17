@@ -1014,11 +1014,11 @@ async function updateDashboardCounts(){
     ];
     const result=await Promise.all(jobs);
     const drafts=result.slice(8,14).reduce((sum,value)=>sum+value,0)+result[14];
-    const published=result.slice(15,23).reduce((sum,value)=>sum+value,0);
+    const published=result.slice(15,22).reduce((sum,value)=>sum+value,0);
     const values={
       statBatches:result[0],statStudents:result[1],statBooks:result[2],statBanners:result[3],
       statChapterNotes:result[4],statChapters:result[5],statLectures:result[6],statNotifications:result[7],
-      statDrafts:drafts,statPublished:published,statUnpublished:result[23],statRequests:result[24]
+      statDrafts:drafts,statPublished:published,statUnpublished:result[22],statRequests:result[23]
     };
     Object.entries(values).forEach(([id,value])=>{const node=$(id);if(node)node.textContent=String(value)});
   }catch(error){
