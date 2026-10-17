@@ -326,6 +326,11 @@ button:disabled{filter:none;transform:none}
         <label for="batchDefaultDownload">Default Download permission</label><select id="batchDefaultDownload"><option value="false">OFF</option><option value="true">ON — items can inherit</option></select>
         <label for="batchRestrictedOriginalLink">Allow Original Link fallback in restricted content</label><select id="batchRestrictedOriginalLink"><option value="false">OFF — hidden unless enabled per item too</option><option value="true">ON — item permission is still required</option></select>
 
+        <button id="batchPreviewButton" class="secondary" type="button">👁️ Preview Batch Card</button>
+        <div id="batchPreviewBox" class="hidden" style="margin:12px 0;border:1px solid #dce5f1;border-radius:14px;overflow:hidden;background:#fff">
+          <div id="batchPreviewImageWrap"></div><div style="padding:14px"><span id="batchPreviewAccess" class="tag"></span><h3 id="batchPreviewTitle"></h3><p id="batchPreviewTeacher" class="small"></p><p id="batchPreviewDescription" class="small"></p><p id="batchPreviewCounts" class="small"></p></div>
+        </div>
+
         <div class="actions">
           <button id="batchSave" type="submit">Save Batch</button>
           <button id="batchCancel" class="secondary hidden"
@@ -2123,6 +2128,25 @@ function updateBatchThumbnailPreview(){
   }
 }
 $("batchThumbnail").addEventListener("input",updateBatchThumbnailPreview);
+$("batchPreviewButton").addEventListener("click",function(){
+  const box=$("batchPreviewBox"),imageWrap=$("batchPreviewImageWrap");imageWrap.replaceChildren();
+  const url=$("batchThumbnail").value.trim();
+  if(/^https:\/\//i.test(url)){const img=document.createElement("img");img.src=url;img.alt="Batch thumbnail preview";img.style.cssText="display:block;width:100%;aspect-ratio:16/9;height:auto;object-fit:contain;background:#f2f6fc";imageWrap.append(img)}
+  $("batchPreviewAccess").textContent=$("batchAccess").value==="restricted"?"SELECTED STUDENTS":"FREE";
+  $("batchPreviewTitle").textContent=$("batchTitle").value.trim()||"Batch Name";
+  $("batchPreviewTeacher").textContent=$("batchTeacher").value.trim()?"Teacher: "+$("batchTeacher").value.trim():"";
+  $("batchPreviewTeacher").hidden=!$("batchTeacher").value.trim();
+  $("batchPreviewDescription").textContent=$("batchDescription").value.trim();
+  $("batchPreviewDescription").hidden=!$("batchDescription").value.trim();
+  const batchId=$("batchId").value;
+  const showCounts=$("batchShowCounts").value==="true";
+  const ch=cache.chapters.filter(row=>row.batch_id===batchId&&row.is_published===true);
+  const ids=new Set(ch.map(row=>row.id));
+  const le=cache.lectures.filter(row=>ids.has(row.chapter_id)&&row.is_published===true);
+  $("batchPreviewCounts").textContent=showCounts?(batchId?(ch.length+" Chapters · "+le.length+" Lectures"):"Actual published counts will appear after saving the batch and adding content."):"";
+  $("batchPreviewCounts").hidden=!showCounts;
+  box.classList.remove("hidden");
+});
 
 $("batchThumbnailFile").addEventListener("change",function(){
   if(this.files?.[0]) $("batchThumbnailUpload").click();
