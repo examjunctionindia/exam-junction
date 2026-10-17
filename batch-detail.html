@@ -62,9 +62,9 @@ function makeNoteRow(note){
   const frame=document.createElement("iframe");frame.className="pdf";frame.title=note.title||"Notes PDF";frame.loading="lazy";frame.allow="fullscreen";wrap.append(frame);
   const fallback=document.createElement("div");fallback.className="fallback-box hidden";fallback.textContent="PDF abhi bhi nahi khul raha? Dobara try karein ya original link kholein.";
   const retry=document.createElement("button");retry.className="btn";retry.type="button";retry.textContent="↻ Retry";
-  let timer=null,pdfRequested=false;
+  let timer=null;
   const schedulePdfFallback=()=>{if(timer)clearTimeout(timer);timer=setTimeout(()=>fallback.classList.remove("hidden"),12000)};
-  retry.addEventListener("click",async()=>{fallback.classList.add("hidden");try{pdfRequested=true;frame.src=await resolveNoteUrl(note);schedulePdfFallback()}catch(e){fallback.classList.remove("hidden");console.error("PDF retry error",e)}});
+  retry.addEventListener("click",async()=>{fallback.classList.add("hidden");try{frame.src=await resolveNoteUrl(note);schedulePdfFallback()}catch(e){fallback.classList.remove("hidden");console.error("PDF retry error",e)}});
   fallback.append(retry);
   if(canShowOriginal(note)){
     const original=document.createElement("button");original.className="btn";original.type="button";original.textContent="↗ Open Original Link";
@@ -73,7 +73,9 @@ function makeNoteRow(note){
   }
   wrap.append(fallback);
   view.addEventListener("click",async()=>{wrap.classList.remove("hidden");wrap.scrollIntoView({behavior:"smooth",block:"nearest"});fallback.classList.add("hidden");try{pdfRequested=true;frame.src=await resolveNoteUrl(note);schedulePdfFallback()}catch(e){fallback.classList.remove("hidden");console.error("PDF open error",e)}});
-  frame.addEventListener("load",()=>{if(timer)clearTimeout(timer);fallback.classList.add("hidden")});
+  // Cross-origin PDF viewers may fire iframe load even when their own error page is shown.
+  // Keep the timeout fallback available so students can retry or open the permitted original link.
+  frame.addEventListener("load",()=>{});
   const downloadAllowed=getDownloadAllowed(note);
   if(downloadAllowed&&(note.download_url||isPrivate||raw)){
     const dl=document.createElement("button");dl.className="btn";dl.type="button";dl.textContent="⬇ Download";
