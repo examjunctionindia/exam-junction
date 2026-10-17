@@ -1916,10 +1916,12 @@ async function editRecord(type,id){
     $("bookAuthor").value=row.author || "";
     $("bookDescription").value=row.description || "";
     $("bookUrl").value=row.external_url || "";
+    $("bookUrl").required=false;
     $("bookDownloadUrl").value=row.download_url || "";
     $("bookDownloadAllowed").value=String(!!row.download_allowed);
     $("bookOriginalLinkAllowed").value=String(!!row.original_link_allowed);
     $("bookStorageUrl").value=row.storage_path || "";
+    $("bookStorageBucket").value=row.storage_bucket || "";
     $("bookCoverUrl").value=row.cover_path || "";
     $("bookAccess").value=row.access_type || "free";
     $("bookPublished").value=row.publication_status || (row.is_published ? "published" : "draft");
@@ -1958,7 +1960,10 @@ async function editRecord(type,id){
     $("notesId").value=row.id;
     $("notesChapter").value=String(row.chapter_id||"");
     $("notesTitle").value=row.title||"";
-    $("notesUrl").value=row.storage_path||"";
+    $("notesStoragePath").value=row.storage_bucket ? (row.storage_path||"") : "";
+    $("notesUrl").value=row.storage_bucket ? "" : (row.storage_path||"");
+    $("notesUrl").required=!row.storage_bucket;
+    $("notesPdfUploadStatus").textContent=row.storage_bucket?"Private PDF stored: "+row.storage_path:"Existing external PDF link. Private upload optional.";
     $("notesDownloadUrl").value=row.download_url||"";
     $("notesDownloadMode").value=row.download_permission_mode||"inherit";
     $("notesOriginalLinkAllowed").value=String(!!row.original_link_allowed);
@@ -1966,7 +1971,7 @@ async function editRecord(type,id){
     $("notesPublished").value=row.publication_status || (row.is_published ? "published" : "draft");
     $("notesEnabled").value="yes";
     $("notesEnabled").dispatchEvent(new Event("change"));
-    $("notesSource").value=(/^https:\/\/drive\.google\.com|^https:\/\/docs\.google\.com/i.test(row.storage_path||""))?"drive":"external";
+    $("notesSource").value=row.storage_bucket?"storage":((/^https:\/\/drive\.google\.com|^https:\/\/docs\.google\.com/i.test(row.storage_path||""))?"drive":"external");
     $("notesSource").dispatchEvent(new Event("change"));
     await populateNotesLectureOptions(row.chapter_id, row.lecture_id || "");
   }
@@ -2268,31 +2273,19 @@ $("batchForm").addEventListener("submit",async function(e){
 
 $("bookForm").addEventListener("submit",async function(e){
   e.preventDefault();
-
-  const url=$("bookUrl").value.trim();
-
-  if(url && !/^https:\/\//i.test(url)){
-    message("Book link HTTPS se shuru hona chahiye.",true);
-    return;
-  }
-
-  await saveRecord(
-    "bookForm","bookSave","books","books",
-    {
-      title:$("bookTitle").value.trim(),
-      publication_status:$("bookPublished").value,
-      author:$("bookAuthor").value.trim(),
-      description:$("bookDescription").value.trim(),
-      external_url:url,
-      download_url:$("bookDownloadUrl").value.trim() || null,
-      download_allowed:$("bookDownloadAllowed").value==="true",
-      original_link_allowed:$("bookOriginalLinkAllowed").value==="true",
-      storage_path:$("bookStorageUrl").value.trim() || url,
-      cover_path:$("bookCoverUrl").value.trim(),
-      access_type:$("bookAccess").value,
-      is_published:$("bookPublished").value==="published"
-    }
-  );
+  const url=$("bookUrl").value.trim(),storagePath=$("bookStorageUrl").value.trim(),storageBucket=$("bookStorageBucket").value.trim();
+  if(url && !/^https:\/\//i.test(url)){message("Book link HTTPS se shuru hona chahiye.",true);return;}
+  if(!url && !(storageBucket==="ej-private-content"&&storagePath) && !/^https:\/\//i.test(storagePath)){message("Book ke liye HTTPS link paste karein ya phone se PDF upload karein.",true);return;}
+  await saveRecord("bookForm","bookSave","books","books",{
+    title:$("bookTitle").value.trim(),publication_status:$("bookPublished").value,
+    author:$("bookAuthor").value.trim(),description:$("bookDescription").value.trim(),
+    external_url:url,download_url:$("bookDownloadUrl").value.trim()||null,
+    download_allowed:$("bookDownloadAllowed").value==="true",
+    original_link_allowed:$("bookOriginalLinkAllowed").value==="true",
+    storage_path:storagePath||url,storage_bucket:storageBucket||null,
+    cover_path:$("bookCoverUrl").value.trim(),access_type:$("bookAccess").value,
+    is_published:$("bookPublished").value==="published"
+  });
 });
 
 /* NOTIFICATION SAVE */
@@ -2363,8 +2356,8 @@ $("chapterForm").addEventListener("submit",async function(e){
 /* LECTURE SAVE */
 
 $("notesLecture").addEventListener("change",function(){const v=$("notesLecture").value;const title=$("notesTitle");if(v){title.placeholder="Lecture ke notes ka title";}else{title.placeholder="Chapter ke notes ka title";}});
-$("notesEnabled").addEventListener("change",function(){const enabled=$("notesEnabled").value==="yes";$("notesContentFields").classList.toggle("hidden",!enabled);$("notesTitle").required=enabled;$("notesUrl").required=enabled;$("notesSource").required=enabled;});
-$("notesSource").addEventListener("change",function(){const source=$("notesSource").value;const input=$("notesUrl");const help=$("notesSourceHelp");if(source==="storage"){input.placeholder="Supabase Storage file URL (future setup)";help.textContent="Storage mode tabhi kaam karega jab Supabase Storage bucket aur access policies configure hon. Is option se upload automatically nahi hota.";}else{input.placeholder="https://drive.google.com/file/d/...";help.textContent="Abhi Google Drive link use karein. Storage select karne par bhi file upload automatic nahi hota; pehle Storage bucket/configuration set karna hoga.";}});
+$("notesEnabled").addEventListener("change",function(){const enabled=$("notesEnabled").value==="yes";$("notesContentFields").classList.toggle("hidden",!enabled);$("notesTitle").required=enabled;$("notesUrl").required=enabled&&$("notesSource").value!=="storage";$("notesSource").required=enabled;});
+$("notesSource").addEventListener("change",function(){const source=$("notesSource").value;const input=$("notesUrl");const help=$("notesSourceHelp");if(source==="storage"){input.required=false;input.placeholder="Private storage path upload ke baad set hoga";help.textContent="Phone se PDF upload karein. File private storage mein rahegi aur approved users ko hi signed link milega. File maximum 50 MB.";}else{input.required=$("notesEnabled").value==="yes";input.placeholder=source==="drive"?"https://drive.google.com/file/d/...":"https://example.com/file.pdf";help.textContent="External Google Drive/website links website login se private nahi bante. Restricted files ke liye phone se private upload prefer karein.";}});
 const openLectureNotesBtn=$("openLectureNotesForm");
 if(openLectureNotesBtn)openLectureNotesBtn.addEventListener("click",function(){
   // The form is inside Chapter Notes Management, which is hidden by the management navigator.
@@ -2396,16 +2389,17 @@ $("notesChapter").addEventListener("change",async function(){await populateNotes
 
 $("notesForm").addEventListener("submit",async function(e){
   e.preventDefault();
-  const url=$("notesUrl").value.trim();
-  if($("notesEnabled").value==="no"){message("Notes skip kiye gaye. Kisi bhi doosre chapter ya lecture ke notes alag se add kar sakte hain.");$("notesForm").reset();$("notesContentFields").classList.remove("hidden");$("notesTitle").required=false;$("notesUrl").required=false;$("notesSource").required=false;return;}
+  const url=$("notesUrl").value.trim(),source=$("notesSource").value,privatePath=$("notesStoragePath").value.trim();
+  if($("notesEnabled").value==="no"){message("Notes skip kiye gaye. Existing notes delete nahi hue. Kisi doosre chapter/lecture ke notes alag se add kar sakte hain.");$("notesForm").reset();$("notesContentFields").classList.remove("hidden");$("notesTitle").required=false;$("notesUrl").required=false;$("notesSource").required=false;return;}
   if(!$("notesTitle").value.trim()){message("Notes title bharein.",true);return;}
-  if(!/^https:\/\//i.test(url)){message("Notes link HTTPS se shuru hona chahiye.",true);return;}
-  const source=$("notesSource").value;
-  let parsed;
-  try{parsed=new URL(url)}catch(_){message("Valid HTTPS link paste karein.",true);return;}
-  if(source==="drive" && !["drive.google.com","docs.google.com"].includes(parsed.hostname.toLowerCase())){message("Google Drive ya Google Docs link hi paste karein.",true);return;}
-   if(source==="external" && !/^https:\/\//i.test(url)){message("External PDF link HTTPS hona chahiye.",true);return;}
-  if(source==="storage" && !["supabase.co","supabase.in"].some(host=>parsed.hostname.toLowerCase()===host||parsed.hostname.toLowerCase().endsWith("."+host))){message("Supabase Storage ka file URL paste karein. Storage bucket pehle configure hona chahiye.",true);return;}
+  let parsed=null;
+  if(source==="storage"){
+    if(!privatePath){message("Pehle phone se PDF upload karein, phir Save Notes dabayein.",true);return;}
+  }else{
+    if(!/^https:\/\//i.test(url)){message("Notes link HTTPS se shuru hona chahiye.",true);return;}
+    try{parsed=new URL(url)}catch(_){message("Valid HTTPS link paste karein.",true);return;}
+    if(source==="drive" && !["drive.google.com","docs.google.com"].includes(parsed.hostname.toLowerCase())){message("Google Drive ya Google Docs link hi paste karein.",true);return;}
+  }
   if(!$("notesChapter").value){message("Notes ke liye chapter select karein.",true);return;}
   const chapterId=$("notesChapter").value;
   const lectureId=$("notesLecture").value || null;
@@ -2429,7 +2423,8 @@ $("notesForm").addEventListener("submit",async function(e){
     chapter_id:$("notesChapter").value,
     lecture_id:$("notesLecture").value || null,
     title:$("notesTitle").value.trim(),
-    storage_path:url,
+    storage_path:source==="storage"?privatePath:url,
+    storage_bucket:source==="storage"?"ej-private-content":null,
     download_url:$("notesDownloadUrl").value.trim() || null,
     download_permission_mode:$("notesDownloadMode").value,
     download_allowed:$("notesDownloadMode").value==="allow",
