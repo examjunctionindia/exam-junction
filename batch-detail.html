@@ -51,7 +51,7 @@ async function resolveNoteUrl(note,{download=false,original=false}={}){
   return original?(urls.original||raw):(urls.view||raw);
 }
 function makeNoteRow(note){
-  const row=document.createElement("div");row.className="note";row.dataset.noteId=note.id;
+  const row=document.createElement("div");row.className="note";row.dataset.noteId=note.id;row.dataset.noteSearch=(note.title||"").toLowerCase();
   const title=document.createElement("div");title.style.fontWeight="700";title.textContent=note.title||"Notes";row.append(title);
   const isPrivate=note.storage_bucket==="ej-private-content"&&!!note.storage_path;
   const raw=safeUrl(note.storage_path||"");
@@ -137,7 +137,7 @@ if(!annResult.error&&(annResult.data||[]).length){
  chaptersRoot.before(announcementsSection);
 }
 const chapterSearch=batch.chapter_search_enabled===true?document.createElement("input"):null;
-if(chapterSearch){chapterSearch.type="search";chapterSearch.className="simple-search";chapterSearch.placeholder="Search chapters";chapterSearch.setAttribute("aria-label","Search chapters");chaptersRoot.before(chapterSearch)}
+if(chapterSearch){chapterSearch.type="search";chapterSearch.className="simple-search";chapterSearch.placeholder="Search chapters or lectures";chapterSearch.setAttribute("aria-label","Search chapters or lectures");chaptersRoot.before(chapterSearch)}
 const chapterResult=await db.from("chapters").select("id,title,position,created_at,is_published").eq("batch_id",id).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true});
 if(chapterResult.error){const p=document.createElement("p");p.className="notice";p.textContent="Chapters load nahi ho paaye. Dobara refresh karein.";chaptersRoot.append(p);console.error(chapterResult.error);return}
 const chapters=chapterResult.data||[];
@@ -145,7 +145,7 @@ if(!chapters.length){const p=document.createElement("p");p.className="notice";p.
 const allLectures=[];
 for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
  const chapter=chapters[chapterIndex];
- const section=document.createElement("details");section.className="chapter";section.dataset.chapterTitle=(chapter.title||"").toLowerCase();section.open=chapterIndex===0;
+ const chapterNumber=String(chapterIndex+1).padStart(2,"0");const section=document.createElement("details");section.className="chapter";section.dataset.chapterSearch=("chapter "+chapterNumber+" "+(chapter.title||"")).toLowerCase();section.open=chapterIndex===0;
  const heading=document.createElement("summary");heading.textContent=chapter.title||"Chapter";section.append(heading);
  const inner=document.createElement("div");inner.className="chapter-inner";section.append(inner);chaptersRoot.append(section);
  const [lr,nr]=await Promise.all([
@@ -154,11 +154,13 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
  ]);
  if(lr.error||nr.error){const p=document.createElement("p");p.className="muted";p.textContent="Is chapter ka content load nahi ho paya.";inner.append(p);console.error(lr.error||nr.error);continue}
  const lectures=lr.data||[],notes=nr.data||[];
- heading.textContent=(chapter.title||"Chapter")+(batch.show_content_counts===true?" ("+lectures.length+" lectures)":"");
+ const chapterNotes=notes.filter(n=>!n.lecture_id);
+ heading.textContent="Chapter "+chapterNumber+" — "+(chapter.title||"Chapter")+(chapterNotes.length?" · Notes available":"")+(batch.show_content_counts===true?" ("+lectures.length+" lectures)":"");
  if(!lectures.length){const p=document.createElement("p");p.className="muted";p.textContent="Abhi published lectures available nahi hain.";inner.append(p)}
- for(const lecture of lectures){
-  const row=document.createElement("details");row.className="lecture lesson lecture-accordion";row.dataset.lectureId=lecture.id;row.dataset.chapterId=chapter.id;
-  const h=document.createElement("summary");h.className="lesson-title";h.textContent=lecture.title||"Lecture";row.append(h);
+ for(let lectureIndex=0;lectureIndex<lectures.length;lectureIndex++){
+  const lecture=lectures[lectureIndex];const lectureNumber=String(lectureIndex+1).padStart(2,"0");
+  const row=document.createElement("details");row.className="lecture lesson lecture-accordion";row.dataset.lectureId=lecture.id;row.dataset.chapterId=chapter.id;row.dataset.lectureSearch=("lecture "+lectureNumber+" "+(lecture.title||"Lecture")).toLowerCase();
+  const h=document.createElement("summary");h.className="lesson-title";h.textContent="Lecture "+lectureNumber+" — "+(lecture.title||"Lecture");row.append(h);
   const body=document.createElement("div");body.className="lecture-content";row.append(body);
   const raw=safeUrl(lecture.youtube_url||"");
   let embedSrc=null,directVideo=false;
@@ -178,7 +180,7 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
    if(directVideo){player=document.createElement("video");player.className="viewer";player.controls=true;player.playsInline=true;player.preload="metadata";player.src=raw;player.style.height="auto";player.style.maxHeight="70vh"}
    else{player=document.createElement("iframe");player.className="viewer";player.src=embedSrc;player.title=lecture.title||"Lecture";player.loading="lazy";player.allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen";player.allowFullscreen=true;player.referrerPolicy="strict-origin-when-cross-origin";player.addEventListener("load",()=>{loading.classList.add("hidden");if(timer)clearTimeout(timer)})}
    wrap.append(player);
-   fallback=document.createElement("div");fallback.className="fallback-box hidden";fallback.textContent="Video load nahi ho paya. Apna internet check karein ya Retry karein.";
+   fallback=document.createElement("div");fallback.className="fallback-box hidden";fallback.textContent="Video nahi chal raha? Dobara try karein ya original link kholein.";
    const retry=document.createElement("button");retry.type="button";retry.className="btn";retry.textContent="↻ Retry";retry.addEventListener("click",()=>{fallback.classList.add("hidden");loading.classList.remove("hidden");if(directVideo){player.style.display="";player.src=raw;player.load()}else player.src=embedSrc+(embedSrc.includes("?")?"&":"?")+"retry="+Date.now();if(timer)clearTimeout(timer);timer=setTimeout(()=>fallback.classList.remove("hidden"),15000)});fallback.append(retry);
    if(originalAllowed){const ol=document.createElement("a");ol.className="btn";ol.href=raw;ol.target="_blank";ol.rel="noopener noreferrer";ol.textContent="↗ Open Original Link";fallback.append(ol)}
    wrap.append(fallback);body.append(wrap);
@@ -188,16 +190,15 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
    const full=document.createElement("button");full.className="btn";full.type="button";full.textContent="⛶ Fullscreen";full.addEventListener("click",async()=>{wrap.classList.remove("hidden");try{if(document.fullscreenElement)await document.exitFullscreen();else await wrap.requestFullscreen()}catch(_){wrap.scrollIntoView({behavior:"smooth",block:"nearest"})}});actions.append(full);
   }else{
    const message=document.createElement("p");message.className="muted";message.textContent="Is video source ko website ke player mein nahi khola ja sakta.";body.append(message);
-   if(originalAllowed){const open=document.createElement("a");open.className="btn";open.href=raw||"#";open.target="_blank";open.rel="noopener noreferrer";open.textContent="▶ Watch / Open Original Link";actions.append(open)}
+   if(originalAllowed&&raw){const open=document.createElement("a");open.className="btn";open.href=raw;open.target="_blank";open.rel="noopener noreferrer";open.textContent="▶ Watch / Open Original Link";actions.append(open)}
   }
-  if(getDownloadAllowed(lecture)&&safeUrl(lecture.download_url)){const dl=document.createElement("a");dl.className="btn";dl.href=safeUrl(lecture.download_url);dl.target="_blank";dl.rel="noopener noreferrer";dl.textContent="⬇ Download";actions.append(dl)}
+  const lectureDownloadUrl=safeUrl(lecture.download_url)||(directVideo?raw:null);if(getDownloadAllowed(lecture)&&lectureDownloadUrl){const dl=document.createElement("a");dl.className="btn";dl.href=lectureDownloadUrl;dl.target="_blank";dl.rel="noopener noreferrer";dl.textContent="⬇ Download";actions.append(dl)}
   if(actions.childElementCount)body.append(actions);
   if(lecture.teacher_name){const teacher=document.createElement("p");teacher.className="muted";teacher.textContent="Teacher: "+lecture.teacher_name;body.append(teacher)}
   const lectureNotes=notes.filter(n=>n.lecture_id===lecture.id);
   if(lectureNotes.length){const ln=document.createElement("div");ln.className="chapter-notes";const lh=document.createElement("h4");lh.textContent="Lecture Notes";ln.append(lh);lectureNotes.forEach(n=>ln.append(makeNoteRow(n)));body.append(ln)}
   inner.append(row);allLectures.push({row,chapterSection:section,chapterId:chapter.id,chapterTitle:chapter.title||"Chapter",title:lecture.title||"Lecture"});
  }
- const chapterNotes=notes.filter(n=>!n.lecture_id);
  if(chapterNotes.length){const noteBox=document.createElement("div");noteBox.className="chapter-notes";const nh=document.createElement("h3");nh.textContent="Chapter Notes";noteBox.append(nh);chapterNotes.forEach(n=>noteBox.append(makeNoteRow(n)));inner.append(noteBox)}
 }
 function focusLecture(index){
@@ -211,7 +212,7 @@ allLectures.forEach((item,index)=>{
  if(index<allLectures.length-1){const next=document.createElement("button");next.className="btn";next.type="button";next.textContent=allLectures[index+1].chapterId!==item.chapterId?"Next Chapter →":"Next Lecture →";next.addEventListener("click",()=>focusLecture(index+1));nav.append(next)}
  if(nav.childElementCount)item.row.querySelector(".lecture-content").append(nav);
 });
-if(chapterSearch)chapterSearch.addEventListener("input",()=>{const q=chapterSearch.value.trim().toLowerCase();Array.from(chaptersRoot.querySelectorAll(":scope > .chapter")).forEach(section=>section.hidden=!section.dataset.chapterTitle.includes(q))});
+if(chapterSearch)chapterSearch.addEventListener("input",()=>{const q=chapterSearch.value.trim().toLowerCase();Array.from(chaptersRoot.querySelectorAll(":scope > .chapter")).forEach(section=>{const chapterMatch=!q||section.dataset.chapterSearch.includes(q);const chapterNoteBox=section.querySelector(":scope > .chapter-inner > .chapter-notes");const chapterNoteMatch=!!chapterNoteBox&&Array.from(chapterNoteBox.querySelectorAll("[data-note-search]")).some(note=>note.dataset.noteSearch.includes(q));const lectureRows=Array.from(section.querySelectorAll(".lecture-accordion"));const matchingLectures=lectureRows.filter(row=>!q||row.dataset.lectureSearch.includes(q)||Array.from(row.querySelectorAll("[data-note-search]")).some(note=>note.dataset.noteSearch.includes(q)));section.hidden=!!q&&!chapterMatch&&!chapterNoteMatch&&matchingLectures.length===0;lectureRows.forEach(row=>{const lectureMatch=!q||chapterMatch||row.dataset.lectureSearch.includes(q)||Array.from(row.querySelectorAll("[data-note-search]")).some(note=>note.dataset.noteSearch.includes(q));row.hidden=!lectureMatch});if(chapterNoteBox)chapterNoteBox.hidden=!!q&&!chapterMatch&&!chapterNoteMatch})});
 })();
 </script>
 </body></html>
