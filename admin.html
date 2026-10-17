@@ -242,6 +242,7 @@ button:disabled{filter:none;transform:none}
         <a href="#dashboardOverview">📊 Dashboard</a>
         <a href="#batchManager">➕ Batches</a>
         <a href="#batchSearchSettingsManager">🔎 Search Settings</a>
+        <a href="#storageManager">🗑️ Storage Management</a>
         <a href="#bookManager">📚 Books / Notes</a>
         <a href="#studentManager">👥 Students & Activity</a>
         <a href="#bannerManager">🖼️ Banners</a>
@@ -617,6 +618,28 @@ button:disabled{filter:none;transform:none}
       <p class="small">Phone se upload hui PDFs yahan dikhenge. Referenced files delete nahi honge. Unused file ko sirf tumhari confirmation par delete kiya ja sakta hai.</p>
       <button id="privatePdfGalleryButton" class="secondary" type="button">📂 View / Manage Uploaded PDFs</button>
       <div id="privatePdfGallery" class="hidden" style="display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px"></div>
+    </section>
+
+    <section class="card" id="storageManager" aria-labelledby="storageManagerHeading">
+      <h2 id="storageManagerHeading">🗑️ Storage Management — Permanent Delete</h2>
+      <p class="small"><strong>Admin only.</strong> Yahan se tum khud uploaded storage files permanently delete kar sakte ho. Delete undo nahi hota. Agar file kisi book, notes, thumbnail ya content mein use ho rahi hai to uska link/content toot sakta hai. Pehle file path aur bucket check karo; phir exact path type karke confirm karo.</p>
+      <label for="storageManagerBucket">Storage bucket</label>
+      <select id="storageManagerBucket">
+        <option value="ej-private-content">Private PDFs (ej-private-content)</option>
+        <option value="ej-banners">Public thumbnails / banners (ej-banners)</option>
+      </select>
+      <label for="storageManagerSearch">Search file name / path</label>
+      <input id="storageManagerSearch" type="search" placeholder="File name ya folder path search karein" autocomplete="off">
+      <div class="actions">
+        <button id="storageManagerRefresh" type="button">🔄 Load / Refresh Files</button>
+        <button id="storageManagerRefreshLog" class="secondary" type="button">📋 Refresh Deletion Log</button>
+      </div>
+      <p id="storageManagerStatus" class="small" role="status" aria-live="polite">Load Files dabayein. Koi file apne-aap delete nahi hogi.</p>
+      <div id="storageManagerFiles" class="small" style="display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px"></div>
+      <hr class="divider">
+      <h3>Permanent Deletion Audit Log</h3>
+      <p class="small">Yahan manual deletion attempts ka status dikhega.</p>
+      <div id="storageManagerLog" class="small">Log load nahi hua.</div>
     </section>
 
     <!-- LECTURE FORM -->
@@ -2846,6 +2869,87 @@ $("issueClearResolved").addEventListener("click",()=>{
 });
 renderAdminIssues();
 
+/* ADMIN STORAGE MANAGER: manual permanent deletion only after exact-path confirmation */
+let storageManagerObjects=[];
+function formatStorageDate(value){if(!value)return "Date unavailable";const d=new Date(value);return Number.isNaN(d.getTime())?"Date unavailable":d.toLocaleString()}
+function renderStorageManagerFiles(){
+  const host=$("storageManagerFiles");if(!host)return;host.replaceChildren();
+  const query=($("storageManagerSearch")?.value||"").trim().toLowerCase();
+  const rows=storageManagerObjects.filter(row=>row.name.toLowerCase().includes(query));
+  if(!rows.length){host.textContent=query?"Koi matching file nahi mili.":"Is bucket mein file nahi mili ya abhi list load nahi hui.";return}
+  const fragment=document.createDocumentFragment();
+  rows.forEach(row=>{
+    const card=document.createElement("div");card.style.cssText="border:1px solid #d9e3f0;border-radius:10px;padding:12px;overflow-wrap:anywhere;background:#fff";
+    const name=document.createElement("strong");name.textContent=row.name;card.appendChild(name);
+    const meta=document.createElement("p");meta.className="small";meta.textContent="Created: "+formatStorageDate(row.created_at)+" · Updated: "+formatStorageDate(row.updated_at);card.appendChild(meta);
+    const del=document.createElement("button");del.type="button";del.className="danger";del.textContent="Permanently Delete";
+    del.addEventListener("click",()=>deleteStorageManagerFile(row));card.appendChild(del);fragment.appendChild(card);
+  });
+  host.appendChild(fragment);
+  if(rows.length>=1500){const note=document.createElement("p");note.className="small";note.textContent="Safety limit: 1,500 files loaded. Search/filter and use another folder/bucket if needed.";host.appendChild(note)}
+}
+async function callStorageManager(payload){
+  const {data,error}=await db.functions.invoke("admin-storage-manager",{body:payload});
+  if(error)throw new Error(error.message||"Storage management request failed");
+  if(data?.error)throw new Error(data.error);
+  return data;
+}
+async function loadStorageManagerFiles(){
+  const status=$("storageManagerStatus"),button=$("storageManagerRefresh");
+  if(!db){if(status)status.textContent="Admin session/database ready nahi hai.";return}
+  button.disabled=true;button.textContent="Loading...";
+  if(status)status.textContent="Storage files load ho rahi hain...";
+  try{
+    const bucket=$("storageManagerBucket").value;
+    const result=await callStorageManager({action:"list",bucket});
+    storageManagerObjects=(result.objects||[]).sort((x,y)=>(y.created_at||"").localeCompare(x.created_at||""));
+    renderStorageManagerFiles();
+    status.textContent=storageManagerObjects.length+" files loaded from "+bucket+(result.truncated?" (list capped at 1,500; use search)":"")+". Koi file delete nahi hui.";
+  }catch(error){
+    console.error("Storage manager list failed",error);
+    storageManagerObjects=[];renderStorageManagerFiles();
+    status.textContent="Files load nahi hui. Admin login aur storage permission check karein. Details: "+(error.message||"unknown error");
+  }finally{button.disabled=false;button.textContent="🔄 Load / Refresh Files"}
+}
+async function deleteStorageManagerFile(row){
+  const bucket=$("storageManagerBucket").value;
+  const warning="WARNING: Permanent delete undo nahi hota. Agar file use ho rahi hai to website par PDF/thumbnail/content toot sakta hai.\n\nBucket: "+bucket+"\nFile: "+row.name+"\n\nDelete karna hai?";
+  if(!confirm(warning))return;
+  const typed=prompt("Final confirmation ke liye file ka exact path type karein:\n"+row.name);
+  if(typed!==row.name){message("Path match nahi hua. File delete nahi ki gayi.",true);return}
+  const status=$("storageManagerStatus");
+  try{
+    status.textContent="Permanent deletion request process ho rahi hai...";
+    const result=await callStorageManager({action:"delete",bucket,path:row.name,confirmation:typed});
+    message(result.warning||"File permanently delete ho gayi. Audit log bhi save hua.");
+    await loadStorageManagerFiles();await loadStorageManagerLog();
+  }catch(error){
+    console.error("Manual permanent delete failed",error);
+    status.textContent="Delete nahi hua: "+(error.message||"unknown error");
+    message("File delete nahi hui. Details Storage Management mein dekho.",true);
+  }
+}
+async function loadStorageManagerLog(){
+  const host=$("storageManagerLog");if(!host)return;host.textContent="Deletion log load ho raha hai...";
+  try{
+    const {data,error}=await db.from("ej_storage_cleanup_log").select("bucket_id,object_name,attempted_at,deleted_at,status,reason,error_message,deleted_by").order("attempted_at",{ascending:false}).limit(50);
+    if(error)throw error;
+    host.replaceChildren();
+    if(!data?.length){host.textContent="Abhi deletion log nahi hai.";return}
+    data.forEach(row=>{
+      const item=document.createElement("div");item.style.cssText="border-bottom:1px solid #e2e8f0;padding:8px 0;overflow-wrap:anywhere";
+      const title=document.createElement("strong");title.textContent=(row.status||"unknown").toUpperCase()+" — "+row.bucket_id+"/"+row.object_name;item.appendChild(title);
+      const meta=document.createElement("p");meta.className="small";meta.textContent="Attempt: "+formatStorageDate(row.attempted_at)+" · Deleted: "+formatStorageDate(row.deleted_at)+" · "+(row.reason||"");item.appendChild(meta);
+      if(row.error_message){const err=document.createElement("p");err.className="small";err.textContent="Error: "+row.error_message;item.appendChild(err)}
+      host.appendChild(item);
+    });
+  }catch(error){host.textContent="Deletion log load nahi hua. "+(error.message||"Check admin permission.")}
+}
+$("storageManagerRefresh")?.addEventListener("click",loadStorageManagerFiles);
+$("storageManagerRefreshLog")?.addEventListener("click",loadStorageManagerLog);
+$("storageManagerBucket")?.addEventListener("change",()=>{storageManagerObjects=[];renderStorageManagerFiles();$("storageManagerStatus").textContent="Bucket badal gaya. Load / Refresh Files dabayein."});
+$("storageManagerSearch")?.addEventListener("input",renderStorageManagerFiles);
+
 /* REFRESH / LOGOUT */
 
 $("refreshButton").addEventListener("click",async function(){
@@ -2882,7 +2986,7 @@ const managementDashboard = $("dashboard");
 const managementSectionIds = [
   "dashboardOverview","batchManager","bookManager","bookAccessManager","batchAccessManager","studentManager","bannerManager",
   "reportsManager","notificationManager","chapterManager","chapterNotesManager","lectureNotesManager","lectureManager","requestManager",
-  "existingBatches","existingBooks","existingNotifications","existingChapters","existingLectures"
+  "existingBatches","existingBooks","existingNotifications","existingChapters","existingLectures","storageManager"
 ];
 function setManagementVisibility(activeId) {
   managementSectionIds.forEach(function(id) {
