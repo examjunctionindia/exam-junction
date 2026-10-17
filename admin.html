@@ -2338,7 +2338,12 @@ $("chapterForm").addEventListener("submit",async function(e){
   if(!current||current.batch_id!==batchId||Number(current.position)!==position){
     const {data:duplicates,error}=await db.from("chapters").select("id").eq("batch_id",batchId).eq("position",position).limit(2);
     if(error){message("Position check nahi ho paya. Dobara try karein.",true);return;}
-    if((duplicates||[]).some(row=>row.id!==currentId)){message("Is batch mein ye Chapter Position pehle se use ho rahi hai. Doosra number choose karein.",true);return;}
+    if((duplicates||[]).some(row=>row.id!==currentId)){
+      if(currentId && current && current.batch_id===batchId){
+        const {error:reorderError}=await db.rpc("ej_reorder_chapter_position",{p_id:currentId,p_target_position:position});
+        if(reorderError){message("Safe reorder nahi hua: "+reorderError.message,true);return;}
+      }else{message("Is batch mein ye Chapter Position pehle se use hai. Naye chapter ke liye free position choose karein; existing chapter ko Edit karke reorder kar sakte hain.",true);return;}
+    }
   }
   await saveRecord("chapterForm","chapterSave","chapters","chapters",{
     batch_id:batchId,title:$("chapterTitle").value.trim(),position,
@@ -2404,7 +2409,12 @@ $("notesForm").addEventListener("submit",async function(e){
     q=lectureId?q.eq("lecture_id",lectureId):q.is("lecture_id",null);
     const {data:duplicates,error}=await q.limit(3);
     if(error){message("Notes position check nahi ho paya. Dobara try karein.",true);return;}
-    if((duplicates||[]).some(row=>row.id!==currentNoteId)){message("Is Chapter/lecture ke Notes Position par pehle se notes hain. Doosra number choose karein.",true);return;}
+    if((duplicates||[]).some(row=>row.id!==currentNoteId)){
+      if(currentNoteId && current && current.chapter_id===chapterId && (current.lecture_id||null)===lectureId){
+        const {error:reorderError}=await db.rpc("ej_reorder_note_position",{p_id:currentNoteId,p_target_position:position});
+        if(reorderError){message("Safe notes reorder nahi hua: "+reorderError.message,true);return;}
+      }else{message("Is Chapter/lecture mein ye Notes Position pehle se use hai. Naye notes ke liye free position choose karein; existing notes ko Edit karke reorder kar sakte hain.",true);return;}
+    }
   }
   await saveRecord("notesForm","notesSave","chapter_notes","notes",{
     chapter_id:$("notesChapter").value,
@@ -2457,7 +2467,12 @@ $("lectureForm").addEventListener("submit",async function(e){
   if(!current||current.chapter_id!==chapterId||Number(current.position)!==position){
     const {data:duplicates,error}=await db.from("lectures").select("id").eq("chapter_id",chapterId).eq("position",position).limit(2);
     if(error){message("Lecture position check nahi ho paya. Dobara try karein.",true);return;}
-    if((duplicates||[]).some(row=>row.id!==currentId)){message("Is chapter mein ye Lecture Position pehle se use hai. Doosra number choose karein.",true);return;}
+    if((duplicates||[]).some(row=>row.id!==currentId)){
+      if(currentId && current && current.chapter_id===chapterId){
+        const {error:reorderError}=await db.rpc("ej_reorder_lecture_position",{p_id:currentId,p_target_position:position});
+        if(reorderError){message("Safe reorder nahi hua: "+reorderError.message,true);return;}
+      }else{message("Is chapter mein ye Lecture Position pehle se use hai. Naye lecture ke liye free position choose karein; existing lecture ko Edit karke reorder kar sakte hain.",true);return;}
+    }
   }
 
   await saveRecord(
