@@ -152,7 +152,7 @@
       const ready=await window.EXAM_JUNCTION.init();
       if(!ready)throw new Error("Supabase unavailable");
       const {data,error}=await window.EXAM_JUNCTION.supabase.from("batches")
-        .select("id,title,description,platform_name,access_type,is_published,created_at,published_at,thumbnail_url,display_position,show_content_counts")
+        .select("id,title,description,show_description,platform_name,access_type,is_published,created_at,published_at,thumbnail_url,display_position,show_content_counts")
         .eq("is_published",true).order("display_position",{ascending:true}).order("created_at",{ascending:false}).limit(100);
       if(error)throw error;
       list.replaceChildren();
@@ -191,7 +191,7 @@
         if(b.published_at && (Date.now()-Date.parse(b.published_at))<7*24*60*60*1000){const fresh=document.createElement("span");fresh.className="new-badge";fresh.textContent="NEW";title.append(fresh)}
         cover.append(coverContent);
         const body=document.createElement("div");body.className="body";
-        const desc=document.createElement("p");desc.className="description";desc.textContent=b.description||"";if(!b.description)desc.hidden=true;
+        const desc=document.createElement("p");desc.className="description";desc.textContent=b.description||"";if(!(b.show_description===true&&b.description))desc.hidden=true;
         const teacher=document.createElement("p");teacher.className="teacher-line";teacher.textContent=b.platform_name?"Teacher: "+b.platform_name:"";if(!b.platform_name)teacher.hidden=true;
         const meta=document.createElement("div");meta.className="card-meta";
         const canSeeCounts=b.show_content_counts===true && (b.access_type==="free" || grantedBatchIds.has(b.id));

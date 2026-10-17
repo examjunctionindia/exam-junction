@@ -985,7 +985,7 @@
         const client = window.EXAM_JUNCTION.supabase;
         const { data, error } = await client
             .from("batches")
-            .select("id,title,description,platform_name,access_type,is_published,thumbnail_url,display_position,created_at,published_at,show_content_counts")
+            .select("id,title,description,show_description,platform_name,access_type,is_published,thumbnail_url,display_position,created_at,published_at,show_content_counts")
             .eq("is_published", true)
             .order("display_position", { ascending: true })
             .order("created_at", { ascending: false })
@@ -1057,7 +1057,7 @@
             const description = document.createElement("p");
             description.className = "batch-description";
             description.textContent = batch.description || "";
-            if(batch.description)body.append(description);
+            if(batch.show_description===true && batch.description)body.append(description);
 
             const meta = document.createElement("div");
             meta.className = "batch-meta";
