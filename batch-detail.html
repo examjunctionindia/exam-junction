@@ -58,20 +58,22 @@ function makeNoteRow(note){
   if(!isPrivate&&!raw){const p=document.createElement("p");p.className="muted";p.textContent="PDF link available nahi hai. Admin se contact karein.";row.append(p);return row}
   const actions=document.createElement("div");actions.className="media-actions";
   const view=document.createElement("button");view.className="btn";view.type="button";view.textContent="📖 View PDF";actions.append(view);
+  const wrap=document.createElement("div");wrap.className="pdf-fullscreen hidden";
+  const frame=document.createElement("iframe");frame.className="pdf";frame.title=note.title||"Notes PDF";frame.loading="lazy";frame.allow="fullscreen";wrap.append(frame);
+  const fallback=document.createElement("div");fallback.className="fallback-box hidden";fallback.textContent="PDF abhi bhi nahi khul raha? Dobara try karein ya original link kholein.";
+  const retry=document.createElement("button");retry.className="btn";retry.type="button";retry.textContent="↻ Retry";
+  let timer=null,pdfRequested=false;
+  const schedulePdfFallback=()=>{if(timer)clearTimeout(timer);timer=setTimeout(()=>fallback.classList.remove("hidden"),12000)};
+  retry.addEventListener("click",async()=>{fallback.classList.add("hidden");try{pdfRequested=true;frame.src=await resolveNoteUrl(note);schedulePdfFallback()}catch(e){fallback.classList.remove("hidden");console.error("PDF retry error",e)}});
+  fallback.append(retry);
   if(canShowOriginal(note)){
     const original=document.createElement("button");original.className="btn";original.type="button";original.textContent="↗ Open Original Link";
     original.addEventListener("click",async()=>{try{const url=await resolveNoteUrl(note,{original:true});window.open(url,"_blank","noopener,noreferrer")}catch(e){alert("Original link available nahi hai.");console.error("Original notes link error",e)}});
-    actions.append(original);
+    fallback.append(original);
   }
-  const wrap=document.createElement("div");wrap.className="pdf-fullscreen hidden";
-  const frame=document.createElement("iframe");frame.className="pdf";frame.title=note.title||"Notes PDF";frame.loading="lazy";frame.allow="fullscreen";wrap.append(frame);
-  const fallback=document.createElement("div");fallback.className="fallback-box hidden";fallback.textContent="PDF website ke andar nahi khul pa raha. Dobara try karein.";
-  const retry=document.createElement("button");retry.className="btn";retry.type="button";retry.textContent="↻ Retry";
-  let timer=null;
-  retry.addEventListener("click",async()=>{fallback.classList.add("hidden");try{frame.src=await resolveNoteUrl(note);if(timer)clearTimeout(timer);timer=setTimeout(()=>fallback.classList.remove("hidden"),12000)}catch(e){fallback.classList.remove("hidden");console.error("PDF retry error",e)}});
-  fallback.append(retry);wrap.append(fallback);
-  view.addEventListener("click",async()=>{wrap.classList.remove("hidden");wrap.scrollIntoView({behavior:"smooth",block:"nearest"});fallback.classList.add("hidden");try{frame.src=await resolveNoteUrl(note);if(timer)clearTimeout(timer);timer=setTimeout(()=>fallback.classList.remove("hidden"),12000)}catch(e){fallback.classList.remove("hidden");console.error("PDF open error",e)}});
-  frame.addEventListener("load",()=>{if(timer)clearTimeout(timer)});
+  wrap.append(fallback);
+  view.addEventListener("click",async()=>{wrap.classList.remove("hidden");wrap.scrollIntoView({behavior:"smooth",block:"nearest"});fallback.classList.add("hidden");try{pdfRequested=true;frame.src=await resolveNoteUrl(note);schedulePdfFallback()}catch(e){fallback.classList.remove("hidden");console.error("PDF open error",e)}});
+  frame.addEventListener("load",()=>{if(timer)clearTimeout(timer);fallback.classList.add("hidden")});
   const downloadAllowed=getDownloadAllowed(note);
   if(downloadAllowed&&(note.download_url||isPrivate||raw)){
     const dl=document.createElement("button");dl.className="btn";dl.type="button";dl.textContent="⬇ Download";
@@ -184,7 +186,7 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
    wrap.append(fallback);body.append(wrap);
    if(directVideo){const showFallback=()=>{loading.classList.add("hidden");fallback.classList.remove("hidden");player.style.display="none"};player.addEventListener("loadstart",()=>loading.classList.remove("hidden"));player.addEventListener("waiting",()=>loading.classList.remove("hidden"));player.addEventListener("error",showFallback);player.addEventListener("stalled",()=>{if(timer)clearTimeout(timer);timer=setTimeout(showFallback,15000)});player.addEventListener("canplay",()=>{if(timer)clearTimeout(timer);loading.classList.add("hidden");fallback.classList.add("hidden");player.style.display=""});player.addEventListener("playing",()=>loading.classList.add("hidden"))}
    else{timer=setTimeout(()=>{if(!wrap.classList.contains("hidden"))fallback.classList.remove("hidden")},15000)}
-   const watch=document.createElement("button");watch.className="btn";watch.type="button";watch.textContent="▶ Watch";watch.addEventListener("click",async()=>{wrap.classList.remove("hidden");try{await wrap.requestFullscreen()}catch(_){wrap.scrollIntoView({behavior:"smooth",block:"nearest"})}});actions.append(watch);
+   const watch=document.createElement("button");watch.className="btn";watch.type="button";watch.textContent="▶ Watch";watch.addEventListener("click",async()=>{wrap.classList.remove("hidden");if(timer)clearTimeout(timer);timer=setTimeout(()=>fallback.classList.remove("hidden"),15000);try{await wrap.requestFullscreen()}catch(_){wrap.scrollIntoView({behavior:"smooth",block:"nearest"})}});actions.append(watch);
    const full=document.createElement("button");full.className="btn";full.type="button";full.textContent="⛶ Fullscreen";full.addEventListener("click",async()=>{wrap.classList.remove("hidden");try{if(document.fullscreenElement)await document.exitFullscreen();else await wrap.requestFullscreen()}catch(_){wrap.scrollIntoView({behavior:"smooth",block:"nearest"})}});actions.append(full);
   }else{
    const message=document.createElement("p");message.className="muted";message.textContent="Is video source ko website ke player mein nahi khola ja sakta.";body.append(message);
