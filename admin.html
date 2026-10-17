@@ -635,6 +635,16 @@ button:disabled{filter:none;transform:none}
         <button id="storageManagerRefreshLog" class="secondary" type="button">📋 Refresh Deletion Log</button>
       </div>
       <p id="storageManagerStatus" class="small" role="status" aria-live="polite">Load Files dabayein. Koi file apne-aap delete nahi hogi.</p>
+      <hr class="divider">
+      <h3>30-Day Cleanup Review — Delete sirf tumhari permission se</h3>
+      <p class="small"><strong>Important:</strong> Scan sirf 30 din se purani files ko review list mein laata hai; scan se kuch delete nahi hota. Purani file zaroori bhi ho sakti hai. Har file ka content mein use check karo. Jo rakhni hai us par Keep; sirf jise permanently delete karna hai us par Approve & Delete dabao. Har delete se pehle exact path confirm hoga.</p>
+      <div class="actions">
+        <button id="storageCleanupScan" type="button">🔍 Scan Old Files (30+ days)</button>
+        <button id="storageCleanupRefresh" class="secondary" type="button">↻ Refresh Review List</button>
+      </div>
+      <p id="storageCleanupStatus" class="small" role="status" aria-live="polite">No automatic deletion. Scan files to create a review list.</p>
+      <div id="storageCleanupCandidates" style="display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px"></div>
+
       <div id="storageManagerFiles" class="small" style="display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px"></div>
       <hr class="divider">
       <h3>Permanent Deletion Audit Log</h3>
@@ -2949,6 +2959,69 @@ $("storageManagerRefresh")?.addEventListener("click",loadStorageManagerFiles);
 $("storageManagerRefreshLog")?.addEventListener("click",loadStorageManagerLog);
 $("storageManagerBucket")?.addEventListener("change",()=>{storageManagerObjects=[];renderStorageManagerFiles();$("storageManagerStatus").textContent="Bucket badal gaya. Load / Refresh Files dabayein."});
 $("storageManagerSearch")?.addEventListener("input",renderStorageManagerFiles);
+
+/* 30-day storage cleanup review queue: scan never deletes; each deletion requires admin approval */
+let storageCleanupRows=[];
+async function callStorageCleanup(payload){
+  const {data,error}=await db.functions.invoke("admin-storage-manager",{body:payload});
+  if(error)throw new Error(error.message||"Storage cleanup request failed");
+  if(data?.error)throw new Error(data.error);
+  return data;
+}
+function storageCleanupDate(value){if(!value)return "Unknown date";const d=new Date(value);return Number.isNaN(d.getTime())?"Unknown date":d.toLocaleString()}
+function renderStorageCleanupCandidates(){
+  const host=$("storageCleanupCandidates");if(!host)return;host.replaceChildren();
+  if(!storageCleanupRows.length){host.textContent="Review list empty. Scan Old Files dabao.";return}
+  const fragment=document.createDocumentFragment();
+  storageCleanupRows.forEach(row=>{
+    const card=document.createElement("article");card.style.cssText="border:1px solid #d9e3f0;border-radius:10px;padding:12px;overflow-wrap:anywhere;background:#fff";
+    const title=document.createElement("strong");title.textContent=row.bucket_id+" / "+row.object_name;card.appendChild(title);
+    const meta=document.createElement("p");meta.className="small";meta.textContent="Uploaded: "+storageCleanupDate(row.object_created_at)+" · Status: "+row.status+(row.reviewed_at?" · Reviewed: "+storageCleanupDate(row.reviewed_at):"");card.appendChild(meta);
+    const warning=document.createElement("p");warning.className="small";warning.textContent="Age alone does not prove this file is unused. Check books, notes, thumbnails and links before approving deletion.";card.appendChild(warning);
+    if(row.error_message){const err=document.createElement("p");err.className="small";err.textContent="Last error: "+row.error_message;card.appendChild(err)}
+    if(row.status==="pending_review"||row.status==="failed"){
+      const actions=document.createElement("div");actions.className="actions";
+      const keep=document.createElement("button");keep.type="button";keep.className="secondary";keep.textContent="Keep — Don't Delete";keep.addEventListener("click",()=>reviewStorageCandidate(row,"keep"));actions.appendChild(keep);
+      const del=document.createElement("button");del.type="button";del.className="danger";del.textContent="Approve & Permanently Delete";del.addEventListener("click",()=>reviewStorageCandidate(row,"approve_delete"));actions.appendChild(del);card.appendChild(actions);
+    }else if(row.status==="keep"){
+      const kept=document.createElement("p");kept.className="small";kept.textContent="Kept by admin — this queue will not delete it.";card.appendChild(kept);
+    }else if(row.status==="deleted"){
+      const done=document.createElement("p");done.className="small";done.textContent="Permanently deleted and marked in audit history.";card.appendChild(done);
+    }
+    fragment.appendChild(card);
+  });
+  host.appendChild(fragment);
+}
+async function loadStorageCleanupCandidates(){
+  const status=$("storageCleanupStatus");status.textContent="Review list load ho rahi hai...";
+  try{const result=await callStorageCleanup({action:"candidates"});storageCleanupRows=result.candidates||[];renderStorageCleanupCandidates();status.textContent=storageCleanupRows.length+" review records loaded. Koi file delete nahi hui."}
+  catch(error){status.textContent="Review list load nahi hui: "+(error.message||"unknown error")}
+}
+async function scanStorageCleanup(){
+  const button=$("storageCleanupScan"),status=$("storageCleanupStatus");
+  if(!confirm("30+ days purani files scan hongi aur review list mein aayengi. Is scan se koi file delete nahi hogi. Continue?"))return;
+  button.disabled=true;button.textContent="Scanning...";
+  status.textContent="Storage scan ho raha hai. Files delete nahi hongi.";
+  try{const result=await callStorageCleanup({action:"scan"});status.textContent="Scan complete: "+result.scanned+" old files found; "+result.newlyQueued+" new review items added. Retention: "+result.retentionDays+" days. "+(result.truncated?"Safety scan limit reached; run scan again later.":"")+" Nothing deleted.";await loadStorageCleanupCandidates()}
+  catch(error){status.textContent="Scan failed: "+(error.message||"unknown error")}
+  finally{button.disabled=false;button.textContent="🔍 Scan Old Files (30+ days)"}
+}
+async function reviewStorageCandidate(row,action){
+  if(action==="keep"){
+    if(!confirm("Is file ko Keep mark karna hai? Is review queue se ise delete nahi kiya jayega.\n\n"+row.bucket_id+"/"+row.object_name))return;
+    try{const result=await callStorageCleanup({action:"keep",id:row.id});message(result.message||"File marked Keep.");await loadStorageCleanupCandidates()}
+    catch(error){message("Keep save nahi hua: "+(error.message||"unknown error"),true)}
+    return;
+  }
+  const warning="PERMANENT DELETE — undo nahi hoga.\n\n"+row.bucket_id+"/"+row.object_name+"\n\nPehle confirm karo ki ye kisi book, lecture, notes ya thumbnail mein use nahi hoti. Delete karni hai?";
+  if(!confirm(warning))return;
+  const typed=prompt("Final approval: exact file path type karo:\n"+row.object_name);
+  if(typed!==row.object_name){message("Exact path match nahi hua. File delete nahi ki gayi.",true);return}
+  try{const result=await callStorageCleanup({action:"approve_delete",id:row.id});message(result.warning||result.message||"Approved deletion processed.");await loadStorageCleanupCandidates();await loadStorageManagerLog()}
+  catch(error){message("Delete nahi hua: "+(error.message||"unknown error"),true);await loadStorageCleanupCandidates()}
+}
+$("storageCleanupScan")?.addEventListener("click",scanStorageCleanup);
+$("storageCleanupRefresh")?.addEventListener("click",loadStorageCleanupCandidates);
 
 /* REFRESH / LOGOUT */
 
