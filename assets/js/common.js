@@ -85,6 +85,7 @@
                 .from("batches")
                 .select("*")
                 .eq("is_published", true)
+                .order("display_position", { ascending: true })
                 .order("created_at", { ascending: false })
                 .limit(100);
 
