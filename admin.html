@@ -1188,7 +1188,6 @@ async function loadLists(){
     }
   }
 
-   updateDashboardCounts();
    refreshDropdowns();
   await loadBookAccess();
   await loadBatchAccess();
@@ -1196,6 +1195,7 @@ async function loadLists(){
   await loadProblemReports();
   await loadStudentActivityAndDirectory();
   await loadBatchSearchSettings();
+  await updateDashboardCounts();
   applyBatchFilters();
 }
 /* PER-BATCH SEARCH SETTINGS */
