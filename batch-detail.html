@@ -108,11 +108,19 @@ if(!allowed){
   try{
    const {data:existing,error:ee}=await db.from("batch_join_requests").select("id,status").eq("batch_id",id).eq("student_id",user.id).maybeSingle();
    if(ee)throw ee;
-   if(existing){alert("Aapki request status: "+existing.status);button.textContent=existing.status==="pending"?"Request Pending":"Request "+existing.status;return}
    const reason=String($("requestReason")?.value||"").trim().slice(0,300);
-   const {error}=await db.from("batch_join_requests").insert({batch_id:id,student_id:user.id,status:"pending",request_reason:reason||null});
-   if(error)throw error;
-   alert("Request bhej di gayi. Admin approval ka wait karein.");button.textContent="Request Pending";
+   if(existing){
+    if(existing.status==="pending"){alert("Aapki request pehle se pending hai. Admin approval ka wait karein.");button.textContent="Request Pending";return}
+    const {data:grant,error:grantError}=await db.from("batch_access").select("id").eq("batch_id",id).eq("student_id",user.id).maybeSingle();
+    if(grantError)throw grantError;
+    if(grant){alert("Aapko is batch ka access pehle se mila hua hai.");button.textContent="Access Granted";return}
+    const {error:updateError}=await db.from("batch_join_requests").update({status:"pending",request_reason:reason||null,created_at:new Date().toISOString()}).eq("id",existing.id).eq("status",existing.status);
+    if(updateError)throw updateError;
+   }else{
+    const {error:insertError}=await db.from("batch_join_requests").insert({batch_id:id,student_id:user.id,status:"pending",request_reason:reason||null});
+    if(insertError)throw insertError;
+   }
+   alert(existing?"Access revoke ho chuka tha. Nayi request bhej di gayi; admin approval ka wait karein.":"Request bhej di gayi. Admin approval ka wait karein.");button.textContent="Request Pending";
   }catch(error){alert("Request nahi bhej paaye. Internet ya permission check karke retry karein.");console.error("Batch request failed",error);button.disabled=false}
  };
  return;
