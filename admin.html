@@ -594,6 +594,11 @@ button:disabled{filter:none;transform:none}
       <hr class="divider"><h3>Existing Chapter Notes</h3>
       <label class="list-search-label" for="searchChapterNotes">Search chapter notes</label><input id="searchChapterNotes" class="list-search" type="search" data-list-search="chapterNotesList" placeholder="Notes title, chapter ya link search karein">
       <div id="chapterNotesList" class="small">Notes load ho rahe hain...</div>
+      <hr class="divider">
+      <h3>Private PDF Storage</h3>
+      <p class="small">Phone se upload hui PDFs yahan dikhenge. Referenced files delete nahi honge. Unused file ko sirf tumhari confirmation par delete kiya ja sakta hai.</p>
+      <button id="privatePdfGalleryButton" class="secondary" type="button">📂 View / Manage Uploaded PDFs</button>
+      <div id="privatePdfGallery" class="hidden" style="display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px"></div>
     </section>
 
     <!-- LECTURE FORM -->
@@ -2190,6 +2195,65 @@ $("batchThumbnailUpload").addEventListener("click",async function(){
 
 $("batchForm").addEventListener("reset",function(){
   setTimeout(()=>{updateBatchThumbnailPreview();const picker=$("batchThumbnailGalleryPicker");if(picker)picker.classList.add("hidden");},0);
+});
+
+$("privatePdfGalleryButton").addEventListener("click",async function(){
+  const root=$("privatePdfGallery"),button=$("privatePdfGalleryButton");
+  if(!root.classList.contains("hidden")){root.classList.add("hidden");return;}
+  root.classList.remove("hidden");root.replaceChildren();root.textContent="Private PDFs load ho rahe hain...";
+  button.disabled=true;
+  try{
+    const entries=[];
+    for(const folder of ["chapter-notes","books"]){
+      const {data,error}=await db.storage.from("ej-private-content").list(folder,{limit:200,sortBy:{column:"created_at",order:"desc"}});
+      if(error)throw error;
+      (data||[]).filter(file=>/\.pdf$/i.test(file.name||"")).forEach(file=>entries.push({folder,file,path:folder+"/"+file.name}));
+    }
+    root.replaceChildren();
+    if(!entries.length){root.textContent="Abhi private storage mein PDFs nahi hain.";return;}
+    for(const entry of entries){
+      const card=document.createElement("div");card.className="item";
+      const title=document.createElement("strong");title.textContent=entry.file.name;
+      const path=document.createElement("p");path.className="small";path.textContent=entry.path;
+      const usage=document.createElement("p");usage.className="small";usage.textContent="Reference check ho raha hai...";
+      const actions=document.createElement("div");actions.className="actions";
+      const useButton=document.createElement("button");useButton.className="secondary";useButton.type="button";useButton.textContent=entry.folder==="books"?"Use for Book":"Use for Notes";
+      useButton.addEventListener("click",()=>{
+        if(entry.folder==="books"){
+          $("bookStorageUrl").value=entry.path;$("bookStorageBucket").value="ej-private-content";$("bookUrl").value="";
+          if(!$("bookTitle").value.trim())$("bookTitle").value=entry.file.name.replace(/\.pdf$/i,"");
+          if(typeof showManagementSection==="function"){const link=managementNav?.querySelector('a[href="#bookManager"]');showManagementSection("bookManager",link)}
+          $("bookForm").scrollIntoView({behavior:"smooth",block:"start"});message("Private PDF Book form mein select hui. Save Book dabayein.");
+        }else{
+          $("notesStoragePath").value=entry.path;$("notesSource").value="storage";$("notesSource").dispatchEvent(new Event("change"));$("notesUrl").value="";
+          if(!$("notesTitle").value.trim())$("notesTitle").value=entry.file.name.replace(/\.pdf$/i,"");
+          if(typeof showManagementSection==="function"){const link=managementNav?.querySelector('a[href="#chapterNotesManager"]');showManagementSection("chapterNotesManager",link)}
+          $("notesForm").scrollIntoView({behavior:"smooth",block:"start"});message("Private PDF Notes form mein select hui. Chapter select karke Save Notes dabayein.");
+        }
+      });
+      const del=document.createElement("button");del.className="danger";del.type="button";del.textContent="Delete unused PDF";
+      const [notesRef,booksRef]=await Promise.all([
+        db.from("chapter_notes").select("id,title").eq("storage_bucket","ej-private-content").eq("storage_path",entry.path).limit(10),
+        db.from("books").select("id,title").eq("storage_bucket","ej-private-content").eq("storage_path",entry.path).limit(10)
+      ]);
+      if(notesRef.error||booksRef.error)throw new Error("PDF reference check nahi ho paya. Safety ke liye delete blocked hai.");
+      const refs=[...(notesRef.data||[]).map(x=>"Notes: "+x.title),...(booksRef.data||[]).map(x=>"Book: "+x.title)];
+      usage.textContent=refs.length?"In use — "+refs.join(", "):"Unused file — manually delete kar sakte ho.";
+      del.disabled=refs.length>0;
+      if(refs.length)del.title="Referenced content ko delete nahi kar sakte.";
+      del.addEventListener("click",async()=>{
+        if(del.disabled)return;
+        const activePath=$("notesStoragePath").value===entry.path||$("bookStorageUrl").value===entry.path;
+        if(activePath){message("Ye PDF abhi form mein selected hai. Pehle doosri file choose karein.",true);return;}
+        if(!confirm(entry.file.name+" ko permanently delete karna hai? Ye action undo nahi hoga."))return;
+        const {error}=await db.storage.from("ej-private-content").remove([entry.path]);
+        if(error){message("PDF delete nahi hui: "+error.message,true);return;}
+        card.remove();message("Unused private PDF delete ho gayi.");
+      });
+      actions.append(useButton,del);card.append(title,path,usage,actions);root.append(card);
+    }
+  }catch(error){root.textContent="Private PDF gallery load nahi hui. Storage policy check karein.";message("Private PDF gallery error: "+(error.message||""),true)}
+  finally{button.disabled=false}
 });
 
 $("batchThumbnailGallery").addEventListener("click",async function(){
