@@ -192,7 +192,7 @@
         cover.append(coverContent);
         const body=document.createElement("div");body.className="body";
         const desc=document.createElement("p");desc.className="description";desc.textContent=b.description||"";if(!b.description)desc.hidden=true;
-        const teacher=document.createElement("p");teacher.className="teacher-line";teacher.textContent=b.platform_name?"👨‍🏫 Teacher: "+b.platform_name:"👨‍🏫 Mathematics Batch";
+        const teacher=document.createElement("p");teacher.className="teacher-line";teacher.textContent=b.platform_name?"Teacher: "+b.platform_name:"";if(!b.platform_name)teacher.hidden=true;
         const meta=document.createElement("div");meta.className="card-meta";
         const canSeeCounts=b.show_content_counts===true && (b.access_type==="free" || grantedBatchIds.has(b.id));
         if(canSeeCounts){
@@ -200,10 +200,10 @@
           const lecturePill=document.createElement("span");lecturePill.className="meta-pill";lecturePill.textContent=(lectureCounts[b.id]||0)+" Lectures";
           meta.append(chapterPill,lecturePill);
         }
+        if(!meta.childElementCount)meta.hidden=true;
         const footer=document.createElement("div");footer.className="footer";
-        const status=document.createElement("span");status.className="status"+(b.access_type==="restricted"?" restricted":"");status.textContent=b.access_type==="restricted"?"🔒 Restricted":"✓ Free";
         const open=document.createElement("a");open.className="open";open.href="batch-detail.html?id="+encodeURIComponent(b.id);open.textContent=b.access_type==="restricted"&&!grantedBatchIds.has(b.id)?(currentUser?"Request Access":"Login to Access"):"View Batch →";
-        footer.append(status,open);body.append(desc,teacher,meta,footer);card.append(cover,body);list.append(card);
+        footer.append(open);body.append(desc,teacher,meta,footer);card.append(cover,body);list.append(card);
       });
       const noResults=document.createElement("div");noResults.id="no-results";noResults.className="empty";noResults.style.gridColumn="1/-1";noResults.hidden=true;noResults.innerHTML="<h2>No matching batches</h2><p>Search ya filter badal kar dobara dekhein.</p>";list.append(noResults);
       filterBatches();
