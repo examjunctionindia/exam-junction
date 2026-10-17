@@ -1979,7 +1979,7 @@ async function editRecord(type,id){
     $("notesUrl").required=!row.storage_bucket;
     $("notesPdfUploadStatus").textContent=row.storage_bucket?"Private PDF stored: "+row.storage_path:"Existing external PDF link. Private upload optional.";
     $("notesDownloadUrl").value=row.download_url||"";
-    $("notesDownloadMode").value=row.download_permission_mode||"inherit";
+    $("notesDownloadMode").value=row.download_permission_mode||(row.download_allowed===true?"allow":"inherit");
     $("notesOriginalLinkAllowed").value=String(!!row.original_link_allowed);
     $("notesPosition").value=String(row.position ?? 0);
     $("notesPublished").value=row.publication_status || (row.is_published ? "published" : "draft");
@@ -1997,7 +1997,7 @@ async function editRecord(type,id){
     $("lectureUrl").value=row.youtube_url || "";
     $("lectureTeacher").value=row.teacher_name || "";
     $("lectureDownloadUrl").value=row.download_url || "";
-    $("lectureDownloadAllowed").value=row.download_permission_mode||"inherit";
+    $("lectureDownloadAllowed").value=row.download_permission_mode||(row.download_allowed===true?"allow":"inherit");
     $("lectureOriginalLinkAllowed").value=String(!!row.original_link_allowed);
     $("lecturePosition").value=String(row.position ?? 0);
     $("lecturePublished").value=row.publication_status || (row.is_published ? "published" : "draft");
