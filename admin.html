@@ -198,7 +198,7 @@ button:disabled{filter:none;transform:none}
     </section>
     <section class="card" id="dashboardOverview" aria-labelledby="overviewHeading">
       <h2 id="overviewHeading">📊 Dashboard Overview</h2>
-      <p class="small">Counts of records currently loaded in this Admin Panel (maximum 200 per list).</p>
+      <p class="small">Live exact counts from the database. Agar count query fail ho to value — dikhayi jayegi.</p>
       <div class="dashboard-stats" aria-live="polite">
         <div class="dashboard-stat"><strong id="statBatches">—</strong><span>Batches loaded</span></div>
         <div class="dashboard-stat"><strong id="statStudents">—</strong><span>Students loaded</span></div>
@@ -983,27 +983,49 @@ function fillSelect(selectId,rows,placeholder,labelFn,selectedValue){
   }
 }
 
-function updateDashboardCounts(){
-  const counts = {
-    statBatches: cache.batches.length,
-    statStudents: cache.students.length,
-    statBooks: cache.books.length,
-    statBanners: cache.banners.length,
-    statChapterNotes: cache.notes.length,
-    statChapters: cache.chapters.length,
-    statLectures: cache.lectures.length,
-    statNotifications: cache.notifications.length,
-    statDrafts: [
-      ...cache.batches,...cache.books,...cache.notifications,...cache.banners,
-      ...cache.chapters,...cache.notes,...cache.lectures
-    ].filter(row => row.publication_status ? row.publication_status === "draft" : row.is_published === false).length,
-    statPublished: [...cache.batches,...cache.books,...cache.notifications,...cache.banners,...cache.chapters,...cache.notes,...cache.lectures].filter(row=>row.is_published===true).length,
-    statUnpublished: cache.batches.filter(row=>(row.publication_status||"") === "unpublished").length
+async function updateDashboardCounts(){
+  const ids=["statBatches","statStudents","statBooks","statBanners","statChapterNotes","statChapters","statLectures","statNotifications","statDrafts","statPublished","statUnpublished","statRequests"];
+  ids.forEach(id=>{const node=$(id);if(node)node.textContent="…"});
+  if(!db){ids.forEach(id=>{const node=$(id);if(node)node.textContent="—"});return}
+  const count=async(table,filters=[])=>{
+    let query=db.from(table).select("id",{count:"exact",head:true});
+    for(const [method,column,value] of filters)query=query[method](column,value);
+    const {count:total,error}=await query;
+    if(error)throw new Error(table+": "+(error.message||"count query failed"));
+    return Number(total||0);
   };
-  Object.entries(counts).forEach(([id,value]) => {
-    const node = $(id);
-    if(node) node.textContent = String(value);
-  });
+  try{
+    const contentTables=["batches","books","notifications","chapters","chapter_notes","lectures"];
+    const publishedTables=[...contentTables,"banners"];
+    const jobs=[
+      count("batches"),
+      count("profiles",[["eq","role","student"]]),
+      count("books"),
+      count("banners"),
+      count("chapter_notes"),
+      count("chapters"),
+      count("lectures"),
+      count("notifications"),
+      ...contentTables.map(table=>count(table,[["eq","publication_status","draft"]])),
+      count("banners",[["eq","is_published",false]]),
+      ...publishedTables.map(table=>count(table,[["eq","is_published",true]])),
+      count("batches",[["eq","publication_status","unpublished"]]),
+      count("batch_join_requests",[["eq","status","pending"]])
+    ];
+    const result=await Promise.all(jobs);
+    const drafts=result.slice(8,14).reduce((sum,value)=>sum+value,0)+result[14];
+    const published=result.slice(15,22).reduce((sum,value)=>sum+value,0);
+    const values={
+      statBatches:result[0],statStudents:result[1],statBooks:result[2],statBanners:result[3],
+      statChapterNotes:result[4],statChapters:result[5],statLectures:result[6],statNotifications:result[7],
+      statDrafts:drafts,statPublished:published,statUnpublished:result[22],statRequests:result[23]
+    };
+    Object.entries(values).forEach(([id,value])=>{const node=$(id);if(node)node.textContent=String(value)});
+  }catch(error){
+    console.error("Exact dashboard count query failed:",error);
+    ids.forEach(id=>{const node=$(id);if(node)node.textContent="—"});
+    recordAdminIssue("Dashboard exact database count failed: "+(error?.message||String(error)),"Dashboard Overview");
+  }
 }
 
 function refreshDropdowns(){
@@ -1166,7 +1188,6 @@ async function loadLists(){
     }
   }
 
-   updateDashboardCounts();
    refreshDropdowns();
   await loadBookAccess();
   await loadBatchAccess();
@@ -1174,6 +1195,7 @@ async function loadLists(){
   await loadProblemReports();
   await loadStudentActivityAndDirectory();
   await loadBatchSearchSettings();
+  await updateDashboardCounts();
   applyBatchFilters();
 }
 /* PER-BATCH SEARCH SETTINGS */
@@ -1268,7 +1290,6 @@ async function loadBookAccess(){
 
     const students = studentsResult.data || [];
     cache.students = students;
-    updateDashboardCounts();
     const books = booksResult.data || [];
     const permissions = accessResult.data || [];
 
@@ -1573,7 +1594,7 @@ async function loadBatchRequests(){
     });
   }catch(error){console.error("Batch requests load error:",error);root.textContent="Batch requests load nahi hui"+(error?.code?" ("+error.code+")":"")+": "+(error?.message||"connection aur admin permission check karein.");}
 }
-$("refreshRequestsButton").addEventListener("click",async function(){await loadBatchRequests();message("Batch requests refresh ho gayi.");});
+$("refreshRequestsButton").addEventListener("click",async function(){await loadBatchRequests();await updateDashboardCounts();message("Batch requests refresh ho gayi.");});
 
 async function loadProblemReports(){
   const root = $("problemReportsList");
