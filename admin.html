@@ -358,6 +358,8 @@ button:disabled{filter:none;transform:none}
         <input id="bookDownloadUrl" type="url" placeholder="Google Drive PDF download link">
         <label for="bookDownloadAllowed">Download Permission</label>
         <select id="bookDownloadAllowed"><option value="false">Disabled</option><option value="true">Allow eligible students</option></select>
+        <label for="bookOriginalLinkAllowed">Original Link fallback permission</label>
+        <select id="bookOriginalLinkAllowed"><option value="false">OFF for restricted books</option><option value="true">ON — only approved readers can see it</option></select>
 
         <label for="bookStorageUrl">Storage / Source Link</label>
         <input id="bookStorageUrl" type="url" placeholder="Blank = use PDF link">
@@ -1919,6 +1921,7 @@ async function editRecord(type,id){
     $("bookUrl").value=row.external_url || "";
     $("bookDownloadUrl").value=row.download_url || "";
     $("bookDownloadAllowed").value=String(!!row.download_allowed);
+    $("bookOriginalLinkAllowed").value=String(!!row.original_link_allowed);
     $("bookStorageUrl").value=row.storage_path || "";
     $("bookCoverUrl").value=row.cover_path || "";
     $("bookAccess").value=row.access_type || "free";
@@ -2267,6 +2270,7 @@ $("bookForm").addEventListener("submit",async function(e){
       external_url:url,
       download_url:$("bookDownloadUrl").value.trim() || null,
       download_allowed:$("bookDownloadAllowed").value==="true",
+      original_link_allowed:$("bookOriginalLinkAllowed").value==="true",
       storage_path:$("bookStorageUrl").value.trim() || url,
       cover_path:$("bookCoverUrl").value.trim(),
       access_type:$("bookAccess").value,
