@@ -295,12 +295,14 @@ button:disabled{filter:none;transform:none}
 
         <label for="batchThumbnailFile">Batch Thumbnail — Phone Gallery se choose karein (optional)</label>
         <input id="batchThumbnailFile" type="file" accept="image/*" style="display:block;width:100%;margin:8px 0 10px;padding:12px;background:#f7faff;border:2px dashed #9bb6dc;border-radius:12px">
-        <button id="batchThumbnailUpload" class="secondary" type="button" style="margin-top:4px">📸 Select from Phone Gallery / Upload</button>
-        <p id="batchThumbnailUploadStatus" class="small" aria-live="polite">Button dabayein → Gallery se image choose karein → image upload hogi. JPG, PNG ya WebP; maximum 5 MB. Upload ke baad Save Batch dabayein.</p>
+        <button id="batchThumbnailUpload" class="secondary" type="button" style="margin-top:4px">📸 Upload from Phone Gallery</button>
+        <button id="batchThumbnailGallery" class="secondary" type="button" style="margin-top:4px">🖼️ Choose from Website Gallery</button>
+        <p id="batchThumbnailUploadStatus" class="small" aria-live="polite">JPG, PNG ya WebP; maximum 5 MB. Existing images website gallery se select kar sakte hain.</p>
+        <div id="batchThumbnailGalleryPicker" class="hidden" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0"></div>
         <label for="batchThumbnail">Thumbnail Image URL (optional)</label>
         <input id="batchThumbnail" type="url" maxlength="2000" placeholder="Gallery upload ke baad link yahan aayega; ya HTTPS link paste karein">
         <div id="batchThumbnailPreviewWrap" class="hidden" style="margin-top:10px">
-          <img id="batchThumbnailPreview" alt="Batch thumbnail preview" style="display:block;width:100%;max-height:190px;object-fit:cover;border-radius:12px;border:1px solid #dce5f1">
+          <img id="batchThumbnailPreview" alt="Batch thumbnail preview" style="display:block;width:100%;aspect-ratio:16/9;height:auto;object-fit:contain;background:#f2f6fc;border-radius:12px;border:1px solid #dce5f1">
         </div>
         <p class="small">Gallery upload ke liye existing public ej-banners storage bucket use hota hai. Purani uploaded images automatically delete nahi hongi.</p>
 
@@ -314,11 +316,13 @@ button:disabled{filter:none;transform:none}
           <option value="restricted">Restricted — selected students</option>
         </select>
 
-        <label for="batchPublished">Publish</label>
-        <select id="batchPublished">
-          <option value="false">Draft — website par nahi dikhega</option>
-          <option value="true">Published</option>
-        </select>
+        <label for="batchPublished">Publication Status</label>
+        <select id="batchPublished"><option value="draft">Draft — website par nahi dikhega</option><option value="published">Published</option><option value="unpublished">Unpublished — hide rahega, delete nahi hoga</option></select>
+        <label for="batchShowCounts">Batch card par chapter/lecture count</label><select id="batchShowCounts"><option value="false">OFF — count hide</option><option value="true">ON — actual published count</option></select>
+        <label for="batchChapterSearch">Is batch mein chapter search</label><select id="batchChapterSearch"><option value="false">OFF</option><option value="true">ON</option></select>
+        <label for="batchAnnouncementSearch">Is batch mein announcement search</label><select id="batchAnnouncementSearch"><option value="false">OFF</option><option value="true">ON</option></select>
+        <label for="batchDefaultDownload">Default Download permission</label><select id="batchDefaultDownload"><option value="false">OFF</option><option value="true">ON — items can inherit</option></select>
+        <label for="batchRestrictedOriginalLink">Allow Original Link fallback in restricted content</label><select id="batchRestrictedOriginalLink"><option value="false">OFF — hidden unless enabled per item too</option><option value="true">ON — item permission is still required</option></select>
 
         <div class="actions">
           <button id="batchSave" type="submit">Save Batch</button>
@@ -365,11 +369,7 @@ button:disabled{filter:none;transform:none}
           <option value="restricted">Restricted — selected students</option>
         </select>
 
-        <label for="bookPublished">Publish</label>
-        <select id="bookPublished">
-          <option value="false">Draft</option>
-          <option value="true">Published</option>
-        </select>
+        <label for="bookPublished">Publication Status</label><select id="bookPublished"><option value="draft">Draft</option><option value="published">Published</option><option value="unpublished">Unpublished — hide, delete nahi</option></select>
 
         <div class="actions">
           <button id="bookSave" type="submit">Save Book</button>
@@ -482,14 +482,11 @@ button:disabled{filter:none;transform:none}
         <label for="noticeMessage">Message *</label>
         <textarea id="noticeMessage" maxlength="5000" required></textarea>
 
-        <label for="noticeUrl">Optional Link</label>
-        <input id="noticeUrl" type="url" placeholder="https://...">
-
-        <label for="noticePublished">Publish</label>
-        <select id="noticePublished">
-          <option value="false">Draft</option>
-          <option value="true">Published</option>
-        </select>
+        <label for="noticeUrl">Optional Link</label><input id="noticeUrl" type="url" placeholder="https://...">
+        <label for="noticeBatch">Announcement location</label><select id="noticeBatch"><option value="">General website notification</option></select>
+        <p class="small">Batch select karoge to announcement us batch ke andar dikhega.</p>
+        <label for="noticeImportant">Notification type</label><select id="noticeImportant"><option value="false">Normal — publish hone ke 24 ghante baad expire/delete</option><option value="true">Important — jab tak tum manually delete na karo</option></select>
+        <label for="noticePublished">Publication Status</label><select id="noticePublished"><option value="draft">Draft</option><option value="published">Published</option><option value="unpublished">Unpublished — hide, delete nahi</option></select>
 
         <div class="actions">
           <button id="noticeSave" type="submit">Save Notification</button>
@@ -535,9 +532,8 @@ button:disabled{filter:none;transform:none}
         <input id="chapterTitle" maxlength="200" required
                placeholder="Percentage">
 
-        <label for="chapterPosition">Position</label>
-        <input id="chapterPosition" type="number" min="0" value="0">
-
+        <label for="chapterPosition">Position</label><input id="chapterPosition" type="number" min="0" value="0" required>
+        <label for="chapterPublished">Publication Status</label><select id="chapterPublished"><option value="draft">Draft</option><option value="published">Published</option><option value="unpublished">Unpublished</option></select>
         <div class="actions">
           <button id="chapterSave" type="submit">Save Chapter</button>
           <button id="chapterCancel" class="secondary hidden"
@@ -567,7 +563,14 @@ button:disabled{filter:none;transform:none}
         <input id="notesId" type="hidden">
         <label for="notesChapter">Select Chapter *</label><select id="notesChapter" required><option value="">Select Chapter</option></select><label for="notesLecture">Notes location *</label><select id="notesLecture"><option value="">Chapter Notes (under chapter)</option></select><label for="notesEnabled">Do you want to add notes?</label><select id="notesEnabled" required><option value="yes">Yes, add notes</option><option value="no">No notes for this chapter/lecture</option></select>
         <div id="notesContentFields"><label for="notesTitle">Notes Title *</label><input id="notesTitle" maxlength="200" placeholder="Percentage PDF Notes">
-        <label for="notesSource">Notes Source *</label><select id="notesSource" required><option value="drive">Google Drive Link</option><option value="external">External Website PDF Link</option><option value="storage" disabled>Supabase Storage (not configured yet)</option></select><label for="notesUrl">PDF / Notes URL *</label><input id="notesUrl" type="url" required placeholder="https://..."><p class="small" id="notesSourceHelp">Google Drive PDF ya kisi external website ka direct PDF link paste karein. External server PDF embed block kar sakta hai; aise mein Open PDF separately button ka use hoga. Storage select karne par file upload automatic nahi hota.</p></div>
+        <label for="notesSource">Notes Source *</label><select id="notesSource" required><option value="drive">Google Drive Link</option><option value="external">External Website PDF Link</option><option value="storage" disabled>Supabase Storage (not configured yet)</option></select>
+        <label for="notesUrl">PDF / Notes URL *</label><input id="notesUrl" type="url" required placeholder="https://...">
+        <label for="notesDownloadUrl">Direct Download URL (optional)</label><input id="notesDownloadUrl" type="url" placeholder="https://...">
+        <label for="notesDownloadMode">Download Permission</label><select id="notesDownloadMode"><option value="inherit">Use batch default</option><option value="allow">Allow for these notes</option><option value="deny">Disable for these notes</option></select>
+        <label for="notesOriginalLinkAllowed">Original Link Permission</label><select id="notesOriginalLinkAllowed"><option value="false">OFF — restricted notes stay inside viewer</option><option value="true">ON — batch permission also required for restricted notes</option></select>
+        <label for="notesPosition">Notes Position</label><input id="notesPosition" type="number" min="0" max="9999" value="0" required>
+        <label for="notesPublished">Publication Status</label><select id="notesPublished"><option value="draft">Draft</option><option value="published">Published</option><option value="unpublished">Unpublished</option></select>
+        <p class="small" id="notesSourceHelp">PDF website mein na khule to original link sirf access aur permission ke mutabik dikhega.</p></div>
         <div class="actions"><button id="notesSave" type="submit">Save Notes Link</button><button id="notesCancel" class="secondary hidden" type="button">Cancel Edit</button></div>
       </form>
       <hr class="divider"><h3>Existing Chapter Notes</h3>
@@ -605,16 +608,14 @@ button:disabled{filter:none;transform:none}
         <input id="lectureTeacher" maxlength="150" placeholder="Rahul Sir">
         <label for="lectureDownloadUrl">Download Video URL (optional)</label>
         <input id="lectureDownloadUrl" type="url" placeholder="Google Drive video link">
-        <label for="lectureDownloadAllowed">Download Permission</label>
-        <select id="lectureDownloadAllowed"><option value="false">Disabled</option><option value="true">Allow eligible students</option></select>
+        <label for="lectureDownloadAllowed">Download Permission</label><select id="lectureDownloadAllowed"><option value="inherit">Use batch default</option><option value="allow">Allow for this lecture</option><option value="deny">Disable for this lecture</option></select>
         <label for="lectureOriginalLinkAllowed">Show Original Link to Students</label>
         <select id="lectureOriginalLinkAllowed"><option value="false">No — hide original link</option><option value="true">Yes — show original link</option></select>
         <p class="small">Default is No. Turn this on only when you want students to see the source link.</p>
         <p class="small">Download URL is a separate link. If the file host makes it public, eligible students can still share that link.</p>
 
-        <label for="lecturePosition">Position</label>
-        <input id="lecturePosition" type="number" min="0" value="0">
-
+        <label for="lecturePosition">Position</label><input id="lecturePosition" type="number" min="0" value="0" required>
+        <label for="lecturePublished">Publication Status</label><select id="lecturePublished"><option value="draft">Draft</option><option value="published">Published</option><option value="unpublished">Unpublished</option></select>
         <div class="actions">
           <button id="lectureSave" type="submit">Save Lecture</button>
           <button id="lectureCancel" class="secondary hidden"
@@ -628,8 +629,14 @@ button:disabled{filter:none;transform:none}
     <section class="card" id="existingBatches">
       <h2>Existing Batches</h2>
       <label class="list-search-label" for="searchBatches">Search batches</label>
-      <input id="searchBatches" class="list-search" type="search" data-list-search="batchList" placeholder="Batch name, teacher ya status search karein">
-      <div id="batchList" class="small">Loading...</div>
+      <input id="searchBatches" class="list-search" type="search" data-list-search="batchList" placeholder="Batch name, teacher, description ya status">
+      <div class="actions" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+        <select id="filterBatchAccess" aria-label="Filter access"><option value="all">All access</option><option value="free">Free</option><option value="restricted">Selected Students</option></select>
+        <select id="filterBatchStatus" aria-label="Filter publication status"><option value="all">All statuses</option><option value="draft">Draft</option><option value="published">Published</option><option value="unpublished">Unpublished</option></select>
+        <select id="filterBatchContent" aria-label="Filter chapter and lecture counts"><option value="all">All content counts</option><option value="chapters">Has chapters</option><option value="no-chapters">No published chapters</option><option value="lectures">Has lectures</option><option value="no-lectures">No published lectures</option></select>
+        <select id="filterBatchThumbnail" aria-label="Filter thumbnail"><option value="all">All thumbnails</option><option value="has">Thumbnail available</option><option value="missing">Thumbnail missing</option></select>
+        <select id="sortBatchList" aria-label="Sort batches"><option value="position">Admin display order</option><option value="name">Name A–Z</option><option value="newest">Recently created</option></select>
+      </div><div id="batchList" class="small">Loading...</div>
     </section>
 
     <section class="card" id="existingBooks">
