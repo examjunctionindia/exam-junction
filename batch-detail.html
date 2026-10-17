@@ -51,7 +51,7 @@ async function resolveNoteUrl(note,{download=false,original=false}={}){
   return original?(urls.original||raw):(urls.view||raw);
 }
 function makeNoteRow(note){
-  const row=document.createElement("div");row.className="note";row.dataset.noteId=note.id;
+  const row=document.createElement("div");row.className="note";row.dataset.noteId=note.id;row.dataset.noteSearch=(note.title||"").toLowerCase();
   const title=document.createElement("div");title.style.fontWeight="700";title.textContent=note.title||"Notes";row.append(title);
   const isPrivate=note.storage_bucket==="ej-private-content"&&!!note.storage_path;
   const raw=safeUrl(note.storage_path||"");
@@ -212,7 +212,7 @@ allLectures.forEach((item,index)=>{
  if(index<allLectures.length-1){const next=document.createElement("button");next.className="btn";next.type="button";next.textContent=allLectures[index+1].chapterId!==item.chapterId?"Next Chapter →":"Next Lecture →";next.addEventListener("click",()=>focusLecture(index+1));nav.append(next)}
  if(nav.childElementCount)item.row.querySelector(".lecture-content").append(nav);
 });
-if(chapterSearch)chapterSearch.addEventListener("input",()=>{const q=chapterSearch.value.trim().toLowerCase();Array.from(chaptersRoot.querySelectorAll(":scope > .chapter")).forEach(section=>{const chapterMatch=!q||section.dataset.chapterSearch.includes(q);const lectureRows=Array.from(section.querySelectorAll(".lecture-accordion"));const matchingLectures=lectureRows.filter(row=>!q||row.dataset.lectureSearch.includes(q));section.hidden=!!q&&!chapterMatch&&matchingLectures.length===0;lectureRows.forEach(row=>{row.hidden=!!q&&!chapterMatch&&!row.dataset.lectureSearch.includes(q)});section.querySelectorAll(":scope > .chapter-inner > .chapter-notes").forEach(note=>{note.hidden=!!q&&!chapterMatch})})});
+if(chapterSearch)chapterSearch.addEventListener("input",()=>{const q=chapterSearch.value.trim().toLowerCase();Array.from(chaptersRoot.querySelectorAll(":scope > .chapter")).forEach(section=>{const chapterMatch=!q||section.dataset.chapterSearch.includes(q);const chapterNoteBox=section.querySelector(":scope > .chapter-inner > .chapter-notes");const chapterNoteMatch=!!chapterNoteBox&&Array.from(chapterNoteBox.querySelectorAll("[data-note-search]")).some(note=>note.dataset.noteSearch.includes(q));const lectureRows=Array.from(section.querySelectorAll(".lecture-accordion"));const matchingLectures=lectureRows.filter(row=>!q||row.dataset.lectureSearch.includes(q)||Array.from(row.querySelectorAll("[data-note-search]")).some(note=>note.dataset.noteSearch.includes(q)));section.hidden=!!q&&!chapterMatch&&!chapterNoteMatch&&matchingLectures.length===0;lectureRows.forEach(row=>{const lectureMatch=!q||chapterMatch||row.dataset.lectureSearch.includes(q)||Array.from(row.querySelectorAll("[data-note-search]")).some(note=>note.dataset.noteSearch.includes(q));row.hidden=!lectureMatch});if(chapterNoteBox)chapterNoteBox.hidden=!!q&&!chapterMatch&&!chapterNoteMatch})});
 })();
 </script>
 </body></html>
