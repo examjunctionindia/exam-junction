@@ -120,9 +120,10 @@ let announcementSearch=null,announcementList=document.createElement("div");
 if(batch.announcement_search_enabled===true){announcementSearch=document.createElement("input");announcementSearch.type="search";announcementSearch.className="simple-search";announcementSearch.placeholder="Search announcements";announcementSearch.setAttribute("aria-label","Search announcements");announcementsSection.append(announcementSearch)}
 announcementsSection.append(announcementList);
 const annResult=await db.from("notifications").select("id,title,message,target_url,created_at,published_at,is_important,expires_at").eq("batch_id",id).eq("is_published",true).order("published_at",{ascending:false}).limit(100);
-if(!annResult.error&&(annResult.data||[]).length){
+const activeAnnouncements=(annResult.data||[]).filter(n=>!n.expires_at||Date.parse(n.expires_at)>Date.now());
+ if(!annResult.error&&activeAnnouncements.length){
  announcementsSection.classList.remove("hidden");
- (annResult.data||[]).forEach(n=>{
+ activeAnnouncements.forEach(n=>{
   const item=document.createElement("article");item.className="announcement";item.dataset.search=(String(n.title||"")+" "+String(n.message||"")).toLowerCase();
   const h=document.createElement("h3");h.textContent=n.title||"Announcement";
   const p=document.createElement("p");p.className="muted";p.textContent=n.message||"";
@@ -141,14 +142,17 @@ if(chapterResult.error){const p=document.createElement("p");p.className="notice"
 const chapters=chapterResult.data||[];
 // Show actual published counts only after the batch access check above has succeeded.
 if(batch.show_content_counts===true){
- let lectureCount=0;
+ let lectureCount=0,countAvailable=true;
  if(chapters.length){
   const {data:countRows,error:countError}=await db.from("lectures").select("id").in("chapter_id",chapters.map(ch=>ch.id)).eq("is_published",true);
-  if(!countError)lectureCount=(countRows||[]).length;
+  if(countError){countAvailable=false;console.warn("Published lecture count unavailable",countError);}
+  else lectureCount=(countRows||[]).length;
  }
- const countText=document.createElement("span");countText.className="batch-content-counts";
- countText.textContent=" · "+chapters.length+" Chapters · "+lectureCount+" Lectures";
- $("meta").append(countText);
+ if(countAvailable){
+  const countText=document.createElement("span");countText.className="batch-content-counts";
+  countText.textContent=" · "+chapters.length+" Chapters · "+lectureCount+" Lectures";
+  $("meta").append(countText);
+ }
 }
 if(!chapters.length){const p=document.createElement("p");p.className="notice";p.textContent="Abhi published chapters available nahi hain.";chaptersRoot.append(p);return}
 const allLectures=[];
