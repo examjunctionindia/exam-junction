@@ -1057,7 +1057,7 @@
             const description = document.createElement("p");
             description.className = "batch-description";
             description.textContent = batch.description || "";
-            if(batch.description)body.append(description);
+            if(batch.show_description===true && batch.description)body.append(description);
 
             const meta = document.createElement("div");
             meta.className = "batch-meta";
