@@ -1449,7 +1449,7 @@ async function loadBatchRequests(){
   root.textContent="Batch requests load ho rahi hain...";
   try{
     const results=await Promise.all([
-      db.from("batch_join_requests").select("id,student_id,batch_id,status,created_at").order("created_at",{ascending:false}).limit(200),
+      db.from("batch_join_requests").select("id,student_id,batch_id,status,created_at,request_reason").order("created_at",{ascending:false}).limit(200),
       db.from("profiles").select("id,full_name").eq("role","student").order("full_name"),
       db.from("batches").select("id,title,access_type,is_published").order("title")
     ]);
@@ -1461,7 +1461,7 @@ async function loadBatchRequests(){
     requests.forEach(request=>{
       const item=document.createElement("div");item.className="item";
       const student=students.find(x=>x.id===request.student_id), batch=batches.find(x=>x.id===request.batch_id);
-      [["Student",student?.full_name||request.student_id],["Batch",batch?.title||request.batch_id],["Status",request.status],["Requested",request.created_at?new Date(request.created_at).toLocaleString():"—"]].forEach(([label,value])=>{
+      [["Student",student?.full_name||request.student_id],["Batch",batch?.title||request.batch_id],["Status",request.status],["Requested",request.created_at?new Date(request.created_at).toLocaleString():"—"],["Reason",request.request_reason||"Not provided"]].forEach(([label,value])=>{
         const line=document.createElement("div");line.style.marginBottom="6px";const strong=document.createElement("strong");strong.textContent=label+": ";line.append(strong,document.createTextNode(String(value??"—")));item.appendChild(line);
       });
       if(request.status==="pending"){
@@ -2240,26 +2240,14 @@ $("privatePdfGalleryButton").addEventListener("click",async function(){
           $("notesForm").scrollIntoView({behavior:"smooth",block:"start"});message("Private PDF Notes form mein select hui. Chapter select karke Save Notes dabayein.");
         }
       });
-      const del=document.createElement("button");del.className="danger";del.type="button";del.textContent="Delete unused PDF";
       const [notesRef,booksRef]=await Promise.all([
         db.from("chapter_notes").select("id,title").eq("storage_bucket","ej-private-content").eq("storage_path",entry.path).limit(10),
         db.from("books").select("id,title").eq("storage_bucket","ej-private-content").eq("storage_path",entry.path).limit(10)
       ]);
-      if(notesRef.error||booksRef.error)throw new Error("PDF reference check nahi ho paya. Safety ke liye delete blocked hai.");
+      if(notesRef.error||booksRef.error)throw new Error("PDF reference check nahi ho paya.");
       const refs=[...(notesRef.data||[]).map(x=>"Notes: "+x.title),...(booksRef.data||[]).map(x=>"Book: "+x.title)];
-      usage.textContent=refs.length?"In use — "+refs.join(", "):"Unused file — manually delete kar sakte ho.";
-      del.disabled=refs.length>0;
-      if(refs.length)del.title="Referenced content ko delete nahi kar sakte.";
-      del.addEventListener("click",async()=>{
-        if(del.disabled)return;
-        const activePath=$("notesStoragePath").value===entry.path||$("bookStorageUrl").value===entry.path;
-        if(activePath){message("Ye PDF abhi form mein selected hai. Pehle doosri file choose karein.",true);return;}
-        if(!confirm(entry.file.name+" ko permanently delete karna hai? Ye action undo nahi hoga."))return;
-        const {error}=await db.storage.from("ej-private-content").remove([entry.path]);
-        if(error){message("PDF delete nahi hui: "+error.message,true);return;}
-        card.remove();message("Unused private PDF delete ho gayi.");
-      });
-      actions.append(useButton,del);card.append(title,path,usage,actions);root.append(card);
+      usage.textContent=refs.length?"In use — "+refs.join(", "):"Unused file — safe to keep here until you choose to use it.";
+      actions.append(useButton);card.append(title,path,usage,actions);root.append(card);
     }
   }catch(error){root.textContent="Private PDF gallery load nahi hui. Storage policy check karein.";message("Private PDF gallery error: "+(error.message||""),true)}
   finally{button.disabled=false}
@@ -2284,24 +2272,7 @@ $("batchThumbnailGallery").addEventListener("click",async function(){
       const img=document.createElement("img");img.src=url;img.alt=file.name;img.loading="lazy";img.style.cssText="display:block;width:100%;aspect-ratio:16/9;object-fit:contain;background:#f2f6fc;border-radius:8px";
       const name=document.createElement("p");name.className="small";name.textContent=file.name;name.style.wordBreak="break-word";
       const choose=document.createElement("button");choose.type="button";choose.className="secondary";choose.textContent="Select";choose.addEventListener("click",()=>{$("batchThumbnail").value=url;updateBatchThumbnailPreview();status.textContent="Gallery thumbnail selected. Save Batch / Update Batch dabayein.";picker.classList.add("hidden")});
-      const remove=document.createElement("button");remove.type="button";remove.className="danger";remove.textContent="Delete unused image";remove.style.marginTop="6px";
-      remove.addEventListener("click",async()=>{
-        if($("batchThumbnail").value===url){message("Ye image abhi form mein selected hai. Pehle doosri thumbnail choose karein.",true);return;}
-        try{
-          const [batches,books,banners]=await Promise.all([
-            db.from("batches").select("id,title").eq("thumbnail_url",url).limit(10),
-            db.from("books").select("id,title").eq("cover_path",url).limit(10),
-            db.from("banners").select("id,title").eq("image_url",url).limit(10)
-          ]);
-          if(batches.error||books.error||banners.error)throw new Error("Image references check nahi ho paya.");
-          const refs=[...(batches.data||[]),...(books.data||[]),...(banners.data||[])];
-          if(refs.length){message("Image abhi content mein use ho rahi hai. Pehle us content ki thumbnail badlein.",true);return;}
-          if(!confirm("Unused thumbnail "+file.name+" ko permanently delete karna hai?"))return;
-          const {error:removeError}=await db.storage.from("ej-banners").remove([path]);if(removeError)throw removeError;
-          tile.remove();message("Unused thumbnail delete ho gayi.");
-        }catch(error){message("Image delete nahi hui. "+(error.message||""),true)}
-      });
-      tile.append(img,name,choose,remove);picker.append(tile);
+      tile.append(img,name,choose);picker.append(tile);
     }
   }catch(error){status.textContent="Website gallery load nahi hui. Storage permission check karein.";message("Gallery load error: "+(error.message||""),true)}
 });
