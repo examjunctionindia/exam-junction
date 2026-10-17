@@ -2219,7 +2219,23 @@ $("chapterForm").addEventListener("submit",async function(e){
 $("notesLecture").addEventListener("change",function(){const v=$("notesLecture").value;const title=$("notesTitle");if(v){title.placeholder="Lecture ke notes ka title";}else{title.placeholder="Chapter ke notes ka title";}});
 $("notesEnabled").addEventListener("change",function(){const enabled=$("notesEnabled").value==="yes";$("notesContentFields").classList.toggle("hidden",!enabled);$("notesTitle").required=enabled;$("notesUrl").required=enabled;$("notesSource").required=enabled;});
 $("notesSource").addEventListener("change",function(){const source=$("notesSource").value;const input=$("notesUrl");const help=$("notesSourceHelp");if(source==="storage"){input.placeholder="Supabase Storage file URL (future setup)";help.textContent="Storage mode tabhi kaam karega jab Supabase Storage bucket aur access policies configure hon. Is option se upload automatically nahi hota.";}else{input.placeholder="https://drive.google.com/file/d/...";help.textContent="Abhi Google Drive link use karein. Storage select karne par bhi file upload automatic nahi hota; pehle Storage bucket/configuration set karna hoga.";}});
-const openLectureNotesBtn=$("openLectureNotesForm");if(openLectureNotesBtn)openLectureNotesBtn.addEventListener("click",function(){const location=$("notesLecture");if(location){location.value="";location.dispatchEvent(new Event("change"));}const enabled=$("notesEnabled");if(enabled){enabled.value="yes";enabled.dispatchEvent(new Event("change"));}const form=$("notesForm");if(form)form.scrollIntoView({behavior:"smooth",block:"start"});const heading=$("notesHeading");if(heading)heading.textContent="📝 Add Lecture Notes — select chapter and lecture";});
+const openLectureNotesBtn=$("openLectureNotesForm");
+if(openLectureNotesBtn)openLectureNotesBtn.addEventListener("click",function(){
+  // The form is inside Chapter Notes Management, which is hidden by the management navigator.
+  if(typeof showManagementSection==="function"){
+    const link=managementNav?.querySelector('a[href="#chapterNotesManager"]');
+    showManagementSection("chapterNotesManager",link);
+  }
+  const form=$("notesForm");
+  if(form){form.reset();resetEdit("notes");}
+  const location=$("notesLecture");
+  if(location){location.value="";location.dispatchEvent(new Event("change"));}
+  const enabled=$("notesEnabled");
+  if(enabled){enabled.value="yes";enabled.dispatchEvent(new Event("change"));}
+  const heading=$("notesHeading");
+  if(heading)heading.textContent="📝 Add Lecture Notes — select chapter and lecture";
+  if(form)form.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
+});
 async function populateNotesLectureOptions(chapterId, selectedLectureId=""){
   const select=$("notesLecture");
   if(!select||!db)return;
