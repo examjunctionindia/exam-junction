@@ -401,19 +401,23 @@
             display: none;
         }
         .batch-cover.has-thumbnail .batch-cover-content {
-            position: absolute;
-            inset: 0;
+            position: relative;
+            inset: auto;
             z-index: 1;
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            justify-content: center;
-            padding: 20px;
-            pointer-events: none;
-        }
-        .batch-cover.has-thumbnail .batch-category,
-        .batch-cover.has-thumbnail h3 {
+            justify-content: flex-start;
+            padding: 14px 16px 10px;
             pointer-events: auto;
+        }
+        .batch-cover.has-thumbnail .batch-category {
+            background: #dbe7ff;
+            color: #214f9b;
+        }
+        .batch-cover.has-thumbnail h3 {
+            color: var(--primary-dark);
+            text-shadow: none;
         }
         .batch-symbol { position: relative; z-index: 1; }
 
