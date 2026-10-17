@@ -1520,7 +1520,7 @@ async function loadBatchRequests(){
   try{
     const results=await Promise.all([
       db.from("batch_join_requests").select("id,student_id,batch_id,status,created_at,request_reason").order("created_at",{ascending:false}).limit(200),
-      db.from("profiles").select("id,full_name").eq("role","student").order("full_name"),
+      db.from("profiles").select("id,full_name,email").eq("role","student").order("full_name"),
       db.from("batches").select("id,title,access_type,is_published").order("title")
     ]);
     for(const result of results){if(result.error)throw result.error;}
@@ -1531,7 +1531,7 @@ async function loadBatchRequests(){
     requests.forEach(request=>{
       const item=document.createElement("div");item.className="item";
       const student=students.find(x=>x.id===request.student_id), batch=batches.find(x=>x.id===request.batch_id);
-      [["Student",student?.full_name||request.student_id],["Batch",batch?.title||request.batch_id],["Status",request.status],["Requested",request.created_at?new Date(request.created_at).toLocaleString():"—"],["Reason",request.request_reason||"Not provided"]].forEach(([label,value])=>{
+      [["Student",(student?.full_name||request.student_id)+(student?.email?" ("+student.email+")":"")],["Batch",batch?.title||request.batch_id],["Status",request.status],["Requested",request.created_at?new Date(request.created_at).toLocaleString():"—"],["Reason",request.request_reason||"Not provided"]].forEach(([label,value])=>{
         const line=document.createElement("div");line.style.marginBottom="6px";const strong=document.createElement("strong");strong.textContent=label+": ";line.append(strong,document.createTextNode(String(value??"—")));item.appendChild(line);
       });
       if(request.status==="pending"){
@@ -1587,7 +1587,7 @@ async function loadProblemReports(){
         .order("created_at",{ascending:false})
         .limit(100),
       db.from("profiles")
-        .select("id,full_name")
+        .select("id,full_name,email")
         .eq("role","student")
     ]);
 
@@ -1608,7 +1608,7 @@ async function loadProblemReports(){
       item.className="item";
       const student=students.find(s=>s.id===report.student_id);
       const fields=[
-        ["Student",student?.full_name || report.student_id],
+        ["Student",(student?.full_name || report.student_id)+(student?.email?" ("+student.email+")":"")],
         ["Category",report.category],
         ["Status",report.status],
         ["Reported",report.created_at ? new Date(report.created_at).toLocaleString() : "—"],
