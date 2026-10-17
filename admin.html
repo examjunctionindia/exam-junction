@@ -816,6 +816,8 @@ function makeButton(label,action,type,id,className){
 function makeItem(root,row,type,lines){
   const item = document.createElement("div");
   item.className = "item";
+  item.dataset.recordId = String(row.id || "");
+  item.dataset.recordType = type;
 
   lines.forEach(line => {
     const div = document.createElement("div");
@@ -906,7 +908,9 @@ function updateDashboardCounts(){
       ...cache.books,
       ...cache.notifications,
       ...cache.banners
-    ].filter(row => row.is_published === false).length
+    ].filter(row => row.is_published === false).length,
+    statPublished: [...cache.batches,...cache.books,...cache.notifications,...cache.banners,...cache.chapters,...cache.notes,...cache.lectures].filter(row=>row.is_published===true).length,
+    statUnpublished: cache.batches.filter(row=>(row.publication_status||"") === "unpublished").length
   };
   Object.entries(counts).forEach(([id,value]) => {
     const node = $(id);
@@ -921,6 +925,7 @@ function refreshDropdowns(){
     "Select Batch",
     row => row.title
   );
+  fillSelect("noticeBatch",cache.batches,"General website notification",row=>row.title);
 
   fillSelect(
     "notesChapter",
@@ -963,8 +968,10 @@ async function loadLists(){
       lines:[
         {key:"title",label:"Batch"},
         {key:"platform_name",label:"Teacher"},
+        {key:"description",label:"Description"},
         {key:"access_type",label:"Access"},
-        {key:"is_published",label:"Published",value:row=>row.is_published ? "Published" : "Draft"},
+        {key:"publication_status",label:"Status",value:row=>row.publication_status || (row.is_published ? "Published" : "Draft")},
+        {key:"thumbnail_url",label:"Thumbnail",value:row=>row.thumbnail_url ? "Available" : "Missing"},
         {key:"display_position",label:"Display Position"},
         {key:"created_at",label:"Created",value:row=>row.created_at ? new Date(row.created_at).toLocaleDateString("en-IN") : "—"}
       ],
@@ -1011,21 +1018,16 @@ async function loadLists(){
       element:"chapterList",
       order:"position",
       lines:[
-        {
-          label:"Batch",
-          value:row => {
-            const batch=findById("batches",row.batch_id);
-            return batch ? batch.title : "Unknown batch";
-          }
-        },
+        {label:"Batch",value:row=>{const batch=findById("batches",row.batch_id);return batch?batch.title:"Unknown batch";}},
         {key:"title",label:"Chapter"},
-        {key:"position",label:"Position"}
+        {key:"position",label:"Position"},
+        {key:"publication_status",label:"Status",value:row=>row.publication_status || (row.is_published ? "Published" : "Draft")}
       ],
       empty:"Abhi koi chapter nahi hai."
     },
     {
       table:"chapter_notes",key:"notes",element:"chapterNotesList",order:"created_at",
-      lines:[{label:"Chapter",value:row=>{const ch=findById("chapters",row.chapter_id);return ch?ch.title:"Unknown chapter";}},{label:"Notes location",value:row=>row.lecture_id?((findById("lectures",row.lecture_id)?.title||"Lecture") + " (lecture notes)"):"Chapter notes"},{key:"title",label:"Notes"},{key:"storage_path",label:"PDF / Drive Link"}],
+      lines:[{label:"Chapter",value:row=>{const ch=findById("chapters",row.chapter_id);return ch?ch.title:"Unknown chapter";}},{label:"Notes location",value:row=>row.lecture_id?((findById("lectures",row.lecture_id)?.title||"Lecture")+" (lecture notes)"):"Chapter notes"},{key:"title",label:"Notes"},{key:"position",label:"Position"},{key:"publication_status",label:"Status",value:row=>row.publication_status || (row.is_published ? "Published" : "Draft")},{key:"storage_path",label:"PDF / Drive Link"}],
       empty:"Abhi chapter notes add nahi hue."
     },
     {
@@ -1043,6 +1045,7 @@ async function loadLists(){
           }
         },
         {key:"position",label:"Position"},
+        {key:"publication_status",label:"Status",value:row=>row.publication_status || (row.is_published ? "Published" : "Draft")},
         {key:"youtube_url",label:"YouTube URL"}
       ],
       empty:"Abhi koi lecture nahi hai."
@@ -1084,6 +1087,7 @@ async function loadLists(){
   await loadBatchRequests();
   await loadProblemReports();
   await loadStudentActivityAndDirectory();
+  applyBatchFilters();
 }
 /* STUDENT BOOK ACCESS */
 
@@ -1858,7 +1862,12 @@ async function editRecord(type,id){
     $("batchPosition").value=String(row.display_position ?? 0);
     updateBatchThumbnailPreview();
     $("batchAccess").value=row.access_type || "free";
-    $("batchPublished").value=String(!!row.is_published);
+    $("batchPublished").value=row.publication_status || (row.is_published ? "published" : "draft");
+    $("batchShowCounts").value=String(!!row.show_content_counts);
+    $("batchChapterSearch").value=String(!!row.chapter_search_enabled);
+    $("batchAnnouncementSearch").value=String(!!row.announcement_search_enabled);
+    $("batchDefaultDownload").value=String(!!row.default_download_allowed);
+    $("batchRestrictedOriginalLink").value=String(!!row.restricted_original_link_allowed);
   }
 
   if(type==="books"){
@@ -1872,7 +1881,7 @@ async function editRecord(type,id){
     $("bookStorageUrl").value=row.storage_path || "";
     $("bookCoverUrl").value=row.cover_path || "";
     $("bookAccess").value=row.access_type || "free";
-    $("bookPublished").value=String(!!row.is_published);
+    $("bookPublished").value=row.publication_status || (row.is_published ? "published" : "draft");
   }
 
   if(type==="banners"){
@@ -1891,7 +1900,9 @@ async function editRecord(type,id){
     $("noticeTitle").value=row.title || "";
     $("noticeMessage").value=row.message || "";
     $("noticeUrl").value=row.target_url || "";
-    $("noticePublished").value=String(!!row.is_published);
+    $("noticeBatch").value=row.batch_id || "";
+    $("noticeImportant").value=String(!!row.is_important);
+    $("noticePublished").value=row.publication_status || (row.is_published ? "published" : "draft");
   }
 
   if(type==="chapters"){
@@ -1899,6 +1910,7 @@ async function editRecord(type,id){
     $("chapterBatch").value=String(row.batch_id || "");
     $("chapterTitle").value=row.title || "";
     $("chapterPosition").value=String(row.position ?? 0);
+    $("chapterPublished").value=row.publication_status || (row.is_published ? "published" : "draft");
   }
 
   if(type==="notes"){
@@ -1906,6 +1918,11 @@ async function editRecord(type,id){
     $("notesChapter").value=String(row.chapter_id||"");
     $("notesTitle").value=row.title||"";
     $("notesUrl").value=row.storage_path||"";
+    $("notesDownloadUrl").value=row.download_url||"";
+    $("notesDownloadMode").value=row.download_permission_mode||"inherit";
+    $("notesOriginalLinkAllowed").value=String(!!row.original_link_allowed);
+    $("notesPosition").value=String(row.position ?? 0);
+    $("notesPublished").value=row.publication_status || (row.is_published ? "published" : "draft");
     $("notesEnabled").value="yes";
     $("notesEnabled").dispatchEvent(new Event("change"));
     $("notesSource").value=(/^https:\/\/drive\.google\.com|^https:\/\/docs\.google\.com/i.test(row.storage_path||""))?"drive":"external";
@@ -1920,9 +1937,10 @@ async function editRecord(type,id){
     $("lectureUrl").value=row.youtube_url || "";
     $("lectureTeacher").value=row.teacher_name || "";
     $("lectureDownloadUrl").value=row.download_url || "";
-    $("lectureDownloadAllowed").value=String(!!row.download_allowed);
+    $("lectureDownloadAllowed").value=row.download_permission_mode||"inherit";
     $("lectureOriginalLinkAllowed").value=String(!!row.original_link_allowed);
     $("lecturePosition").value=String(row.position ?? 0);
+    $("lecturePublished").value=row.publication_status || (row.is_published ? "published" : "draft");
 
     const chapter=findById("chapters",row.chapter_id);
     if(chapter){
@@ -2134,7 +2152,13 @@ $("batchForm").addEventListener("submit",async function(e){
       thumbnail_url:$("batchThumbnail").value.trim(),
       display_position:Number($("batchPosition").value),
       access_type:$("batchAccess").value,
-      is_published:$("batchPublished").value==="true"
+      publication_status:$("batchPublished").value,
+      is_published:$("batchPublished").value==="published",
+      show_content_counts:$("batchShowCounts").value==="true",
+      chapter_search_enabled:$("batchChapterSearch").value==="true",
+      announcement_search_enabled:$("batchAnnouncementSearch").value==="true",
+      default_download_allowed:$("batchDefaultDownload").value==="true",
+      restricted_original_link_allowed:$("batchRestrictedOriginalLink").value==="true"
     }
   );
 });
@@ -2155,6 +2179,7 @@ $("bookForm").addEventListener("submit",async function(e){
     "bookForm","bookSave","books","books",
     {
       title:$("bookTitle").value.trim(),
+      publication_status:$("bookPublished").value,
       author:$("bookAuthor").value.trim(),
       description:$("bookDescription").value.trim(),
       external_url:url,
@@ -2163,7 +2188,7 @@ $("bookForm").addEventListener("submit",async function(e){
       storage_path:$("bookStorageUrl").value.trim() || url,
       cover_path:$("bookCoverUrl").value.trim(),
       access_type:$("bookAccess").value,
-      is_published:$("bookPublished").value==="true"
+      is_published:$("bookPublished").value==="published"
     }
   );
 });
@@ -2196,7 +2221,10 @@ $("notificationForm").addEventListener("submit",async function(e){
       title:$("noticeTitle").value.trim(),
       message:$("noticeMessage").value.trim(),
       target_url:url || "",
-      is_published:$("noticePublished").value==="true"
+      batch_id:$("noticeBatch").value || null,
+      is_important:$("noticeImportant").value==="true",
+      publication_status:$("noticePublished").value,
+      is_published:$("noticePublished").value==="published"
     }
   );
 });
@@ -2216,7 +2244,9 @@ $("chapterForm").addEventListener("submit",async function(e){
     {
       batch_id:$("chapterBatch").value,
       title:$("chapterTitle").value.trim(),
-      position:Number($("chapterPosition").value || 0)
+      position:Number($("chapterPosition").value || 0),
+      publication_status:$("chapterPublished").value,
+      is_published:$("chapterPublished").value==="published"
     }
   );
 });
@@ -2282,7 +2312,14 @@ $("notesForm").addEventListener("submit",async function(e){
     chapter_id:$("notesChapter").value,
     lecture_id:$("notesLecture").value || null,
     title:$("notesTitle").value.trim(),
-    storage_path:url
+    storage_path:url,
+    download_url:$("notesDownloadUrl").value.trim() || null,
+    download_permission_mode:$("notesDownloadMode").value,
+    download_allowed:$("notesDownloadMode").value==="allow",
+    original_link_allowed:$("notesOriginalLinkAllowed").value==="true",
+    position:Number($("notesPosition").value || 0),
+    publication_status:$("notesPublished").value,
+    is_published:$("notesPublished").value==="published"
   });
 });
 
@@ -2325,9 +2362,12 @@ $("lectureForm").addEventListener("submit",async function(e){
       youtube_url:url,
       teacher_name:$("lectureTeacher").value.trim() || null,
       download_url:$("lectureDownloadUrl").value.trim() || null,
-      download_allowed:$("lectureDownloadAllowed").value==="true",
+      download_permission_mode:$("lectureDownloadAllowed").value,
+      download_allowed:$("lectureDownloadAllowed").value==="allow",
       original_link_allowed:$("lectureOriginalLinkAllowed").value==="true",
-      position:Number($("lecturePosition").value || 0)
+      position:Number($("lecturePosition").value || 0),
+      publication_status:$("lecturePublished").value,
+      is_published:$("lecturePublished").value==="published"
     }
   );
 });
