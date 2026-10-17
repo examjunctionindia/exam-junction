@@ -132,3 +132,136 @@ Record pass/fail results honestly. A syntax check or dashboard scan alone does n
 ## 17. Completion rule
 
 This addendum is part of the existing Final Master Admin Plan V1.0. It does not authorize automatic implementation of every listed feature, database migration, or deletion. For implementation, audit the relevant code and current schema first, make the smallest root-cause fix, test affected and neighbouring workflows, and avoid repeated patches.
+
+---
+
+## 18. Complete Admin Panel navigation and layout
+
+The Admin Panel must provide a responsive, usable sidebar/navigation with these sections, preserving any already-working implementation and mapping each entry to its real existing section:
+
+1. Dashboard
+2. Batches
+3. Books & Notes
+4. Chapters
+5. Lectures
+6. Notifications
+7. Student Access
+8. Settings
+
+Also include the already-planned Banner Management, Chapter Notes, Lecture Notes, Access Requests, and Problem Reports in the appropriate management group or subsection so no existing feature becomes unreachable. On mobile, provide a reliable menu/open-close interaction and make sure navigation reveals the target section before scrolling. No link may point to a missing section. The active section must be visually clear.
+
+## 19. Complete student-facing website requirements connected to admin content
+
+Admin-managed content must appear in the student site according to the current approved EXAM JUNCTION product plan, without adding unrelated exam categories or mock/practice features that were not requested.
+
+- Home: concise platform/batch information and published banners where configured.
+- Batch: published batch cards and content, with access restrictions applied.
+- Books: published free and selected-student books/notes according to permissions.
+- Notifications: display published notifications through the existing notification UI.
+- About: use About instead of Student Profile where that approved navigation variant is in force.
+- Keep any previously approved bottom navigation layout; the latest confirmed layout was Home, Batch, Books, Leaderboard, Profile, with Notifications in the upper-right. If the later About replacement is the active approved version, use About instead of Profile. Do not silently restore removed navigation items; verify the current approved variant before altering it.
+- Login is required only for protected/selected-student content and other operations that need an authenticated user. Do not unnecessarily block public published free content.
+
+Do not add Banking, PYQ, Practice, Mock Test, or Daily Practice sections unless the owner explicitly changes the maths-only scope.
+
+## 20. Student batch cards, content viewing, Watch and Download
+
+- Batch cards must show the configured thumbnail at the correct location and use responsive image sizing so the whole image is visible as intended.
+- Show basic information for restricted batches without exposing their chapters, lectures, private notes, or original restricted URLs.
+- Unauthorized visitors should see a clear “Login to Access” or “Access not granted” message.
+- Authorized students should see chapters and lectures allowed by the published/access rules.
+- On lecture selection, show Watch and Download actions where supported.
+- Watch should use the website's playback/viewing interface and support fullscreen when the player permits it.
+- For PDFs/notes, use a matching View/Open and Download pattern where the source supports it.
+- A public Google Drive link cannot be made private merely by hiding it in the UI. Restricted source files must use a protected delivery mechanism and policies that actually enforce access.
+- If an external video refuses embedding, show a usable open-link fallback and an actionable message rather than an infinite spinner.
+- Do not claim download support for a source/server that blocks it.
+
+## 21. Website gallery and media selection
+
+Batch thumbnail selection should be initiated from the website's own gallery picker. The picker may allow selecting a new image from the phone gallery and selecting an existing image if a supported gallery/library already exists.
+
+- Preview the chosen image before saving.
+- Validate image type and size.
+- Show upload progress and clear errors.
+- Preserve the current thumbnail if a replacement upload fails.
+- Avoid leaving orphaned uploaded files when an upload fails before a database record is saved; do not automatically delete existing assets without explicit approval.
+- Use existing configured storage only. Do not assume that a Supabase Storage bucket exists or that it is public/private; inspect configuration and policies first.
+- Image upload and image URL save are separate operations; report success only after the complete intended operation is confirmed.
+
+## 22. Authentication, roles and user profile
+
+- Admin login uses Supabase Auth and checks the user's actual admin role/profile.
+- Student access requires the appropriate authenticated account for restricted content.
+- Handle expired sessions, sign-out, refresh, and auth-state changes without leaving stale Admin UI visible.
+- Never trust a client-side role flag alone; database policies must enforce privileged operations.
+- Keep account/profile features consistent with the currently approved student navigation; do not add a student-profile page if About has replaced it.
+- Avoid exposing student personal data to unauthorized users.
+- Existing security settings that the owner deferred must not be enabled/changed without asking.
+
+## 23. Content publishing lifecycle
+
+Every supported content type should follow the lifecycle allowed by its existing schema:
+
+- Draft content is Admin-only.
+- Published + Free content is available to visitors as permitted by existing product rules.
+- Published + Selected Students content is available only to authorized signed-in users.
+- Unpublishing content should hide it from student-facing pages without destroying the record.
+- Preview should show how content will appear, while respecting Admin-only draft visibility.
+- Publish/access changes must refresh the visible list and dashboard counts from actual data.
+- Where no status column or supported policy exists, report the gap rather than silently inventing a column.
+
+## 24. Mobile-first admin workflow
+
+The owner primarily manages content from an Android phone and does not want routine code edits. Forms and workflows must be comfortable on small screens:
+
+- Large tap targets and responsive forms.
+- Clear labels and validation.
+- Dropdowns that load the correct related records.
+- Visible Save/Update/Cancel states.
+- Upload picker reachable on mobile.
+- Lists with readable record summaries and actions.
+- Avoid horizontal overflow and hidden buttons.
+- Do not lose form state unexpectedly during navigation or refresh.
+- Provide understandable Hindi/Hinglish messages where appropriate.
+- The daily workflow should primarily be content upload and management; technical maintenance should be occasional.
+
+## 25. Data integrity and safe operations
+
+- Do not delete records or storage files automatically as part of a normal edit.
+- Before deleting a batch/chapter/lecture/book, show a clear confirmation and inspect dependencies.
+- Prefer unpublish/archive only if the current schema supports it and the owner approves.
+- Prevent double submission and duplicate records.
+- Handle network timeouts and retry safely without accidentally creating duplicates.
+- After an operation, refresh the relevant list and dashboard from the database.
+- If the backend returns no updated/deleted row, do not announce success.
+- Do not perform destructive migrations or broad RLS changes as part of a frontend-only fix.
+
+## 26. Testing matrix for the entire product
+
+Testing must cover both Admin and student views, not just syntax:
+
+- Admin login, expired session, logout and access denied.
+- Dashboard counts/loading/errors.
+- Sidebar navigation and every form's visibility.
+- CRUD for batches, books, chapters, lectures, chapter notes, lecture notes, banners and notifications where supported.
+- Gallery selection, image preview/upload failure, and card display.
+- YouTube and external MP4 link behaviour.
+- PDF open/view/download behaviour where supported.
+- Draft visibility and published content lifecycle.
+- Free access versus selected-student access.
+- Grant and revoke access using an authorized test account and an unauthorized test account.
+- Problem report listing/reply/resolution only if its database function and policies exist.
+- Mobile viewport, reload, slow network, duplicate taps and empty states.
+- Regression tests for neighbouring features after every fix.
+
+For every test, record Passed / Failed / Blocked. A feature is Blocked when required schema, policy, storage, or test account is missing. Never label a blocked/unexecuted test as passed.
+
+## 27. Explicitly outside the current approved scope
+
+- No unrequested exam modules such as PYQ, mock tests, banking, practice or daily practice.
+- No automatic Supabase schema/policy/storage changes without the owner's explicit approval.
+- No deleting data, files, tables, columns, policies, or old features to simplify implementation.
+- No assumption that public external links provide restricted security.
+- No claim that all features are implemented just because they are listed in this plan.
+
