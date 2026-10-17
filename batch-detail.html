@@ -154,7 +154,8 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
  ]);
  if(lr.error||nr.error){const p=document.createElement("p");p.className="muted";p.textContent="Is chapter ka content load nahi ho paya.";inner.append(p);console.error(lr.error||nr.error);continue}
  const lectures=lr.data||[],notes=nr.data||[];
- heading.textContent="Chapter "+chapterNumber+" — "+(chapter.title||"Chapter")+(batch.show_content_counts===true?" ("+lectures.length+" lectures)":"");
+ const chapterNotes=notes.filter(n=>!n.lecture_id);
+ heading.textContent="Chapter "+chapterNumber+" — "+(chapter.title||"Chapter")+(chapterNotes.length?" · Notes available":"")+(batch.show_content_counts===true?" ("+lectures.length+" lectures)":"");
  if(!lectures.length){const p=document.createElement("p");p.className="muted";p.textContent="Abhi published lectures available nahi hain.";inner.append(p)}
  for(let lectureIndex=0;lectureIndex<lectures.length;lectureIndex++){
   const lecture=lectures[lectureIndex];const lectureNumber=String(lectureIndex+1).padStart(2,"0");
@@ -198,7 +199,6 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
   if(lectureNotes.length){const ln=document.createElement("div");ln.className="chapter-notes";const lh=document.createElement("h4");lh.textContent="Lecture Notes";ln.append(lh);lectureNotes.forEach(n=>ln.append(makeNoteRow(n)));body.append(ln)}
   inner.append(row);allLectures.push({row,chapterSection:section,chapterId:chapter.id,chapterTitle:chapter.title||"Chapter",title:lecture.title||"Lecture"});
  }
- const chapterNotes=notes.filter(n=>!n.lecture_id);
  if(chapterNotes.length){const noteBox=document.createElement("div");noteBox.className="chapter-notes";const nh=document.createElement("h3");nh.textContent="Chapter Notes";noteBox.append(nh);chapterNotes.forEach(n=>noteBox.append(makeNoteRow(n)));inner.append(noteBox)}
 }
 function focusLecture(index){
