@@ -633,7 +633,7 @@
           item.created_at || item.published_at || item.date
         );
 
-        const link = item.link_url || item.url || item.link || "";
+        const link = item.target_url || item.link_url || item.url || item.link || "";
 
         const card = document.createElement("article");
         card.className = "notification-card";
