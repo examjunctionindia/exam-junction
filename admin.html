@@ -851,6 +851,12 @@ function makeItem(root,row,type,lines){
     item.appendChild(div);
   });
 
+  let positionConflict=false;
+  if(type==="chapters")positionConflict=cache.chapters.filter(x=>x.batch_id===row.batch_id&&Number(x.position)===Number(row.position)).length>1;
+  if(type==="lectures")positionConflict=cache.lectures.filter(x=>x.chapter_id===row.chapter_id&&Number(x.position)===Number(row.position)).length>1;
+  if(type==="notes")positionConflict=cache.notes.filter(x=>x.chapter_id===row.chapter_id&&(x.lecture_id||null)===(row.lecture_id||null)&&Number(x.position)===Number(row.position)).length>1;
+  if(positionConflict){const warning=document.createElement("p");warning.className="small";warning.style.cssText="color:#a16207;font-weight:700";warning.textContent="⚠ Position conflict: change this item's position to resolve it. No content is deleted.";item.appendChild(warning);}
+
   const actions = document.createElement("div");
   actions.className = "actions";
 
