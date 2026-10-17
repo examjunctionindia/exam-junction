@@ -381,14 +381,14 @@
             object-fit: contain;
             opacity: 1;
         }
-        .batch-cover.has-thumbnail::after {
-            content: "";
-            position: absolute;
-            inset: 0;
-            z-index: 0;
-            background: linear-gradient(90deg,rgba(8,25,52,.78) 0%,rgba(8,25,52,.42) 62%,rgba(8,25,52,.12) 100%);
-            pointer-events: none;
+        .batch-cover.has-thumbnail::after { display:none; }
+        .batch-cover.has-thumbnail .batch-cover-content {
+            position:relative;inset:auto;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;
+            padding:16px 18px 8px;pointer-events:auto;
         }
+        .batch-cover.has-thumbnail .batch-symbol { display:none; }
+        .new-badge{display:inline-block;margin-left:7px;padding:4px 7px;border-radius:6px;background:#e0f2e8;color:#176a46;font-size:10px;font-weight:800}
+        .count-chip{display:inline-flex;align-items:center;padding:7px 10px;border:1px solid var(--border);border-radius:9px;background:#fbfcff;color:var(--muted);font-size:11px;font-weight:700;margin:8px 6px 0 0}
         .batch-cover.has-thumbnail .batch-category {
             background: rgba(255,255,255,.92);
             color: #173866;
@@ -981,7 +981,7 @@
         const client = window.EXAM_JUNCTION.supabase;
         const { data, error } = await client
             .from("batches")
-            .select("id,title,description,platform_name,access_type,is_published,thumbnail_url,display_position,created_at")
+            .select("id,title,description,platform_name,access_type,is_published,thumbnail_url,display_position,created_at,published_at,show_content_counts")
             .eq("is_published", true)
             .order("display_position", { ascending: true })
             .order("created_at", { ascending: false })
@@ -990,6 +990,22 @@
         if (error) throw error;
 
         const batches = data || [];
+        let currentUser=null,grantedBatchIds=new Set();
+        try{
+            const authResult=await client.auth.getUser();currentUser=authResult?.data?.user||null;
+            if(currentUser){const grantsResult=await client.from("batch_access").select("batch_id").eq("student_id",currentUser.id);grantedBatchIds=new Set((grantsResult.data||[]).map(item=>item.batch_id));}
+        }catch(_){}
+        const chapterCounts={},lectureCounts={};
+        try{
+            const cr=await client.from("chapters").select("id,batch_id").eq("is_published",true);
+            if(!cr.error){
+                (cr.data||[]).forEach(ch=>{chapterCounts[ch.batch_id]=(chapterCounts[ch.batch_id]||0)+1});
+                const chapterIds=(cr.data||[]).map(ch=>ch.id);
+                if(chapterIds.length){const lr=await client.from("lectures").select("id,chapter_id").eq("is_published",true).in("chapter_id",chapterIds);
+                    if(!lr.error){const map=new Map((cr.data||[]).map(ch=>[ch.id,ch.batch_id]));(lr.data||[]).forEach(l=>{const bid=map.get(l.chapter_id);if(bid)lectureCounts[bid]=(lectureCounts[bid]||0)+1})}
+                }
+            }
+        }catch(_){}
         count.textContent = batches.length + (batches.length === 1 ? " Batch" : " Batches");
         list.replaceChildren();
 
@@ -1024,6 +1040,7 @@
             const title = document.createElement("h3");
             title.textContent = batch.title || "Maths Batch";
             coverContent.append(category, title);
+            if(batch.published_at && Date.now()-Date.parse(batch.published_at)<7*24*60*60*1000){const fresh=document.createElement("span");fresh.className="new-badge";fresh.textContent="NEW";coverContent.append(fresh);}
 
             const symbol = document.createElement("div");
             symbol.className = "batch-symbol";
@@ -1035,8 +1052,8 @@
             body.className = "batch-body";
             const description = document.createElement("p");
             description.className = "batch-description";
-            description.textContent = batch.description || "Batch details aur available learning content dekhne ke liye open karein.";
-            body.append(description);
+            description.textContent = batch.description || "";
+            if(batch.description)body.append(description);
 
             const meta = document.createElement("div");
             meta.className = "batch-meta";
@@ -1050,6 +1067,11 @@
             access.className = "meta-chip";
             access.textContent = batch.access_type === "restricted" ? "🔒 Permission required" : "✓ Free access";
             meta.append(access);
+            const canSeeCounts=batch.show_content_counts===true&&(batch.access_type==="free"||grantedBatchIds.has(batch.id));
+            if(canSeeCounts){
+                const chapterChip=document.createElement("span");chapterChip.className="count-chip";chapterChip.textContent=(chapterCounts[batch.id]||0)+" Chapters";meta.append(chapterChip);
+                const lectureChip=document.createElement("span");lectureChip.className="count-chip";lectureChip.textContent=(lectureCounts[batch.id]||0)+" Lectures";meta.append(lectureChip);
+            }
             body.append(meta);
 
             const footer = document.createElement("div");
@@ -1060,7 +1082,7 @@
             const open = document.createElement("a");
             open.className = "batch-button";
             open.href = "batch-detail.html?id=" + encodeURIComponent(batch.id);
-            open.textContent = "Open Batch →";
+            open.textContent = batch.access_type==="restricted"&&!(currentUser&&grantedBatchIds.has(batch.id)) ? (currentUser ? "Request Access" : "Login to Access") : "View Batch →";
             footer.append(status, open);
             body.append(footer);
 
