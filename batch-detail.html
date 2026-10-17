@@ -1,20 +1,194 @@
 <!doctype html>
 <html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#102b55"><title>Batch | EXAM JUNCTION</title><link rel="stylesheet" href="assets/css/style.css"><style>
-*{box-sizing:border-box}body{margin:0;background:#f5f7fb;color:#17243a;font-family:Arial,sans-serif}.app{max-width:760px;min-height:100vh;margin:auto;padding-bottom:35px}header{padding:16px;background:white;border-bottom:1px solid #e6ebf2;display:flex;justify-content:space-between;align-items:center;gap:12px}.brand{font-weight:900;color:#173b73;text-decoration:none}.back{padding:10px 12px;border:1px solid #e6ebf2;border-radius:10px;background:white}main{padding:20px 16px}h1,h2,h3{color:#10274c}.muted{color:#718096;line-height:1.65;font-size:14px}.panel,.chapter,.notice{background:white;border:1px solid #e6ebf2;border-radius:15px;padding:16px;margin:14px 0}.btn{display:inline-block;border:0;border-radius:10px;padding:12px 15px;background:#173b73;color:white;font-weight:bold;text-decoration:none;cursor:pointer}.lecture,.note{padding:12px 0;border-top:1px solid #edf0f5}.viewer{width:100%;aspect-ratio:16/9;border:0;border-radius:12px;background:#101b35}.pdf{width:100%;height:70vh;border:0;background:#eee}.lesson{background:#f4faf9;border:1px solid #dbeeea;border-radius:14px;padding:14px;margin:12px 0}.lesson-title{font-size:17px;margin:4px 0 10px}.lecture-accordion{padding:0;overflow:hidden}.lecture-accordion>summary{list-style:none;cursor:pointer;padding:14px;margin:0;font-weight:800;display:flex;justify-content:space-between;gap:10px}.lecture-accordion>summary::-webkit-details-marker{display:none}.lecture-accordion>summary:after{content:"＋";color:#376bc0}.lecture-accordion[open]>summary:after{content:"−"}.lecture-content{padding:0 14px 14px}.chapter{padding:0;overflow:hidden}.chapter summary{cursor:pointer;list-style:none;padding:16px;font-weight:800;color:#10274c;display:flex;align-items:center;justify-content:space-between;gap:12px}.chapter summary::-webkit-details-marker{display:none}.chapter summary:after{content:"＋";font-size:20px;color:#376bc0}.chapter[open] summary:after{content:"−"}.chapter .chapter-inner{padding:0 16px 16px}.chapter h2{margin-top:0}.chapter-notes{background:#f8fbff;border-radius:12px;padding:12px;margin-top:12px}.pdf-fullscreen:fullscreen .pdf{height:calc(100vh - 65px)}.media-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.media-actions button{border:0;border-radius:10px;padding:11px 14px;background:#173b73;color:white;font-weight:700}.media-actions a{display:inline-block}.media-fullscreen:fullscreen{background:#050b16;padding:10px;display:flex;flex-direction:column;justify-content:center}.media-fullscreen:fullscreen .viewer{height:calc(100vh - 55px);aspect-ratio:auto}.pdf-fullscreen:fullscreen{background:#101b35;padding:8px}.pdf-fullscreen:fullscreen .pdf{height:calc(100vh - 65px)}.hidden{display:none!important}
+*{box-sizing:border-box}body{margin:0;background:#f5f7fb;color:#17243a;font-family:Arial,sans-serif}.app{max-width:760px;min-height:100vh;margin:auto;padding-bottom:35px}header{padding:16px;background:white;border-bottom:1px solid #e6ebf2;display:flex;justify-content:space-between;align-items:center;gap:12px}.brand{font-weight:900;color:#173b73;text-decoration:none}.back{padding:10px 12px;border:1px solid #e6ebf2;border-radius:10px;background:white}main{padding:20px 16px}h1,h2,h3{color:#10274c}.muted{color:#718096;line-height:1.65;font-size:14px}.panel,.chapter,.notice{background:white;border:1px solid #e6ebf2;border-radius:15px;padding:16px;margin:14px 0}.btn{display:inline-block;border:0;border-radius:10px;padding:12px 15px;background:#173b73;color:white;font-weight:bold;text-decoration:none;cursor:pointer}.lecture,.note{padding:12px 0;border-top:1px solid #edf0f5}.viewer{width:100%;aspect-ratio:16/9;border:0;border-radius:12px;background:#101b35}.pdf{width:100%;height:70vh;border:0;background:#eee}.lesson{background:#f4faf9;border:1px solid #dbeeea;border-radius:14px;padding:14px;margin:12px 0}.lesson-title{font-size:17px;margin:4px 0 10px}.lecture-accordion{padding:0;overflow:hidden}.lecture-accordion>summary{list-style:none;cursor:pointer;padding:14px;margin:0;font-weight:800;display:flex;justify-content:space-between;gap:10px}.lecture-accordion>summary::-webkit-details-marker{display:none}.lecture-accordion>summary:after{content:"＋";color:#376bc0}.lecture-accordion[open]>summary:after{content:"−"}.lecture-content{padding:0 14px 14px}.chapter{padding:0;overflow:hidden}.chapter summary{cursor:pointer;list-style:none;padding:16px;font-weight:800;color:#10274c;display:flex;align-items:center;justify-content:space-between;gap:12px}.chapter summary::-webkit-details-marker{display:none}.chapter summary:after{content:"＋";font-size:20px;color:#376bc0}.chapter[open] summary:after{content:"−"}.chapter .chapter-inner{padding:0 16px 16px}.chapter h2{margin-top:0}.chapter-notes{background:#f8fbff;border-radius:12px;padding:12px;margin-top:12px}.simple-search{width:100%;padding:12px 14px;border:1px solid #d8e2f0;border-radius:10px;font-size:15px;margin:8px 0 12px}.announcement{background:#fff;border:1px solid #e6ebf2;border-radius:12px;padding:13px;margin:10px 0}.announcement-date{font-size:12px;color:#718096;margin-top:8px}.chapter[hidden]{display:none!important}.fallback-box{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;margin:10px 0}.pdf-fullscreen:fullscreen .pdf{height:calc(100vh - 65px)}.media-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.media-actions button{border:0;border-radius:10px;padding:11px 14px;background:#173b73;color:white;font-weight:700}.media-actions a{display:inline-block}.media-fullscreen:fullscreen{background:#050b16;padding:10px;display:flex;flex-direction:column;justify-content:center}.media-fullscreen:fullscreen .viewer{height:calc(100vh - 55px);aspect-ratio:auto}.pdf-fullscreen:fullscreen{background:#101b35;padding:8px}.pdf-fullscreen:fullscreen .pdf{height:calc(100vh - 65px)}.hidden{display:none!important}
 </style></head><body><div class="app"><header><a class="brand" href="index.html">← EXAM JUNCTION</a><a href="login.html">Login</a></header><main><div id="status" class="notice">Batch load ho raha hai…</div><section id="content" class="hidden"><div class="panel"><h1 id="title"></h1><p id="description" class="muted"></p><div id="meta" class="muted"></div></div><div id="access-panel" class="panel hidden"></div><div id="chapters"></div></section></main></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="assets/js/config.js"></script><script src="assets/js/common.js"></script><script>
-(async()=>{const $=id=>document.getElementById(id),status=$("status"),content=$("content"),clientReady=await window.EXAM_JUNCTION.init();if(!clientReady){status.textContent="Connection unavailable. Internet check karke refresh karein.";return}const db=window.EXAM_JUNCTION.supabase,escape=window.EXAM_JUNCTION.escapeHTML,id=new URLSearchParams(location.search).get("id");if(!id){status.textContent="Batch ID nahi mila. Home se batch open karein.";return}
-function makeNoteRow(note){const row=document.createElement("div");row.className="note";row.dataset.noteId=note.id;const h=document.createElement("h3");h.textContent=note.title||"Notes";row.append(h);let url=(note.storage_path||"").trim(),openUrl=url,downloadUrl=url;try{const u=new URL(url);if(u.hostname==="drive.google.com"){const m=u.pathname.match(/\/file\/d\/([^/]+)/);if(m){url="https://drive.google.com/file/d/"+m[1]+"/preview";openUrl="https://drive.google.com/file/d/"+m[1]+"/view";downloadUrl="https://drive.google.com/uc?export=download&id="+encodeURIComponent(m[1])}}else if(u.hostname==="docs.google.com"){openUrl=u.origin+u.pathname.replace(/\/edit.*$/,"/edit");url="https://docs.google.com"+u.pathname.replace(/\/edit.*$/,"/preview");downloadUrl=u.origin+u.pathname.replace(/\/edit.*$/,"/export?format=pdf")}}catch(_){url="";openUrl="";downloadUrl=""}if(url){const wrap=document.createElement("div");wrap.className="pdf-fullscreen hidden";const actions=document.createElement("div");actions.className="media-actions";const full=document.createElement("button");full.textContent="⛶ PDF Full screen";full.onclick=async()=>{try{const parsedUrl=new URL(openUrl||url);const isDrive=parsedUrl.hostname==="drive.google.com"||parsedUrl.hostname==="docs.google.com";if(!isDrive){location.href=openUrl||url;return}if(document.fullscreenElement)await document.exitFullscreen();else await wrap.requestFullscreen()}catch(_){location.href=openUrl||url}};actions.append(full);const open=document.createElement("a");open.className="btn";open.href=openUrl||url;open.target="_blank";open.rel="noopener noreferrer";open.textContent="↗ Open PDF separately";actions.append(open);wrap.append(actions);const frame=document.createElement("iframe");frame.className="pdf";frame.src=url;frame.title=note.title||"Notes";frame.loading="lazy";frame.setAttribute("allow","fullscreen");wrap.append(frame);const controls=document.createElement("div");controls.className="media-actions";const read=document.createElement("button");read.textContent="📖 Read Now";read.onclick=()=>{wrap.classList.remove("hidden");wrap.scrollIntoView({behavior:"smooth",block:"nearest"})};controls.append(read);const download=document.createElement("a");download.className="btn";download.href=downloadUrl||openUrl||url;download.target="_blank";download.rel="noopener noreferrer";download.textContent="⬇ Download PDF";controls.append(download);row.append(controls,wrap)}else{const p=document.createElement("p");p.className="muted";p.textContent="Google Drive link ya sharing settings check karein.";row.append(p)}return row}
-try{const [{data:batch,error:be},{data:userData}]=await Promise.all([db.from("batches").select("id,title,description,platform_name,access_type,is_published").eq("id",id).eq("is_published",true).maybeSingle(),db.auth.getUser()]);if(be)throw be;if(!batch){status.textContent="Batch nahi mila ya abhi publish nahi hai.";return}
-$("title").textContent=batch.title||"Maths Batch";$("description").textContent=batch.description||"Batch ke chapters aur learning content."; $("meta").textContent=(batch.platform_name?"Teacher: "+batch.platform_name+" • ":"")+(batch.access_type==="free"?"Free batch":"Selected students only");content.classList.remove("hidden");status.classList.add("hidden");
-let allowed=batch.access_type==="free",user=userData?.user||null;
-if(batch.access_type==="restricted"&&user){const {data:grant,error}=await db.from("batch_access").select("id").eq("batch_id",id).eq("student_id",user.id).maybeSingle();if(error)console.warn(error);allowed=!!grant}
-if(!allowed){const panel=$("access-panel");panel.classList.remove("hidden");panel.innerHTML='<h2>🔒 Access required</h2><p class="muted">'+(user?'Is batch ke liye access request bhejein. Admin approve karega.':'Restricted batch ke liye login karke request bhejna zaroori hai.')+'</p><button class="btn" id="request">'+(user?'Request Access':'Login to Continue')+'</button>'; $("request").onclick=async()=>{if(!user){location.href="login.html?next="+encodeURIComponent("batch-detail.html?id="+id);return}const {data:existing,error:ee}=await db.from("batch_join_requests").select("id,status").eq("batch_id",id).eq("student_id",user.id).maybeSingle();if(ee){alert("Request status check nahi ho saka.");return}if(existing){alert("Aapki request status: "+existing.status);return}const {error}=await db.from("batch_join_requests").insert({batch_id:id,student_id:user.id,status:"pending"});if(error){alert("Request nahi bhej paaye: "+error.message);return}alert("Request bhej di gayi. Admin approval ka wait karein.");$("request").textContent="Request sent";$("request").disabled=true};return}
-const ch=$("chapters");const {data:chapters,error:ce}=await db.from("chapters").select("id,title,position").eq("batch_id",id).order("position",{ascending:true});if(ce)throw ce;if(!chapters?.length){ch.innerHTML='<div class="notice">Abhi chapters add nahi hue hain.</div>';return}
-for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){const chapter=chapters[chapterIndex];const section=document.createElement("details");section.className="chapter";section.open=chapterIndex===0;const heading=document.createElement("summary");heading.textContent=chapter.title||"Chapter";section.append(heading);const inner=document.createElement("div");inner.className="chapter-inner";section.append(inner);const [lr,nr]=await Promise.all([db.from("lectures").select("*").eq("chapter_id",chapter.id).order("position",{ascending:true}),db.from("chapter_notes").select("id,title,storage_path,created_at,lecture_id").eq("chapter_id",chapter.id).order("created_at",{ascending:false})]);if(lr.error)throw lr.error;if(nr.error)throw nr.error;heading.textContent=(chapter.title||"Chapter")+" ("+(lr.data||[]).length+" lectures)";
-if(!(lr.data||[]).length){const emptyLecture=document.createElement("p");emptyLecture.className="muted";emptyLecture.textContent="Is chapter mein abhi lectures add nahi kiye gaye hain.";inner.append(emptyLecture)}
-for(const lecture of (lr.data||[])){const row=document.createElement("details");row.className="lecture lesson lecture-accordion";const h=document.createElement("summary");h.className="lesson-title";h.textContent=lecture.title||"Lecture";row.append(h);const lectureBody=document.createElement("div");lectureBody.className="lecture-content";row.append(lectureBody);const lectureUrl=(lecture.youtube_url||"").trim();let embedSrc=null, directVideo=false;let videoId=lectureUrl.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([\w-]{11})/);if(videoId){embedSrc="https://www.youtube-nocookie.com/embed/"+videoId[1]+"?controls=1&playsinline=1&rel=0"}else{try{const u=new URL(lectureUrl);if(u.protocol==="https:"&&/(^|\.)drive\.google\.com$/.test(u.hostname)){let m=u.pathname.match(/\/file\/d\/([^/]+)/);if(!m)m=u.pathname.match(/\/open$/)&&u.searchParams.get("id")?[null,u.searchParams.get("id")]:null;if(m&&m[1])embedSrc="https://drive.google.com/file/d/"+encodeURIComponent(m[1])+"/preview"}else if(u.protocol==="https:"&&/(^|\.)vimeo\.com$/.test(u.hostname)){const m=u.pathname.match(/\/(\d+)(?:$|\/)/);if(m)embedSrc="https://player.vimeo.com/video/"+m[1]}else if(u.protocol==="https:"&&/(\.mp4|\.webm|\.ogg)$/i.test(u.pathname)){directVideo=true}}catch(_){}}if(embedSrc||directVideo){const wrap=document.createElement("div");wrap.className="media-fullscreen hidden";if(directVideo){const player=document.createElement("video");player.className="viewer";player.controls=true;player.playsInline=true;player.preload="metadata";player.src=lectureUrl;player.style.height="auto";player.style.maxHeight="70vh";let loadTimer=null;const clearLoadTimer=()=>{if(loadTimer){clearTimeout(loadTimer);loadTimer=null}};const showMediaFallback=()=>{if(wrap.querySelector(".media-error"))return;player.style.display="none";const warning=document.createElement("p");warning.className="muted media-error";warning.textContent="Video website ke andar load nahi ho pa raha. Hosting server embedded playback ko support na karta ho sakta hai. Neeche “Open Original Link” se lecture kholein.";wrap.append(warning)};const armLoadTimer=()=>{clearLoadTimer();loadTimer=setTimeout(showMediaFallback,15000)};const recoverMedia=()=>{clearLoadTimer();player.style.display="";const warning=wrap.querySelector(".media-error");if(warning)warning.remove()};player.addEventListener("loadstart",armLoadTimer);player.addEventListener("waiting",armLoadTimer);player.addEventListener("stalled",armLoadTimer);player.addEventListener("canplay",recoverMedia);player.addEventListener("playing",recoverMedia);player.addEventListener("error",()=>{clearLoadTimer();showMediaFallback()});wrap.append(player)}else{const frame=document.createElement("iframe");frame.className="viewer";frame.src=embedSrc;frame.title=lecture.title||"Lecture";frame.loading="lazy";frame.allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen";frame.allowFullscreen=true;frame.referrerPolicy="strict-origin-when-cross-origin";wrap.append(frame)}lectureBody.append(wrap);const actions=document.createElement("div");actions.className="media-actions";const watch=document.createElement("button");watch.textContent="▶ Watch Now";watch.onclick=async()=>{wrap.classList.remove("hidden");try{const media=wrap.querySelector("video,iframe");if(media&&typeof media.requestFullscreen==="function"){await media.requestFullscreen()}else if(!document.fullscreenElement){await wrap.requestFullscreen()}}catch(_){wrap.scrollIntoView({behavior:"smooth",block:"nearest"})}};actions.append(watch);const full=document.createElement("button");full.textContent="⛶ Full screen";full.onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await wrap.requestFullscreen()}catch(_){alert("Full screen is browser/device par supported nahi hai.")}};actions.append(full);if(lecture.original_link_allowed===true){try{const original=new URL(lectureUrl);if(original.protocol==="https:"&&original.hostname&&!["localhost","127.0.0.1"].includes(original.hostname.toLowerCase())){const originalLink=document.createElement("a");originalLink.className="btn";originalLink.href=original.href;originalLink.target="_blank";originalLink.rel="noopener noreferrer";originalLink.textContent="↗ Open Original Link";actions.append(originalLink)}}catch(_){}}if(lecture.download_allowed&&lecture.download_url){const dl=document.createElement("a");dl.className="btn";dl.href=lecture.download_url;dl.target="_blank";dl.rel="noopener noreferrer";dl.textContent="⬇ Download Lecture";actions.append(dl)}lectureBody.append(actions);if(lecture.teacher_name){const teacher=document.createElement("p");teacher.className="muted";teacher.textContent="Teacher: "+lecture.teacher_name;lectureBody.append(teacher)}const lectureNotes=(nr.data||[]).filter(n=>n.lecture_id===lecture.id);if(lectureNotes.length){const ln=document.createElement("div");ln.className="chapter-notes";const lh=document.createElement("h4");lh.textContent="📄 Lecture Notes";ln.append(lh);for(const n of lectureNotes){const nrw=makeNoteRow(n);ln.append(nrw)}lectureBody.append(ln)}}else{let externalUrl=null;try{const candidate=new URL(lecture.youtube_url||"");if(candidate.protocol==="https:"&&candidate.hostname&&!["localhost","127.0.0.1"].includes(candidate.hostname.toLowerCase()))externalUrl=candidate.href}catch(_){}if(externalUrl){const p=document.createElement("p");p.className="muted";p.textContent="Yeh lecture external platform par khulega.";lectureBody.append(p);const actions=document.createElement("div");actions.className="media-actions";const open=document.createElement("a");open.className="btn";open.href=externalUrl;open.target="_blank";open.rel="noopener noreferrer";open.textContent="▶ Watch Now";open.onclick=(event)=>{event.preventDefault();try{window.open(externalUrl,"_blank","noopener,noreferrer")}catch(_){location.href=externalUrl}};actions.append(open);if(lecture.original_link_allowed===true){const originalLink=document.createElement("a");originalLink.className="btn";originalLink.href=externalUrl;originalLink.target="_blank";originalLink.rel="noopener noreferrer";originalLink.textContent="↗ Open Original Link";actions.append(originalLink)}if(lecture.download_allowed&&lecture.download_url){let dlUrl=null;try{const d=new URL(lecture.download_url);if(d.protocol==="https:")dlUrl=d.href}catch(_){}if(dlUrl){const dl=document.createElement("a");dl.className="btn";dl.href=dlUrl;dl.target="_blank";dl.rel="noopener noreferrer";dl.textContent="⬇ Download Lecture";actions.append(dl)}}lectureBody.append(actions);if(lecture.teacher_name){const teacher=document.createElement("p");teacher.className="muted";teacher.textContent="Teacher: "+lecture.teacher_name;lectureBody.append(teacher)}const lectureNotes=(nr.data||[]).filter(n=>n.lecture_id===lecture.id);if(lectureNotes.length){const ln=document.createElement("div");ln.className="chapter-notes";const lh=document.createElement("h4");lh.textContent="📄 Lecture Notes";ln.append(lh);for(const n of lectureNotes){ln.append(makeNoteRow(n))}lectureBody.append(ln)}}else{const p=document.createElement("p");p.className="muted";p.textContent="Lecture link valid HTTPS URL nahi hai. Admin se contact karein.";lectureBody.append(p)}}inner.append(row)}
-const chapterOnlyNotes=(nr.data||[]).filter(note=>!note.lecture_id);const chapterNotes=document.createElement("div");chapterNotes.className="chapter-notes";const chapterNotesHeading=document.createElement("h3");chapterNotesHeading.textContent="📄 Chapter Notes";chapterNotes.append(chapterNotesHeading);for(const note of chapterOnlyNotes){chapterNotes.append(makeNoteRow(note))}if(chapterOnlyNotes.length===0){const empty=document.createElement("p");empty.className="muted";empty.textContent="Chapter Notes add nahi kiye gaye hain.";chapterNotes.append(empty)}inner.append(chapterNotes);ch.append(section)}
-}catch(e){console.error(e);status.textContent="Content load nahi hua. Database connection ya access policy check karein."}
+(async()=>{
+"use strict";
+const $=id=>document.getElementById(id);
+const status=$("status"),content=$("content");
+const clientReady=await window.EXAM_JUNCTION.init();
+if(!clientReady){status.textContent="Connection unavailable. Internet check karke refresh karein.";return}
+const db=window.EXAM_JUNCTION.supabase;
+const id=new URLSearchParams(location.search).get("id");
+if(!id){status.textContent="Batch ID nahi mila. Home se batch open karein.";return}
+const safeUrl=value=>{try{const u=new URL(String(value||""));return u.protocol==="https:"&&u.hostname&&!["localhost","127.0.0.1"].includes(u.hostname.toLowerCase())?u.href:null}catch(_){return null}};
+const getDownloadAllowed=item=>{
+  const mode=item.download_permission_mode||"inherit";
+  if(mode==="allow")return true;
+  if(mode==="deny")return false;
+  return batch.default_download_allowed===true;
+};
+const canShowOriginal=item=>batch.access_type!=="restricted" || (batch.restricted_original_link_allowed===true && item.original_link_allowed===true);
+function googlePdfUrls(raw){
+  let view=safeUrl(raw),original=view,download=view;
+  if(!view)return {view:null,original:null,download:null};
+  try{
+    const u=new URL(view);
+    if(u.hostname==="drive.google.com"){
+      let m=u.pathname.match(/\/file\/d\/([^/]+)/);
+      if(!m&&u.pathname==="/open"&&u.searchParams.get("id"))m=[null,u.searchParams.get("id")];
+      if(m&&m[1]){view="https://drive.google.com/file/d/"+encodeURIComponent(m[1])+"/preview";original="https://drive.google.com/file/d/"+encodeURIComponent(m[1])+"/view";download="https://drive.google.com/uc?export=download&id="+encodeURIComponent(m[1]);}
+    }else if(u.hostname==="docs.google.com"){
+      original=u.origin+u.pathname.replace(/\/edit.*$/,"/edit");
+      view=u.origin+u.pathname.replace(/\/edit.*$/,"/preview");
+      download=u.origin+u.pathname.replace(/\/edit.*$/,"/export?format=pdf");
+    }
+  }catch(_){}
+  return {view,original,download};
+}
+function makeNoteRow(note){
+  const row=document.createElement("div");row.className="note";row.dataset.noteId=note.id;
+  const title=document.createElement("div");title.style.fontWeight="700";title.textContent=note.title||"Notes";row.append(title);
+  const raw=safeUrl(note.storage_path||"");
+  if(!raw){const p=document.createElement("p");p.className="muted";p.textContent="PDF link available nahi hai. Admin se contact karein.";row.append(p);return row}
+  const urls=googlePdfUrls(raw);
+  const actions=document.createElement("div");actions.className="media-actions";
+  const view=document.createElement("button");view.className="btn";view.type="button";view.textContent="📖 View PDF";actions.append(view);
+  const wrap=document.createElement("div");wrap.className="pdf-fullscreen hidden";
+  const frame=document.createElement("iframe");frame.className="pdf";frame.title=note.title||"Notes PDF";frame.loading="lazy";frame.src=urls.view;frame.allow="fullscreen";wrap.append(frame);
+  const fallback=document.createElement("div");fallback.className="fallback-box hidden";fallback.textContent="PDF website ke andar nahi khul pa raha. Dobara try karein ya original link use karein, agar allowed ho.";wrap.append(fallback);
+  const retry=document.createElement("button");retry.className="btn";retry.type="button";retry.textContent="↻ Retry";retry.addEventListener("click",()=>{fallback.classList.add("hidden");frame.src=urls.view+"#retry="+Date.now();setTimeout(()=>fallback.classList.remove("hidden"),12000)});fallback.append(retry);
+  if(canShowOriginal(note)){const original=document.createElement("a");original.className="btn";original.href=urls.original||raw;original.target="_blank";original.rel="noopener noreferrer";original.textContent="↗ Open Original Link";fallback.append(original)}
+  let timer=null;view.addEventListener("click",()=>{wrap.classList.remove("hidden");wrap.scrollIntoView({behavior:"smooth",block:"nearest"});if(timer)clearTimeout(timer);timer=setTimeout(()=>fallback.classList.remove("hidden"),12000)});
+  frame.addEventListener("load",()=>{if(timer)clearTimeout(timer)});
+  actions.append(view);
+  const downloadAllowed=getDownloadAllowed(note);
+  const downloadUrl=safeUrl(note.download_url||urls.download||"");
+  if(downloadAllowed&&downloadUrl){const dl=document.createElement("a");dl.className="btn";dl.href=downloadUrl;dl.target="_blank";dl.rel="noopener noreferrer";dl.textContent="⬇ Download";actions.append(dl)}
+  row.append(actions,wrap);return row;
+}
+const [batchResult,userResult]=await Promise.all([
+  db.from("batches").select("id,title,description,platform_name,access_type,is_published,thumbnail_url,show_content_counts,chapter_search_enabled,announcement_search_enabled,default_download_allowed,restricted_original_link_allowed,published_at").eq("id",id).eq("is_published",true).maybeSingle(),
+  db.auth.getUser()
+]);
+if(batchResult.error){status.textContent="Batch load nahi ho paya. Dobara refresh karein.";console.error("Batch load error",batchResult.error);return}
+const batch=batchResult.data;
+if(!batch){status.textContent="Batch nahi mila ya abhi publish nahi hai.";return}
+$("title").textContent=batch.title||"Maths Batch";
+$("description").textContent=batch.description||"";
+if(!batch.description)$("description").hidden=true;
+$("meta").textContent=(batch.platform_name?"Teacher: "+batch.platform_name+" • ":"")+(batch.access_type==="free"?"Free batch":"Selected students only");
+if(batch.thumbnail_url){
+ const image=document.createElement("img");image.src=batch.thumbnail_url;image.alt=(batch.title||"Batch")+" thumbnail";image.loading="lazy";image.style.cssText="display:block;width:100%;aspect-ratio:16/9;object-fit:contain;background:#f2f6fc;border-radius:12px;margin:0 0 14px";image.onerror=()=>image.remove();$("content").querySelector(".panel").prepend(image);
+}
+content.classList.remove("hidden");status.classList.add("hidden");
+const user=userResult?.data?.user||null;
+let allowed=batch.access_type==="free";
+if(batch.access_type==="restricted"&&user){
+ const {data:grant,error}=await db.from("batch_access").select("id").eq("batch_id",id).eq("student_id",user.id).maybeSingle();
+ if(error)console.warn("Access check failed",error);allowed=!!grant;
+}
+if(!allowed){
+ const panel=$("access-panel");panel.classList.remove("hidden");
+ panel.innerHTML='<h2>🔒 Access required</h2><p class="muted">'+(user?'Is batch ke liye access request bhejein. Admin approve karega.':'Restricted batch ke liye login karke request bhejna zaroori hai.')+'</p><button class="btn" id="request">'+(user?'Request Access':'Login to Access')+'</button>';
+ $("request").onclick=async()=>{
+  if(!user){location.href="login.html?next="+encodeURIComponent("batch-detail.html?id="+id);return}
+  const {data:existing,error:ee}=await db.from("batch_join_requests").select("id,status").eq("batch_id",id).eq("student_id",user.id).maybeSingle();
+  if(ee){alert("Request status check nahi ho saka.");return}
+  if(existing){alert("Aapki request status: "+existing.status);return}
+  const {error}=await db.from("batch_join_requests").insert({batch_id:id,student_id:user.id,status:"pending"});
+  if(error){alert("Request nahi bhej paaye. Dobara try karein.");console.error(error);return}
+  alert("Request bhej di gayi. Admin approval ka wait karein.");$("request").textContent="Request sent";$("request").disabled=true;
+ };
+ return;
+}
+const chaptersRoot=$("chapters");
+const announcementsSection=document.createElement("section");announcementsSection.className="panel hidden";announcementsSection.id="announcementsSection";
+const announcementHeading=document.createElement("h2");announcementHeading.textContent="Announcements";announcementsSection.append(announcementHeading);
+let announcementSearch=null,announcementList=document.createElement("div");
+if(batch.announcement_search_enabled===true){announcementSearch=document.createElement("input");announcementSearch.type="search";announcementSearch.className="simple-search";announcementSearch.placeholder="Search announcements";announcementSearch.setAttribute("aria-label","Search announcements");announcementsSection.append(announcementSearch)}
+announcementsSection.append(announcementList);
+const annResult=await db.from("notifications").select("id,title,message,target_url,created_at,published_at,is_important,expires_at").eq("batch_id",id).eq("is_published",true).order("published_at",{ascending:false}).limit(100);
+if(!annResult.error&&(annResult.data||[]).length){
+ announcementsSection.classList.remove("hidden");
+ (annResult.data||[]).forEach(n=>{
+  const item=document.createElement("article");item.className="announcement";item.dataset.search=(String(n.title||"")+" "+String(n.message||"")).toLowerCase();
+  const h=document.createElement("h3");h.textContent=n.title||"Announcement";
+  const p=document.createElement("p");p.className="muted";p.textContent=n.message||"";
+  item.append(h,p);
+  if(n.published_at||n.created_at){const date=document.createElement("div");date.className="announcement-date";date.textContent=new Date(n.published_at||n.created_at).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"});item.append(date)}
+  const target=safeUrl(n.target_url);if(target){const link=document.createElement("a");link.className="btn";link.href=target;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Open Link";item.append(link)}
+  announcementList.append(item);
+ });
+ if(announcementSearch)announcementSearch.addEventListener("input",()=>{const q=announcementSearch.value.trim().toLowerCase();Array.from(announcementList.children).forEach(item=>item.hidden=!item.dataset.search.includes(q))});
+ chaptersRoot.before(announcementsSection);
+}
+const chapterSearch=batch.chapter_search_enabled===true?document.createElement("input"):null;
+if(chapterSearch){chapterSearch.type="search";chapterSearch.className="simple-search";chapterSearch.placeholder="Search chapters";chapterSearch.setAttribute("aria-label","Search chapters");chaptersRoot.before(chapterSearch)}
+const chapterResult=await db.from("chapters").select("id,title,position,created_at,is_published").eq("batch_id",id).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true});
+if(chapterResult.error){const p=document.createElement("p");p.className="notice";p.textContent="Chapters load nahi ho paaye. Dobara refresh karein.";chaptersRoot.append(p);console.error(chapterResult.error);return}
+const chapters=chapterResult.data||[];
+if(!chapters.length){const p=document.createElement("p");p.className="notice";p.textContent="Abhi published chapters available nahi hain.";chaptersRoot.append(p);return}
+const allLectures=[];
+for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
+ const chapter=chapters[chapterIndex];
+ const section=document.createElement("details");section.className="chapter";section.dataset.chapterTitle=(chapter.title||"").toLowerCase();section.open=chapterIndex===0;
+ const heading=document.createElement("summary");heading.textContent=chapter.title||"Chapter";section.append(heading);
+ const inner=document.createElement("div");inner.className="chapter-inner";section.append(inner);chaptersRoot.append(section);
+ const [lr,nr]=await Promise.all([
+  db.from("lectures").select("id,chapter_id,title,youtube_url,position,teacher_name,download_url,download_allowed,download_permission_mode,original_link_allowed,is_published,published_at,created_at").eq("chapter_id",chapter.id).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true}),
+  db.from("chapter_notes").select("id,chapter_id,lecture_id,title,storage_path,download_url,download_allowed,download_permission_mode,original_link_allowed,position,is_published,created_at").eq("chapter_id",chapter.id).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true})
+ ]);
+ if(lr.error||nr.error){const p=document.createElement("p");p.className="muted";p.textContent="Is chapter ka content load nahi ho paya.";inner.append(p);console.error(lr.error||nr.error);continue}
+ const lectures=lr.data||[],notes=nr.data||[];
+ heading.textContent=(chapter.title||"Chapter")+(batch.show_content_counts===true?" ("+lectures.length+" lectures)":"");
+ if(!lectures.length){const p=document.createElement("p");p.className="muted";p.textContent="Abhi published lectures available nahi hain.";inner.append(p)}
+ for(const lecture of lectures){
+  const row=document.createElement("details");row.className="lecture lesson lecture-accordion";row.dataset.lectureId=lecture.id;row.dataset.chapterId=chapter.id;
+  const h=document.createElement("summary");h.className="lesson-title";h.textContent=lecture.title||"Lecture";row.append(h);
+  const body=document.createElement("div");body.className="lecture-content";row.append(body);
+  const raw=safeUrl(lecture.youtube_url||"");
+  let embedSrc=null,directVideo=false;
+  if(raw){
+   const u=new URL(raw);let m=u.href.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([\w-]{11})/);
+   if(m)embedSrc="https://www.youtube-nocookie.com/embed/"+m[1]+"?controls=1&playsinline=1&rel=0";
+   else if(u.hostname==="drive.google.com"){let g=u.pathname.match(/\/file\/d\/([^/]+)/);if(!g&&u.pathname==="/open"&&u.searchParams.get("id"))g=[null,u.searchParams.get("id")];if(g&&g[1])embedSrc="https://drive.google.com/file/d/"+encodeURIComponent(g[1])+"/preview"}
+   else if(u.hostname==="vimeo.com"||u.hostname==="www.vimeo.com"){const vm=u.pathname.match(/\/(\d+)(?:$|\/)/);if(vm)embedSrc="https://player.vimeo.com/video/"+vm[1]}
+   else if(/\.(mp4|webm|ogg)$/i.test(u.pathname))directVideo=true;
+  }
+  const originalAllowed=canShowOriginal(lecture);
+  const actions=document.createElement("div");actions.className="media-actions";
+  let wrap=null,player=null,fallback=null,timer=null;
+  if(embedSrc||directVideo){
+   wrap=document.createElement("div");wrap.className="media-fullscreen hidden";
+   if(directVideo){player=document.createElement("video");player.className="viewer";player.controls=true;player.playsInline=true;player.preload="metadata";player.src=raw;player.style.height="auto";player.style.maxHeight="70vh"}
+   else{player=document.createElement("iframe");player.className="viewer";player.src=embedSrc;player.title=lecture.title||"Lecture";player.loading="lazy";player.allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen";player.allowFullscreen=true;player.referrerPolicy="strict-origin-when-cross-origin"}
+   wrap.append(player);
+   fallback=document.createElement("div");fallback.className="fallback-box hidden";fallback.textContent="Video load nahi ho paya. Dobara try karein.";
+   const retry=document.createElement("button");retry.type="button";retry.className="btn";retry.textContent="↻ Retry";retry.addEventListener("click",()=>{fallback.classList.add("hidden");if(directVideo){player.style.display="";player.src=raw;player.load()}else player.src=embedSrc+(embedSrc.includes("?")?"&":"?")+"retry="+Date.now();if(timer)clearTimeout(timer);timer=setTimeout(()=>fallback.classList.remove("hidden"),15000)});fallback.append(retry);
+   if(originalAllowed){const ol=document.createElement("a");ol.className="btn";ol.href=raw;ol.target="_blank";ol.rel="noopener noreferrer";ol.textContent="↗ Open Original Link";fallback.append(ol)}
+   wrap.append(fallback);body.append(wrap);
+   if(directVideo){const showFallback=()=>{fallback.classList.remove("hidden");player.style.display="none"};player.addEventListener("error",showFallback);player.addEventListener("stalled",()=>{if(timer)clearTimeout(timer);timer=setTimeout(showFallback,15000)});player.addEventListener("canplay",()=>{if(timer)clearTimeout(timer);fallback.classList.add("hidden");player.style.display=""})}
+   else{timer=setTimeout(()=>fallback.classList.remove("hidden"),15000)}
+   const watch=document.createElement("button");watch.className="btn";watch.type="button";watch.textContent="▶ Watch";watch.addEventListener("click",async()=>{wrap.classList.remove("hidden");try{await wrap.requestFullscreen()}catch(_){wrap.scrollIntoView({behavior:"smooth",block:"nearest"})}});actions.append(watch);
+   const full=document.createElement("button");full.className="btn";full.type="button";full.textContent="⛶ Fullscreen";full.addEventListener("click",async()=>{wrap.classList.remove("hidden");try{if(document.fullscreenElement)await document.exitFullscreen();else await wrap.requestFullscreen()}catch(_){wrap.scrollIntoView({behavior:"smooth",block:"nearest"})}});actions.append(full);
+  }else{
+   const message=document.createElement("p");message.className="muted";message.textContent="Is video source ko website ke player mein nahi khola ja sakta.";body.append(message);
+   if(originalAllowed){const open=document.createElement("a");open.className="btn";open.href=raw||"#";open.target="_blank";open.rel="noopener noreferrer";open.textContent="▶ Watch / Open Original Link";actions.append(open)}
+  }
+  if(getDownloadAllowed(lecture)&&safeUrl(lecture.download_url)){const dl=document.createElement("a");dl.className="btn";dl.href=safeUrl(lecture.download_url);dl.target="_blank";dl.rel="noopener noreferrer";dl.textContent="⬇ Download";actions.append(dl)}
+  if(actions.childElementCount)body.append(actions);
+  if(lecture.teacher_name){const teacher=document.createElement("p");teacher.className="muted";teacher.textContent="Teacher: "+lecture.teacher_name;body.append(teacher)}
+  const lectureNotes=notes.filter(n=>n.lecture_id===lecture.id);
+  if(lectureNotes.length){const ln=document.createElement("div");ln.className="chapter-notes";const lh=document.createElement("h4");lh.textContent="Lecture Notes";ln.append(lh);lectureNotes.forEach(n=>ln.append(makeNoteRow(n)));body.append(ln)}
+  inner.append(row);allLectures.push({row,chapterSection:section,chapterId:chapter.id,chapterTitle:chapter.title||"Chapter",title:lecture.title||"Lecture"});
+ }
+ const chapterNotes=notes.filter(n=>!n.lecture_id);
+ if(chapterNotes.length){const noteBox=document.createElement("div");noteBox.className="chapter-notes";const nh=document.createElement("h3");nh.textContent="Chapter Notes";noteBox.append(nh);chapterNotes.forEach(n=>noteBox.append(makeNoteRow(n)));inner.append(noteBox)}
+}
+function focusLecture(index){
+ const target=allLectures[index];if(!target)return;
+ allLectures.forEach((item,i)=>{if(i!==index)item.row.open=false});
+ target.chapterSection.open=true;target.row.open=true;target.row.scrollIntoView({behavior:"smooth",block:"start"});
+}
+allLectures.forEach((item,index)=>{
+ const nav=document.createElement("div");nav.className="media-actions";
+ if(index>0){const prev=document.createElement("button");prev.className="btn";prev.type="button";prev.textContent="← Previous Lecture";prev.addEventListener("click",()=>focusLecture(index-1));nav.append(prev)}
+ if(index<allLectures.length-1){const next=document.createElement("button");next.className="btn";next.type="button";next.textContent=allLectures[index+1].chapterId!==item.chapterId?"Next Chapter →":"Next Lecture →";next.addEventListener("click",()=>focusLecture(index+1));nav.append(next)}
+ if(nav.childElementCount)item.row.querySelector(".lecture-content").append(nav);
+});
+if(chapterSearch)chapterSearch.addEventListener("input",()=>{const q=chapterSearch.value.trim().toLowerCase();Array.from(chaptersRoot.querySelectorAll(":scope > .chapter")).forEach(section=>section.hidden=!section.dataset.chapterTitle.includes(q))});
 })();
-</script></body></html>
+</script>
+</body></html>
