@@ -953,7 +953,7 @@ function updateDashboardCounts(){
     statDrafts: [
       ...cache.batches,...cache.books,...cache.notifications,...cache.banners,
       ...cache.chapters,...cache.notes,...cache.lectures
-    ].filter(row => row.is_published === false).length,
+    ].filter(row => row.publication_status ? row.publication_status === "draft" : row.is_published === false).length,
     statPublished: [...cache.batches,...cache.books,...cache.notifications,...cache.banners,...cache.chapters,...cache.notes,...cache.lectures].filter(row=>row.is_published===true).length,
     statUnpublished: cache.batches.filter(row=>(row.publication_status||"") === "unpublished").length
   };
