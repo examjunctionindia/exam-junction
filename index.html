@@ -771,6 +771,9 @@
             </div>
 
 
+            <label for="home-batch-search" style="display:block;margin:0 0 7px;color:var(--muted);font-size:12px;font-weight:700">Search batches</label>
+            <input id="home-batch-search" type="search" placeholder="Batch ya teacher ka naam search karein..." autocomplete="off" aria-label="Search published batches by batch or teacher" style="display:block;width:100%;min-height:48px;margin:0 0 15px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;color:var(--text);font:inherit;font-size:14px">
+
             <!-- Published batches are loaded from Supabase below. -->
 
             <div class="batch-list" id="batch-list">
@@ -928,6 +931,28 @@
     const list = document.getElementById("batch-list");
     const count = document.getElementById("batch-count");
     if (!list || !count) return;
+    const searchInput = document.getElementById("home-batch-search");
+    if (searchInput) searchInput.addEventListener("input", () => {
+        const query = searchInput.value.trim().toLocaleLowerCase();
+        let shown = 0;
+        list.querySelectorAll(".batch-card").forEach(card => {
+            const match = card.textContent.toLocaleLowerCase().includes(query);
+            card.hidden = !match;
+            if (match) shown++;
+        });
+        const total = list.querySelectorAll(".batch-card").length;
+        count.textContent = shown + (shown === 1 ? " Batch" : " Batches");
+        let noResults = document.getElementById("home-search-no-results");
+        if (!noResults) {
+            noResults = document.createElement("div");
+            noResults.id = "home-search-no-results";
+            noResults.className = "empty-state";
+            noResults.style.gridColumn = "1 / -1";
+            noResults.textContent = "Koi matching batch nahi mila. Search ka naam badal kar try karein.";
+        }
+        if (query && shown === 0 && total > 0) list.append(noResults);
+        else if (noResults.parentNode) noResults.remove();
+    });
 
     const showMessage = (title, detail) => {
         list.replaceChildren();
