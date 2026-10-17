@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102b55">
+  <title>My Batches | EXAM JUNCTION</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#f5f7fb;color:#17243a;font-family:Arial,sans-serif}
+    a{text-decoration:none;color:inherit}
+    .app{max-width:760px;min-height:100vh;margin:auto;padding-bottom:90px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:#fff;border-bottom:1px solid #e6ebf2}
+    .brand{font-size:18px;font-weight:800;color:#173b73}
+    .back{padding:9px 12px;border:1px solid #e6ebf2;border-radius:10px;background:#fff;color:#173b73}
+    main{padding:22px 17px}
+    .eyebrow{font-size:11px;letter-spacing:1.4px;font-weight:800;color:#376bc0}
+    h1{margin:8px 0;color:#10274c;font-size:28px}
+    .subtitle{font-size:14px;line-height:1.65;color:#718096}
+    .list{display:grid;gap:14px;margin-top:20px}
+    .card{overflow:hidden;background:#fff;border:1px solid #e6ebf2;border-radius:16px;box-shadow:0 4px 14px rgba(16,39,76,.04)}
+    .cover img{display:block;width:100%;height:auto;max-height:none;object-fit:contain;background:#f2f6fc}
+    .body{padding:16px}
+    .tag{display:inline-block;padding:5px 8px;border-radius:7px;background:#e0f2e8;color:#176a46;font-size:10px;font-weight:800}
+    h2{margin:10px 0 5px;color:#10274c;font-size:19px}
+    .teacher,.desc{margin:7px 0;color:#64748b;font-size:13px;line-height:1.6}
+    .open{display:inline-flex;margin-top:10px;padding:11px 14px;border-radius:10px;background:#173b73;color:white;font-size:12px;font-weight:800}
+    .empty,.message{padding:24px 18px;border:1px dashed #cbd6e5;border-radius:15px;background:#fff;text-align:center;color:#64748b;font-size:13px;line-height:1.7}
+    .empty h2{font-size:17px}
+    .empty .open{margin-top:8px}
+    nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));width:100%;max-width:760px;padding:9px 4px calc(9px + env(safe-area-inset-bottom));background:rgba(255,255,255,.98);border-top:1px solid #e6ebf2}
+    nav a{text-align:center;font-size:10px;font-weight:700;color:#8793a5;padding:7px 0}
+    nav a.active{color:#173b73}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a class="back" href="profile.html" aria-label="Back to profile">← Back</a>
+    <a class="brand" href="index.html">EXAM JUNCTION</a>
+  </header>
+  <main>
+    <div class="eyebrow">YOUR LEARNING</div>
+    <h1>My Batches</h1>
+    <p class="subtitle">Yahan sirf aapke approved aur access-granted batches dikhte hain.</p>
+    <div id="status" class="message" role="status" aria-live="polite">Aapke batches load ho rahe hain…</div>
+    <section id="batch-list" class="list" aria-live="polite"></section>
+  </main>
+  <nav aria-label="Main navigation">
+    <a href="index.html">⌂<br>Home</a>
+    <a href="batch.html">▤<br>Batch</a>
+    <a href="books.html">▣<br>Books</a>
+    <a href="leaderboard.html">♛<br>Leaderboard</a>
+    <a class="active" href="profile.html">♙<br>My</a>
+  </nav>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/common.js"></script>
+<script>
+(async function(){
+  const status=document.getElementById("status");
+  const list=document.getElementById("batch-list");
+  function showError(message){status.hidden=false;status.textContent=message;}
+  function showEmpty(){
+    status.hidden=true;
+    list.innerHTML='<div class="empty"><h2>Abhi koi approved batch nahi hai</h2><p>Jis batch ka access approve ho chuka hai, woh yahan dikhai dega.</p><a class="open" href="batch.html">Explore Batches</a></div>';
+  }
+  try{
+    if(!window.EXAM_JUNCTION||!(await window.EXAM_JUNCTION.init()))throw new Error("connection");
+    const client=window.EXAM_JUNCTION.supabase;
+    const {data:authData,error:authError}=await client.auth.getUser();
+    if(authError)throw authError;
+    if(!authData.user){window.location.replace("login.html");return;}
+    const {data:grants,error:grantError}=await client.from("batch_access").select("batch_id").eq("student_id",authData.user.id);
+    if(grantError)throw grantError;
+    const ids=[...new Set((grants||[]).map(row=>row.batch_id).filter(Boolean))];
+    if(!ids.length){showEmpty();return;}
+    const {data:batches,error:batchError}=await client.from("batches")
+      .select("id,title,description,show_description,platform_name,access_type,is_published,thumbnail_url")
+      .in("id",ids).eq("is_published",true).order("title");
+    if(batchError)throw batchError;
+    list.replaceChildren();
+    const approved=(batches||[]).filter(batch=>batch.access_type==="restricted");
+    if(!approved.length){showEmpty();return;}
+    approved.forEach(batch=>{
+      const card=document.createElement("article");card.className="card";
+      if(batch.thumbnail_url){
+        const cover=document.createElement("div");cover.className="cover";
+        const img=document.createElement("img");img.src=batch.thumbnail_url;img.alt=(batch.title||"Batch")+" thumbnail";img.loading="lazy";img.onerror=()=>cover.remove();cover.append(img);card.append(cover);
+      }
+      const body=document.createElement("div");body.className="body";
+      const tag=document.createElement("span");tag.className="tag";tag.textContent="ACCESS APPROVED";
+      const title=document.createElement("h2");title.textContent=batch.title||"Batch";
+      body.append(tag,title);
+      if(batch.platform_name){const teacher=document.createElement("p");teacher.className="teacher";teacher.textContent="Teacher: "+batch.platform_name;body.append(teacher);}
+      if(batch.show_description===true&&batch.description){const desc=document.createElement("p");desc.className="desc";desc.textContent=batch.description;body.append(desc);}
+      const open=document.createElement("a");open.className="open";open.href="batch-detail.html?id="+encodeURIComponent(batch.id);open.textContent="Open My Batch →";body.append(open);
+      card.append(body);list.append(card);
+    });
+    if(!list.childElementCount)showEmpty();else status.hidden=true;
+  }catch(error){
+    console.error("My Batches load failed",error);
+    showError("My Batches load nahi ho paaye. Internet check karke Retry karein.");
+    const retry=document.createElement("button");retry.className="open";retry.textContent="Retry";retry.onclick=()=>window.location.reload();status.append(" ",retry);
+  }
+})();
+</script>
+</body>
+</html>
