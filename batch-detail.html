@@ -139,6 +139,17 @@ if(chapterSearch){chapterSearch.type="search";chapterSearch.className="simple-se
 const chapterResult=await db.from("chapters").select("id,title,position,created_at,is_published").eq("batch_id",id).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true});
 if(chapterResult.error){const p=document.createElement("p");p.className="notice";p.textContent="Chapters load nahi ho paaye. Dobara refresh karein.";chaptersRoot.append(p);console.error(chapterResult.error);return}
 const chapters=chapterResult.data||[];
+// Show actual published counts only after the batch access check above has succeeded.
+if(batch.show_content_counts===true){
+ let lectureCount=0;
+ if(chapters.length){
+  const {data:countRows,error:countError}=await db.from("lectures").select("id").in("chapter_id",chapters.map(ch=>ch.id)).eq("is_published",true);
+  if(!countError)lectureCount=(countRows||[]).length;
+ }
+ const countText=document.createElement("span");countText.className="batch-content-counts";
+ countText.textContent=" · "+chapters.length+" Chapters · "+lectureCount+" Lectures";
+ $("meta").append(countText);
+}
 if(!chapters.length){const p=document.createElement("p");p.className="notice";p.textContent="Abhi published chapters available nahi hain.";chaptersRoot.append(p);return}
 const allLectures=[];
 for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
