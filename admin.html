@@ -1478,9 +1478,22 @@ async function loadBatchRequests(){
               if(existing.error)throw existing.error;
               if(!existing.data){const grant=await db.from("batch_access").insert({student_id:request.student_id,batch_id:request.batch_id});if(grant.error)throw grant.error;}
             }
-            const update=await db.from("batch_join_requests").update({status:approved?"approved":"rejected"}).eq("id",request.id).eq("status","pending");
+            const update=await db.from("batch_join_requests").update({status:approved?"approved":"rejected"}).eq("id",request.id).eq("status","pending").select("id").maybeSingle();
             if(update.error)throw update.error;
-            message(approved?"Request approved; batch access granted.":"Batch request rejected.");
+            if(!update.data?.id)throw new Error("Request already processed or no longer pending.");
+            const notification=await db.from("notifications").insert({
+              title:approved?"Batch Access Approved":"Batch Access Request Update",
+              message:approved?"Aapki "+(batch?.title||"selected batch")+" batch request approve ho gayi hai. Ab aap batch ka content dekh sakte hain.":"Aapki "+(batch?.title||"selected batch")+" batch access request approve nahi hui. Agar zaroori ho to admin se sampark karein.",
+              target_url:"batch-detail.html?id="+encodeURIComponent(request.batch_id),
+              recipient_id:request.student_id,
+              batch_id:request.batch_id,
+              is_important:true,
+              is_published:true,
+              publication_status:"published",
+              published_at:new Date().toISOString()
+            });
+            if(notification.error)console.error("Request status notification could not be saved:",notification.error);
+            message(approved?"Request approved; batch access granted."+(notification.error?" Student notification save nahi hui.":" Student ko notification bhej di gayi."):"Batch request rejected."+(notification.error?" Student notification save nahi hui.":" Student ko notification bhej di gayi."));
             await loadBatchRequests();await loadBatchAccess();
           }catch(error){console.error("Batch request action failed:",error);message("Request update nahi hui: "+(error?.message||"permission/connection check karein."),true);approve.disabled=false;reject.disabled=false;}
         }
