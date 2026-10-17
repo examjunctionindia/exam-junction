@@ -356,8 +356,12 @@ button:disabled{filter:none;transform:none}
         <label for="bookDescription">Description</label>
         <textarea id="bookDescription" maxlength="5000"></textarea>
 
-        <label for="bookUrl">PDF / Google Drive Link *</label>
-        <input id="bookUrl" type="url" required placeholder="https://...">
+        <label for="bookUrl">PDF / Google Drive Link (optional if uploading PDF)</label>
+        <input id="bookUrl" type="url" placeholder="https://...">
+        <label for="bookPdfFile">Upload PDF from phone (private storage)</label>
+        <input id="bookPdfFile" type="file" accept="application/pdf,.pdf" style="display:block;width:100%;margin:8px 0;padding:12px;background:#f7faff;border:1px dashed #9bb6dc;border-radius:12px">
+        <button id="bookPdfUpload" class="secondary" type="button">⬆️ Upload PDF to Free Private Storage</button>
+        <p id="bookPdfUploadStatus" class="small" aria-live="polite">PDF upload ke baad Save Book dabayein. Maximum 50 MB per file; free storage quota applies.</p>
 
         <label for="bookDownloadUrl">Download PDF URL (optional)</label>
         <input id="bookDownloadUrl" type="url" placeholder="Google Drive PDF download link">
@@ -366,8 +370,9 @@ button:disabled{filter:none;transform:none}
         <label for="bookOriginalLinkAllowed">Original Link fallback permission</label>
         <select id="bookOriginalLinkAllowed"><option value="false">OFF for restricted books</option><option value="true">ON — only approved readers can see it</option></select>
 
-        <label for="bookStorageUrl">Storage / Source Link</label>
-        <input id="bookStorageUrl" type="url" placeholder="Blank = use PDF link">
+        <label for="bookStorageUrl">Private storage path / alternate source</label>
+        <input id="bookStorageUrl" type="text" placeholder="Auto-filled by private PDF upload">
+        <input id="bookStorageBucket" type="hidden" value="">
 
         <label for="bookCoverUrl">Cover Image URL (optional)</label>
         <input id="bookCoverUrl" type="url" placeholder="https://...">
@@ -572,8 +577,12 @@ button:disabled{filter:none;transform:none}
         <input id="notesId" type="hidden">
         <label for="notesChapter">Select Chapter *</label><select id="notesChapter" required><option value="">Select Chapter</option></select><label for="notesLecture">Notes location *</label><select id="notesLecture"><option value="">Chapter Notes (under chapter)</option></select><label for="notesEnabled">Do you want to add notes?</label><select id="notesEnabled" required><option value="yes">Yes, add notes</option><option value="no">No notes for this chapter/lecture</option></select>
         <div id="notesContentFields"><label for="notesTitle">Notes Title *</label><input id="notesTitle" maxlength="200" placeholder="Percentage PDF Notes">
-        <label for="notesSource">Notes Source *</label><select id="notesSource" required><option value="drive">Google Drive Link</option><option value="external">External Website PDF Link</option><option value="storage" disabled>Supabase Storage (not configured yet)</option></select>
-        <label for="notesUrl">PDF / Notes URL *</label><input id="notesUrl" type="url" required placeholder="https://...">
+        <label for="notesSource">Notes Source *</label><select id="notesSource" required><option value="drive">Google Drive Link</option><option value="external">External Website PDF Link</option><option value="storage">Upload from phone to private storage</option></select>
+        <label for="notesUrl">PDF / Notes URL (not needed for private upload)</label><input id="notesUrl" type="url" placeholder="https://...">
+        <input id="notesStoragePath" type="hidden" value="">
+        <label for="notesPdfFile">Upload PDF from phone (private storage)</label><input id="notesPdfFile" type="file" accept="application/pdf,.pdf" style="display:block;width:100%;margin:8px 0;padding:12px;background:#f7faff;border:1px dashed #9bb6dc;border-radius:12px">
+        <button id="notesPdfUpload" class="secondary" type="button">⬆️ Upload Notes PDF</button>
+        <p id="notesPdfUploadStatus" class="small" aria-live="polite">PDF upload ke baad Save Notes dabayein. Maximum 50 MB per file; free storage quota applies.</p>
         <label for="notesDownloadUrl">Direct Download URL (optional)</label><input id="notesDownloadUrl" type="url" placeholder="https://...">
         <label for="notesDownloadMode">Download Permission</label><select id="notesDownloadMode"><option value="inherit">Use batch default</option><option value="allow">Allow for these notes</option><option value="deny">Disable for these notes</option></select>
         <label for="notesOriginalLinkAllowed">Original Link Permission</label><select id="notesOriginalLinkAllowed"><option value="false">OFF — restricted notes stay inside viewer</option><option value="true">ON — batch permission also required for restricted notes</option></select>
