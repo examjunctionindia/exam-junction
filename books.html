@@ -64,17 +64,18 @@ function render(){
   const btn=document.createElement("button");btn.className="btn";
   if(b.access_type==="restricted"&&!b.isAccessible){
    const requestStatus=bookRequests.get(b.id);
+   const reason=document.createElement("textarea");reason.rows=2;reason.maxLength=300;reason.placeholder="Request reason (optional)";reason.setAttribute("aria-label","Request reason for "+(b.title||"book"));reason.style.cssText="display:block;width:100%;margin-top:10px;padding:10px;border:1px solid #dfe6f0;border-radius:9px;font:inherit;font-size:13px;"+(currentUser&&requestStatus!=="pending"?"":"display:none;");
    btn.textContent=!currentUser?"🔐 Login to Access":requestStatus==="pending"?"⏳ Request Pending":requestStatus==="rejected"?"🔁 Request Access Again":"📨 Request Access";
    btn.disabled=!!currentUser&&requestStatus==="pending";
-   btn.onclick=async()=>{if(!currentUser){window.location.href="login.html?next="+encodeURIComponent("books.html");return;}if(requestStatus==="pending")return;
+   btn.onclick=async()=>{if(!currentUser){window.location.href="login.html?next="+encodeURIComponent("books.html");return;}if(bookRequests.get(b.id)==="pending")return;
     btn.disabled=true;btn.textContent="Sending...";
-    try{const payload={student_id:currentUser.id,book_id:b.id,status:"pending"};const {error}=await db.from("book_access_requests").upsert(payload,{onConflict:"student_id,book_id"});if(error)throw error;bookRequests.set(b.id,"pending");btn.textContent="⏳ Request Pending";btn.disabled=true;}
+    try{const payload={student_id:currentUser.id,book_id:b.id,status:"pending",reason:String(reason.value||"").trim().slice(0,300)||null,updated_at:new Date().toISOString()};const {error}=await db.from("book_access_requests").upsert(payload,{onConflict:"student_id,book_id"});if(error)throw error;bookRequests.set(b.id,"pending");reason.style.display="none";btn.textContent="⏳ Request Pending";btn.disabled=true;}
     catch(e){console.error("Book access request failed",e);btn.disabled=false;btn.textContent="📨 Request Access";alert("Request nahi bheji ja saki. Dobara try karein.");}
    };
   }else{btn.textContent="📖 View PDF";btn.onclick=()=>openBook(b);}
   const actions=document.createElement("div");actions.className="reader-actions";actions.append(btn);
   if(b.isAccessible&&b.download_allowed&&(b.download_url||b.storage_bucket==="ej-private-content")){const dl=document.createElement("button");dl.className="btn";dl.textContent="⬇ Download";dl.onclick=()=>downloadBook(b);actions.append(dl)}
-  card.append(badge,h);if(b.author||b.description)card.append(p);card.append(actions);list.append(card);
+  card.append(badge,h);if(b.author||b.description)card.append(p);if(b.access_type==="restricted"&&!b.isAccessible&&currentUser){card.append(reason)}card.append(actions);list.append(card);
  });
 }
 async function openBook(book){
