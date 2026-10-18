@@ -148,7 +148,14 @@ button:disabled{filter:none;transform:none}
 .list-search{margin:0 0 12px;background:#fbfdff}
 .list-search:focus{outline:3px solid rgba(37,99,184,.18);border-color:#2563b8}
 @media(max-width:600px){#managementHome{padding:17px 14px}.management-nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.management-nav a{min-height:78px;padding:12px 7px;font-size:12px}}
-@media(min-width:900px){#managementHome{max-width:920px;margin:0 auto;width:100%}.management-nav{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.management-subnav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px}
+.management-subnav-card{min-height:76px;text-align:left;background:#fff;color:#173b73;border:1px solid #dce6f4;border-radius:14px;padding:16px;box-shadow:0 3px 10px rgba(16,43,85,.04);line-height:1.4}
+.management-subnav-card:hover{background:#f7faff;border-color:#9dbce8}
+.management-subnav-card:focus-visible{outline:3px solid rgba(37,99,184,.35);outline-offset:3px}
+#managementCategoryHome{padding:clamp(18px,3vw,30px);background:linear-gradient(145deg,#fff 0%,#f8fbff 100%);border-color:#d8e5f6}
+#managementCategoryTitle{color:#102b55;margin:16px 0 8px}
+@media(max-width:480px){.management-subnav{grid-template-columns:1fr}}
+@media(min-width:900px){#managementHome,#managementCategoryHome{max-width:920px;margin:0 auto;width:100%}.management-nav{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 </style>
 </head>
@@ -238,29 +245,23 @@ button:disabled{filter:none;transform:none}
     <section class="card" id="managementHome" aria-labelledby="managementNavHeading">
       <h2 id="managementNavHeading">🧭 Management Shortcuts</h2>
       <p class="management-help">Daily workflow: pehle batch banayein → uske chapters aur lectures add karein → books/notes publish karein → zaroorat par selected students ko access dein → reports aur notifications check karein. Draft items publish hone tak student website par nahi dikhte.</p>
-      <nav class="management-nav" aria-label="Admin management sections">
-        <a href="#dashboardOverview">📊 Dashboard</a>
-        <a href="#batchManager">➕ Batches</a>
-        <a href="#batchSearchSettingsManager">🔎 Search Settings</a>
-        <a href="#storageManager">🗑️ Storage Management</a>
-        <a href="#bookManager">📚 Books / Notes</a>
-        <a href="#studentManager">👥 Students & Activity</a>
-        <a href="#bannerManager">🖼️ Banners</a>
-        <a href="#chapterManager">📖 Chapters</a>
-        <a href="#chapterNotesManager">📄 Chapter Notes</a>
-        <a href="#lectureNotesManager">📝 Lecture Notes</a>
-        <a href="#lectureManager">▶️ Lectures</a>
-        <a href="#batchAccessManager">🔐 Batch Access</a>
-        <a href="#bookAccessManager">🔐 Book Access</a>
-        <a href="#reportsManager">🛟 Student Reports</a>
-        <a href="#notificationManager">🔔 Notifications</a>
-        <a href="#existingBatches">📋 Existing Batches</a>
-        <a href="#existingBooks">📋 Existing Books</a>
-        <a href="#existingNotifications">🔔 Existing Notifications</a>
-        <a href="#existingChapters">📖 Existing Chapters</a>
-        <a href="#existingLectures">▶️ Existing Lectures</a>
-        <a href="#requestManager">📨 Batch Requests</a>
+      <nav class="management-nav" aria-label="Admin management categories">
+        <a href="#category-dashboard" data-management-category="dashboard">📊 Dashboard</a>
+        <a href="#category-batches" data-management-category="batches">➕ Batches</a>
+        <a href="#category-books" data-management-category="books">📚 Books / Notes</a>
+        <a href="#category-chapters" data-management-category="chapters">📖 Chapters</a>
+        <a href="#category-lectures" data-management-category="lectures">▶️ Lectures</a>
+        <a href="#category-notifications" data-management-category="notifications">🔔 Notifications</a>
+        <a href="#category-home" data-management-category="home">🖼️ Home</a>
+        <a href="#category-students" data-management-category="students">👥 Students</a>
+        <a href="#category-settings" data-management-category="settings">⚙️ Settings</a>
       </nav>
+      <section id="managementCategoryHome" class="hidden" aria-live="polite">
+        <button type="button" class="secondary management-home-button" id="managementCategoryBack">← Back to Main Menu</button>
+        <h2 id="managementCategoryTitle"></h2>
+        <p class="small" id="managementCategoryDescription"></p>
+        <div class="management-subnav" id="managementSubnav"></div>
+      </section>
     </section>
 
     <!-- STUDENT DIRECTORY AND ACTIVITY (READ-ONLY) -->
@@ -3223,56 +3224,121 @@ $("logoutButton").addEventListener("click",async function(){
 });
 
 
-/* Management dashboard: show the selected section only; keep the management home uncluttered. */
+/* Organized admin navigation: categories contain the existing feature pages.
+   Existing feature sections and handlers remain in place; only their navigation is grouped. */
 const managementNav = document.querySelector(".management-nav");
 const managementHome = $("managementHome");
-const managementDashboard = $("dashboard");
+const managementCategoryHome = $("managementCategoryHome");
+const managementSubnav = $("managementSubnav");
+const managementCategoryTitle = $("managementCategoryTitle");
+const managementCategoryDescription = $("managementCategoryDescription");
+const managementCategoryBack = $("managementCategoryBack");
 const managementSectionIds = [
-  "dashboardOverview","batchManager","bookManager","bookAccessManager","batchAccessManager","studentManager","bannerManager",
-  "reportsManager","notificationManager","chapterManager","chapterNotesManager","lectureNotesManager","lectureManager","requestManager",
-  "existingBatches","existingBooks","existingNotifications","existingChapters","existingLectures","storageManager"
+  "dashboardOverview","adminErrorTracker","batchManager","batchSearchSettingsManager","bookManager","bookAccessManager",
+  "batchAccessManager","studentManager","bannerManager","reportsManager","notificationManager","chapterManager",
+  "chapterNotesManager","lectureNotesManager","lectureManager","requestManager","existingBatches","existingBooks",
+  "existingNotifications","expiredImportantNotifications","existingChapters","existingLectures","storageManager"
 ];
+const managementCategories = {
+  dashboard: {title:"📊 Dashboard",description:"Dashboard overview aur admin-only diagnostics.",items:[
+    ["dashboardOverview","📊 Dashboard Overview"],["adminErrorTracker","🧰 Error Tracker — Admin Only"]
+  ]},
+  batches: {title:"➕ Batches",description:"Batch management se sambandhit existing features.",items:[
+    ["batchManager","➕ Add / Manage Batches"],["existingBatches","📋 Existing Batches"],["batchAccessManager","🔐 Batch Access"],
+    ["requestManager","📨 Batch Requests"]
+  ]},
+  books: {title:"📚 Books / Notes",description:"Books aur book access ke existing features.",items:[
+    ["bookManager","📚 Books / Notes"],["existingBooks","📋 Existing Books"],["bookAccessManager","🔐 Book Access"]
+  ]},
+  chapters: {title:"📖 Chapters",description:"Chapter se sambandhit existing pages; har option apna purana function kholega.",items:[
+    ["chapterManager","📖 Chapters"],["chapterNotesManager","📄 Chapter Notes"],["existingChapters","📚 Existing Chapters"]
+  ]},
+  lectures: {title:"▶️ Lectures",description:"Lectures aur lecture notes ke existing features.",items:[
+    ["lectureManager","▶️ Lectures"],["lectureNotesManager","📝 Lecture Notes"],["existingLectures","📋 Existing Lectures"]
+  ]},
+  notifications: {title:"🔔 Notifications",description:"Notification create/manage aur existing notifications.",items:[
+    ["notificationManager","🔔 Notifications"],["existingNotifications","📋 Existing Notifications"],["expiredImportantNotifications","🕒 Expired Important Notifications"]
+  ]},
+  home: {title:"🖼️ Home",description:"Home page par dikhne wali existing content settings.",items:[
+    ["bannerManager","🖼️ Banners"]
+  ]},
+  students: {title:"👥 Students",description:"Student activity aur reports ke existing features.",items:[
+    ["studentManager","👥 Students & Activity"],["reportsManager","🛟 Student Reports"]
+  ]},
+  settings: {title:"⚙️ Settings",description:"Search aur storage ke existing settings pages.",items:[
+    ["batchSearchSettingsManager","🔎 Batch Search Settings"],["storageManager","🗑️ Storage Management"]
+  ]}
+};
+let activeManagementCategory = null;
+function scrollManagementTop() {
+  window.scrollTo({top:0,behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
+}
 function setManagementVisibility(activeId) {
   managementSectionIds.forEach(function(id) {
     const section = $(id);
     if (section) section.classList.toggle("management-view-hidden", id !== activeId);
   });
   if (managementHome) managementHome.classList.toggle("management-view-hidden", activeId !== "managementHome");
+  if (managementCategoryHome) managementCategoryHome.classList.toggle("management-view-hidden", activeId !== "managementCategoryHome");
   const account = $("adminAccount");
   if (account) account.classList.toggle("management-view-hidden", activeId !== "dashboardOverview");
+}
+function showManagementHome() {
+  activeManagementCategory = null;
+  setManagementVisibility("managementHome");
+  if (managementNav) managementNav.querySelectorAll("a").forEach(function(link) { link.removeAttribute("aria-current"); });
+  scrollManagementTop();
+}
+function showManagementCategory(key, link) {
+  const category = managementCategories[key];
+  if (!category || !managementCategoryHome || !managementSubnav) return;
+  activeManagementCategory = key;
+  setManagementVisibility("managementCategoryHome");
+  managementCategoryTitle.textContent = category.title;
+  managementCategoryDescription.textContent = category.description;
+  managementSubnav.replaceChildren();
+  category.items.forEach(function(item) {
+    const target = $(item[0]);
+    if (!target) return;
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "management-subnav-card";
+    card.textContent = item[1];
+    card.addEventListener("click", function() { showManagementSection(item[0]); });
+    managementSubnav.appendChild(card);
+  });
+  if (managementNav) managementNav.querySelectorAll("a").forEach(function(item) { item.removeAttribute("aria-current"); });
+  if (link) link.setAttribute("aria-current","page");
+  scrollManagementTop();
 }
 function addManagementBackButton(section) {
   if (!section || section.querySelector(".management-home-button")) return;
   const back = document.createElement("button");
   back.type = "button";
   back.className = "secondary management-home-button";
-  back.textContent = "← Back to Management";
-  back.addEventListener("click", showManagementHome);
+  back.textContent = "← Back to " + ((managementCategories[activeManagementCategory] || {}).title || "Management");
+  back.addEventListener("click", function() {
+    if (activeManagementCategory) showManagementCategory(activeManagementCategory,
+      managementNav && managementNav.querySelector('[data-management-category="' + activeManagementCategory + '"]'));
+    else showManagementHome();
+  });
   section.insertBefore(back, section.firstChild);
 }
-function showManagementHome() {
-  setManagementVisibility("managementHome");
-  if (managementNav) managementNav.querySelectorAll("a").forEach(function(link) { link.removeAttribute("aria-current"); });
-  window.scrollTo({top:0,behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
-}
-function showManagementSection(id, link) {
+function showManagementSection(id) {
   if (!managementSectionIds.includes(id)) return;
   setManagementVisibility(id);
-  if (managementNav) managementNav.querySelectorAll("a").forEach(function(item) { item.removeAttribute("aria-current"); });
-  if (link) link.setAttribute("aria-current","page");
   addManagementBackButton($(id));
-  window.scrollTo({top:0,behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
+  scrollManagementTop();
 }
 if (managementNav) {
   managementNav.addEventListener("click",function(event) {
-    const link = event.target.closest("a");
+    const link = event.target.closest("a[data-management-category]");
     if (!link) return;
-    const id = (link.getAttribute("href") || "").slice(1);
-    if (!managementSectionIds.includes(id)) return;
     event.preventDefault();
-    showManagementSection(id,link);
+    showManagementCategory(link.getAttribute("data-management-category"),link);
   });
 }
+if (managementCategoryBack) managementCategoryBack.addEventListener("click", showManagementHome);
 /* Start with the Management landing page only. Dashboard is a separate workspace. */
 showManagementHome();
 
