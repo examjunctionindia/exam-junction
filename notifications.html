@@ -303,6 +303,10 @@
       overflow-wrap: anywhere;
     }
 
+    .notification-group { display:grid; gap:12px; margin-bottom:22px; }
+    .notification-group-title { margin:0 0 2px; color:var(--navy); font-size:17px; }
+    .notification-group .notification-list { display:grid; gap:12px; }
+
     /* Loading, empty and error states */
 
     .state-box {
@@ -609,76 +613,114 @@
       return "📢";
     }
 
-    function renderNotifications(items) {
-      notificationList.innerHTML = "";
+    function createNotificationCard(item) {
+      const title = item.title || item.heading || item.name || "Announcement";
+      const message = item.message || item.body || item.description || item.content || "";
+      const date = formatDate(item.published_at || item.created_at || item.date);
+      const rawLink = item.target_url || item.link_url || item.url || item.link || "";
 
-      if (!Array.isArray(items) || items.length === 0) {
+      const card = document.createElement("article");
+      card.className = "notification-card";
+
+      const icon = document.createElement("div");
+      icon.className = "notification-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = getNotificationIcon(item);
+
+      const content = document.createElement("div");
+      content.className = "notification-content";
+      const top = document.createElement("div");
+      top.className = "notification-top";
+      const heading = document.createElement("h3");
+      heading.className = "notification-title";
+      heading.textContent = title;
+      top.appendChild(heading);
+      content.appendChild(top);
+
+      const messageEl = document.createElement("p");
+      messageEl.className = "notification-message";
+      messageEl.textContent = message;
+      content.appendChild(messageEl);
+
+      if (date) {
+        const time = document.createElement("time");
+        time.className = "notification-date";
+        time.textContent = date;
+        content.appendChild(time);
+      }
+
+      if (rawLink) {
+        try {
+          const url = new URL(rawLink, window.location.href);
+          if (url.protocol === "https:" || url.origin === window.location.origin) {
+            const link = document.createElement("a");
+            link.className = "notification-link";
+            link.href = url.href;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.textContent = "Open details ↗";
+            content.appendChild(link);
+          }
+        } catch (_) {}
+      }
+
+      card.append(icon, content);
+      return card;
+    }
+
+    function renderNotificationGroup(title, items) {
+      if (!items.length) return false;
+      const section = document.createElement("section");
+      section.className = "notification-group";
+      const heading = document.createElement("h2");
+      heading.className = "notification-group-title";
+      heading.textContent = title;
+      section.appendChild(heading);
+
+      const list = document.createElement("div");
+      list.className = "notification-list";
+      items.forEach(item => list.appendChild(createNotificationCard(item)));
+      section.appendChild(list);
+      notificationList.appendChild(section);
+      return true;
+    }
+
+    function renderNotifications(items, user, batchId) {
+      notificationList.innerHTML = "";
+      const now = Date.now();
+      const visible = (Array.isArray(items) ? items : []).filter(item => {
+        if (item.expires_at) {
+          const expiresAt = Date.parse(item.expires_at);
+          if (Number.isFinite(expiresAt) && expiresAt <= now) return false;
+        }
+        if (batchId && String(item.batch_id || "") !== batchId) return false;
+        if (item.recipient_id && item.recipient_id !== user?.id) return false;
+        return true;
+      });
+
+      const important = visible.filter(item =>
+        item.is_important === true || (!!user && item.recipient_id === user.id)
+      );
+      const regularBatch = visible.filter(item =>
+        !!item.batch_id && item.is_important !== true && !item.recipient_id
+      );
+
+      const hasImportant = renderNotificationGroup("Student Approval / Important Messages", important);
+      const hasRegular = renderNotificationGroup("Regular Batch Notifications", regularBatch);
+
+      if (!hasImportant && !hasRegular) {
         showState("empty");
         return;
       }
-
-      const fragment = document.createDocumentFragment();
-
-      items.forEach(function (item) {
-        const title = item.title || item.heading || item.name || "Announcement";
-
-        const message =
-          item.message ||
-          item.body ||
-          item.description ||
-          item.content ||
-          "";
-
-        const date = formatDate(
-          item.created_at || item.published_at || item.date
-        );
-
-        const link = item.target_url || item.link_url || item.url || item.link || "";
-
-        const card = document.createElement("article");
-        card.className = "notification-card";
-
-        card.innerHTML = `
-          <div class="notification-icon" aria-hidden="true">
-            ${getNotificationIcon(item)}
-          </div>
-
-          <div class="notification-content">
-            <div class="notification-top">
-              <h3 class="notification-title">
-                ${escapeHTML(title)}
-              </h3>
-            </div>
-
-            <p class="notification-message">${escapeHTML(message)}</p>
-
-            ${date ? `
-              <time class="notification-date">
-                ${escapeHTML(date)}
-              </time>
-            ` : ""}
-
-            ${link ? `
-              <a
-                class="notification-link"
-                href="${escapeHTML(link)}"
-                target="_blank"
-                rel="noopener noreferrer"
-              >Open details ↗</a>
-            ` : ""}
-          </div>
-        `;
-
-        fragment.appendChild(card);
-      });
-
-      notificationList.appendChild(fragment);
       showState("list");
     }
 
     async function loadNotifications() {
       refreshButton.disabled = true;
       showState("loading");
+      const batchId = new URLSearchParams(window.location.search).get("batch_id");
+      const pageHeading = document.querySelector(".section-heading h2");
+      if (pageHeading) pageHeading.textContent = batchId ? "Batch Notifications" : "Notifications";
 
       try {
         if (!window.EXAM_JUNCTION ||
@@ -688,9 +730,11 @@
           );
         }
 
-        const items = await window.EXAM_JUNCTION.getNotifications();
-
-        renderNotifications(items);
+        const [items, user] = await Promise.all([
+          window.EXAM_JUNCTION.getNotifications(),
+          window.EXAM_JUNCTION.getCurrentUser()
+        ]);
+        renderNotifications(items, user, batchId);
       } catch (error) {
         console.error("Notifications load error:", error);
 
