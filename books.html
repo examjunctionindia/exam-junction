@@ -35,11 +35,19 @@ async function resolveFileUrl(book,{download=false,original=false}={}){
 }
 const canOriginal=book=>book.access_type!=="restricted"||book.original_link_allowed===true;
 async function downloadBook(book){
+ if(book.access_type==="restricted"&&!book.isAccessible){alert("Is book ka access approve nahi hua hai.");return;}
  try{const url=await resolveFileUrl(book,{download:true});window.open(url,"_blank","noopener,noreferrer")}catch(e){alert("Download available nahi hai. Admin se contact karein.");console.error("Book download error",e)}
 }
+let currentUser=null;
+try{const auth=await db.auth.getUser();currentUser=auth?.data?.user||null;}catch(_){}
 try{
- const {data,error}=await db.from("books").select("id,title,author,description,cover_path,storage_path,storage_bucket,external_url,access_type,download_url,download_allowed,original_link_allowed,publication_status,created_at").eq("is_published",true).order("created_at",{ascending:false}).limit(100);
- if(error)throw error;books=data||[];$("status").classList.toggle("hidden",books.length>0);if(!books.length)$("status").textContent="Abhi koi aisi published book nahi hai jiska aapko access ho.";render();
+ const {data:catalog,error:catalogError}=await db.from("public_book_catalog").select("id,title,author,description,access_type,created_at").order("created_at",{ascending:false}).limit(100);
+ if(catalogError)throw catalogError;
+ const {data:allowed,error:allowedError}=await db.from("books").select("id,title,author,description,cover_path,storage_path,storage_bucket,external_url,access_type,download_url,download_allowed,original_link_allowed,publication_status,created_at").eq("is_published",true).order("created_at",{ascending:false}).limit(100);
+ if(allowedError)throw allowedError;
+ const allowedById=new Map((allowed||[]).map(b=>[b.id,b]));
+ books=(catalog||[]).map(meta=>({...meta,...(allowedById.get(meta.id)||{}),isAccessible:allowedById.has(meta.id)}));
+ $("status").classList.toggle("hidden",books.length>0);if(!books.length)$("status").textContent="Abhi koi published book nahi hai.";render();
 }catch(e){console.error("Books load error",e);$("status").textContent="Books load nahi hui. Internet ya database policy check karein."}
 function render(){
  const q=$("search").value.trim().toLowerCase(),list=$("list");list.replaceChildren();
@@ -51,9 +59,13 @@ function render(){
   const badge=document.createElement("span");badge.className="badge "+(b.access_type==="restricted"?"restricted":"");badge.textContent=b.access_type==="restricted"?"🔒 SELECTED STUDENTS":"FREE";
   const h=document.createElement("h2");h.textContent=b.title||"Study Book";
   const p=document.createElement("p");p.className="muted";p.textContent=(b.author?"Author: "+b.author+" • ":"")+(b.description||"");
-  const btn=document.createElement("button");btn.className="btn";btn.textContent="📖 View PDF";btn.onclick=()=>openBook(b);
+  const btn=document.createElement("button");btn.className="btn";
+  if(b.access_type==="restricted"&&!b.isAccessible){
+   btn.textContent=currentUser?"🔒 Access Not Granted":"🔐 Login to Access";
+   btn.onclick=()=>{if(!currentUser)window.location.href="login.html?next="+encodeURIComponent("books.html");else alert("Is Restricted Book ka access abhi approve nahi hua hai. Access ke liye admin se sampark karein.");};
+  }else{btn.textContent="📖 View PDF";btn.onclick=()=>openBook(b);}
   const actions=document.createElement("div");actions.className="reader-actions";actions.append(btn);
-  if(b.download_allowed&&(b.download_url||b.storage_bucket==="ej-private-content")){const dl=document.createElement("button");dl.className="btn";dl.textContent="⬇ Download";dl.onclick=()=>downloadBook(b);actions.append(dl)}
+  if(b.isAccessible&&b.download_allowed&&(b.download_url||b.storage_bucket==="ej-private-content")){const dl=document.createElement("button");dl.className="btn";dl.textContent="⬇ Download";dl.onclick=()=>downloadBook(b);actions.append(dl)}
   card.append(badge,h);if(b.author||b.description)card.append(p);card.append(actions);list.append(card);
  });
 }
