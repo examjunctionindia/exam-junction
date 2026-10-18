@@ -7,6 +7,8 @@ const $=id=>document.getElementById(id);
 if(!window.EXAM_JUNCTION||!await window.EXAM_JUNCTION.init()){$("status").textContent="Connection unavailable. Internet check karke refresh karein.";return}
 const db=window.EXAM_JUNCTION.supabase;
 let books=[];
+let currentUser=null;
+let bookRequests=new Map();
 const safeHttps=value=>{try{const u=new URL(String(value||""));return u.protocol==="https:"&&u.hostname?u.href:""}catch(_){return ""}};
 function normalizeStudyUrl(value){
  const raw=safeHttps(value);if(!raw)return "";
@@ -38,8 +40,8 @@ async function downloadBook(book){
  if(book.access_type==="restricted"&&!book.isAccessible){alert("Is book ka access approve nahi hua hai.");return;}
  try{const url=await resolveFileUrl(book,{download:true});window.open(url,"_blank","noopener,noreferrer")}catch(e){alert("Download available nahi hai. Admin se contact karein.");console.error("Book download error",e)}
 }
-let currentUser=null;
 try{const auth=await db.auth.getUser();currentUser=auth?.data?.user||null;}catch(_){}
+if(currentUser){try{const {data:reqs,error:reqErr}=await db.from("book_access_requests").select("book_id,status").eq("student_id",currentUser.id);if(!reqErr)(reqs||[]).forEach(r=>bookRequests.set(r.book_id,r.status));}catch(e){console.warn("Book request status unavailable",e)}}
 try{
  const {data:catalog,error:catalogError}=await db.from("public_book_catalog").select("id,title,author,description,access_type,created_at").order("created_at",{ascending:false}).limit(100);
  if(catalogError)throw catalogError;
@@ -61,8 +63,14 @@ function render(){
   const p=document.createElement("p");p.className="muted";p.textContent=(b.author?"Author: "+b.author+" • ":"")+(b.description||"");
   const btn=document.createElement("button");btn.className="btn";
   if(b.access_type==="restricted"&&!b.isAccessible){
-   btn.textContent=currentUser?"🔒 Access Not Granted":"🔐 Login to Access";
-   btn.onclick=()=>{if(!currentUser)window.location.href="login.html?next="+encodeURIComponent("books.html");else alert("Is Restricted Book ka access abhi approve nahi hua hai. Access ke liye admin se sampark karein.");};
+   const requestStatus=bookRequests.get(b.id);
+   btn.textContent=!currentUser?"🔐 Login to Access":requestStatus==="pending"?"⏳ Request Pending":requestStatus==="rejected"?"🔁 Request Access Again":"📨 Request Access";
+   btn.disabled=!!currentUser&&requestStatus==="pending";
+   btn.onclick=async()=>{if(!currentUser){window.location.href="login.html?next="+encodeURIComponent("books.html");return;}if(requestStatus==="pending")return;
+    btn.disabled=true;btn.textContent="Sending...";
+    try{const payload={student_id:currentUser.id,book_id:b.id,status:"pending"};const {error}=await db.from("book_access_requests").upsert(payload,{onConflict:"student_id,book_id"});if(error)throw error;bookRequests.set(b.id,"pending");btn.textContent="⏳ Request Pending";btn.disabled=true;}
+    catch(e){console.error("Book access request failed",e);btn.disabled=false;btn.textContent="📨 Request Access";alert("Request nahi bheji ja saki. Dobara try karein.");}
+   };
   }else{btn.textContent="📖 View PDF";btn.onclick=()=>openBook(b);}
   const actions=document.createElement("div");actions.className="reader-actions";actions.append(btn);
   if(b.isAccessible&&b.download_allowed&&(b.download_url||b.storage_bucket==="ej-private-content")){const dl=document.createElement("button");dl.className="btn";dl.textContent="⬇ Download";dl.onclick=()=>downloadBook(b);actions.append(dl)}
