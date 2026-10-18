@@ -45,12 +45,23 @@ if(currentUser){try{const {data:reqs,error:reqErr}=await db.from("book_access_re
 try{
  const {data:catalog,error:catalogError}=await db.from("public_book_catalog").select("id,title,author,description,access_type,created_at").order("created_at",{ascending:false}).limit(100);
  if(catalogError)throw catalogError;
- const {data:allowed,error:allowedError}=await db.from("books").select("id,title,author,description,cover_path,storage_path,storage_bucket,external_url,access_type,download_url,download_allowed,original_link_allowed,publication_status,created_at").eq("is_published",true).order("created_at",{ascending:false}).limit(100);
- if(allowedError)throw allowedError;
- const allowedById=new Map((allowed||[]).map(b=>[b.id,b]));
- books=(catalog||[]).map(meta=>({...meta,...(allowedById.get(meta.id)||{}),isAccessible:allowedById.has(meta.id)}));
- $("status").classList.toggle("hidden",books.length>0);if(!books.length)$("status").textContent="Abhi koi published book nahi hai.";render();
-}catch(e){console.error("Books load error",e);$("status").textContent="Books load nahi hui. Internet ya database policy check karein."}
+ // Always render the public metadata first. A student RLS-filtered books query must not hide the catalogue.
+ books=(catalog||[]).map(meta=>({...meta,isAccessible:false}));
+ $("status").classList.toggle("hidden",books.length>0);
+ if(!books.length)$("status").textContent="Abhi koi published book nahi hai.";
+ render();
+ try{
+  const {data:allowed,error:allowedError}=await db.from("books").select("id,title,author,description,cover_path,storage_path,storage_bucket,external_url,access_type,download_url,download_allowed,original_link_allowed,publication_status,created_at").eq("is_published",true).order("created_at",{ascending:false}).limit(100);
+  if(allowedError)throw allowedError;
+  const allowedById=new Map((allowed||[]).map(b=>[b.id,b]));
+  books=(catalog||[]).map(meta=>({...meta,...(allowedById.get(meta.id)||{}),isAccessible:allowedById.has(meta.id)}));
+  render();
+ }catch(fileError){
+  // Metadata remains visible; file links stay unavailable unless the database explicitly authorizes them.
+  console.error("Book file access query failed; catalogue remains visible",fileError);
+ }
+}catch(e){console.error("Books catalogue load error",e);$("status").classList.remove("hidden");$("status").textContent="Books load nahi hui. Internet ya database policy check karein."}
+
 function render(){
  const q=$("search").value.trim().toLowerCase(),list=$("list");list.replaceChildren();
  const filtered=books.filter(b=>[b.title,b.author,b.description].join(" ").toLowerCase().includes(q));
