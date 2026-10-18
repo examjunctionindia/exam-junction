@@ -256,12 +256,13 @@ button:disabled{filter:none;transform:none}
         <a href="#category-students" data-management-category="students" onclick="showManagementCategory('students',this);return false;">👥 Students</a>
         <a href="#category-settings" data-management-category="settings" onclick="showManagementCategory('settings',this);return false;">⚙️ Settings</a>
       </nav>
-      <section id="managementCategoryHome" class="hidden" aria-live="polite">
-        <button type="button" class="secondary management-home-button" id="managementCategoryBack">← Back to Main Menu</button>
-        <h2 id="managementCategoryTitle"></h2>
-        <p class="small" id="managementCategoryDescription"></p>
-        <div class="management-subnav" id="managementSubnav"></div>
-      </section>
+    </section>
+
+    <section class="card hidden" id="managementCategoryHome" aria-live="polite">
+      <button type="button" class="secondary management-home-button" id="managementCategoryBack">← Back to Main Menu</button>
+      <h2 id="managementCategoryTitle"></h2>
+      <p class="small" id="managementCategoryDescription"></p>
+      <div class="management-subnav" id="managementSubnav"></div>
     </section>
 
     <!-- STUDENT DIRECTORY AND ACTIVITY (READ-ONLY) -->
