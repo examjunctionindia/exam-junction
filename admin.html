@@ -457,6 +457,11 @@ button:disabled{filter:none;transform:none}
       <div id="bookAccessList" class="small">
         Permissions load ho rahi hain...
       </div>
+      <hr class="divider">
+      <h3>📨 Student Book Requests</h3>
+      <p class="small">Student ki request approve ya reject karein. Approve karne par book_access grant hoga.</p>
+      <button id="refreshBookRequestsButton" class="secondary" type="button">Refresh Book Requests</button>
+      <div id="bookRequestsList" class="small" style="margin-top:12px">Requests load ho rahi hain...</div>
     </section>
 
     <!-- STUDENT BATCH ACCESS -->
@@ -1490,6 +1495,54 @@ $("refreshBookAccessButton").addEventListener("click",async function(){
   await loadBookAccess();
   message("Book permissions refresh ho gayi.");
 });
+
+/* STUDENT BOOK ACCESS REQUEST REVIEW */
+async function loadBookRequests(){
+ const host=$("bookRequestsList");if(!host||!db)return;
+ host.textContent="Book requests load ho rahi hain...";
+ try{
+  const {data:rows,error}=await db.from("book_access_requests").select("id,student_id,book_id,status,reason,created_at").order("created_at",{ascending:false}).limit(300);
+  if(error)throw error;
+  host.replaceChildren();
+  if(!rows?.length){host.textContent="Abhi koi book request nahi hai.";return;}
+  const studentIds=[...new Set(rows.map(r=>r.student_id))],bookIds=[...new Set(rows.map(r=>r.book_id))];
+  const [sr,br]=await Promise.all([
+   db.from("profiles").select("id,full_name,email").in("id",studentIds),
+   db.from("books").select("id,title").in("id",bookIds)
+  ]);
+  if(sr.error)throw sr.error;if(br.error)throw br.error;
+  const students=new Map((sr.data||[]).map(x=>[x.id,x])),books=new Map((br.data||[]).map(x=>[x.id,x]));
+  rows.forEach(row=>{
+   const card=document.createElement("div");card.style.cssText="border:1px solid #d9e3f0;border-radius:10px;padding:12px;margin:8px 0;overflow-wrap:anywhere";
+   const s=students.get(row.student_id),b=books.get(row.book_id);
+   const title=document.createElement("strong");title.textContent=(s?.full_name||s?.email||row.student_id)+" — "+(b?.title||row.book_id);card.append(title);
+   const meta=document.createElement("p");meta.className="small";meta.textContent="Status: "+row.status+" · Requested: "+new Date(row.created_at).toLocaleString();card.append(meta);
+   if(row.reason){const reason=document.createElement("p");reason.className="small";reason.textContent="Reason: "+row.reason;card.append(reason)}
+   if(row.status==="pending"){
+    const actions=document.createElement("div");actions.className="actions";
+    const approve=document.createElement("button");approve.type="button";approve.textContent="Approve";approve.addEventListener("click",()=>reviewBookRequest(row,"approved"));actions.append(approve);
+    const reject=document.createElement("button");reject.type="button";reject.className="secondary";reject.textContent="Reject";reject.addEventListener("click",()=>reviewBookRequest(row,"rejected"));actions.append(reject);card.append(actions);
+   }
+   host.append(card);
+  });
+ }catch(e){console.error("Book request list failed",e);host.textContent="Book requests load nahi hui. Admin permission/policy check karein."}
+}
+async function reviewBookRequest(row,status){
+ if(!db||!["approved","rejected"].includes(status))return;
+ if(!confirm(status==="approved"?"Is student ko book access approve karna hai?":"Is book request ko reject karna hai?"))return;
+ try{
+  if(status==="approved"){
+   const {error:grantError}=await db.from("book_access").upsert({student_id:row.student_id,book_id:row.book_id},{onConflict:"student_id,book_id"});
+   if(grantError)throw grantError;
+  }
+  const {error}=await db.from("book_access_requests").update({status,reviewed_by:(await db.auth.getUser()).data.user.id,reviewed_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",row.id);
+  if(error)throw error;
+  message(status==="approved"?"Book request approved; access grant ho gaya.":"Book request rejected.");
+  await loadBookRequests();await loadBookAccess();
+ }catch(e){console.error("Book request review failed",e);message("Request update nahi hui. "+(e.message||""),true)}
+}
+$("refreshBookRequestsButton")?.addEventListener("click",loadBookRequests);
+
 /* STUDENT BATCH ACCESS — existing Supabase schema only */
 async function loadBatchAccess(){
   const studentSelect=$("batchAccessStudent");
