@@ -704,11 +704,15 @@
       const regularBatch = visible.filter(item =>
         !!item.batch_id && item.is_important !== true && !item.recipient_id
       );
+      const regularGeneral = !batchId ? visible.filter(item =>
+        !item.batch_id && !item.recipient_id && item.is_important !== true
+      ) : [];
 
       const hasImportant = renderNotificationGroup("Student Approval / Important Messages", important);
-      const hasRegular = renderNotificationGroup("Regular Batch Notifications", regularBatch);
+      const hasRegularBatch = renderNotificationGroup("Regular Batch Notifications", regularBatch);
+      const hasRegularGeneral = renderNotificationGroup("Regular Notifications", regularGeneral);
 
-      if (!hasImportant && !hasRegular) {
+      if (!hasImportant && !hasRegularBatch && !hasRegularGeneral) {
         showState("empty");
         return;
       }
