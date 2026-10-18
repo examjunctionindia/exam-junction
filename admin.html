@@ -523,7 +523,15 @@ button:disabled{filter:none;transform:none}
         <label for="noticeUrl">Optional Link</label><input id="noticeUrl" type="url" placeholder="https://...">
         <label for="noticeBatch">Announcement location</label><select id="noticeBatch"><option value="">General website notification</option></select>
         <p class="small">Batch select karoge to announcement us batch ke andar dikhega.</p>
-        <label for="noticeImportant">Notification type</label><select id="noticeImportant"><option value="false">Normal — publish hone ke 24 ghante baad expire/delete</option><option value="true">Important — jab tak tum manually delete na karo</option></select>
+        <label for="noticeImportant">Notification type</label>
+        <select id="noticeImportant"><option value="false">Normal — 24 ghante baad expire, expiry ke 24 ghante baad delete</option><option value="true">Important — expiry aur deletion tumhare control mein</option></select>
+        <div id="importantNotificationControls" class="hidden">
+          <label for="noticeExpiresAt">Important notification expiry (optional)</label>
+          <input id="noticeExpiresAt" type="datetime-local">
+          <label for="noticeAutoDelete">Automatic deletion process</label>
+          <select id="noticeAutoDelete"><option value="false">OFF — review list mein rakhein</option><option value="true">ON — expiry ke baad deletion review mein bhejein (permission ke bina delete nahi hoga)</option></select>
+          <p class="small">Expiry par student se hide hogi. Delete se pehle review aur confirmation zaroori hai. Keep karne par notification safe rahegi.</p>
+        </div>
         <label for="noticePublished">Publication Status</label><select id="noticePublished"><option value="draft">Draft</option><option value="published">Published</option><option value="unpublished">Unpublished — hide, delete nahi</option></select>
 
         <div class="actions">
@@ -730,6 +738,18 @@ button:disabled{filter:none;transform:none}
       <label class="list-search-label" for="searchNotices">Search notifications</label>
       <input id="searchNotices" class="list-search" type="search" data-list-search="noticeList" placeholder="Notification title ya status search karein">
       <div id="noticeList" class="small">Loading...</div>
+    </section>
+
+    <section class="card" id="expiredImportantNotifications">
+      <h2>⏳ Expired Important Notifications — Review</h2>
+      <p class="small">Expired important notifications students se hidden rahengi. Yahan Keep ya Delete Now choose karein. Permanent deletion se pehle confirmation zaroori hai; Automatic Deletion ON hone par bhi bina permission delete nahi hoga.</p>
+      <div class="actions">
+        <button id="selectAllExpiredImportant" class="secondary" type="button">Select All</button>
+        <button id="deleteSelectedExpiredImportant" class="danger" type="button">Delete Selected</button>
+        <button id="refreshExpiredImportant" class="secondary" type="button">Refresh Review List</button>
+      </div>
+      <p id="expiredImportantStatus" class="small" role="status" aria-live="polite">Review list load ho rahi hai...</p>
+      <div id="expiredImportantList" class="small">Loading...</div>
     </section>
 
     <section class="card" id="existingChapters">
@@ -1148,7 +1168,9 @@ async function loadLists(){
         {label:"Location",value:row=>row.batch_id?(findById("batches",row.batch_id)?.title||"Batch announcement"):"General website"},
         {label:"Type",value:row=>row.is_important?"Important (manual delete)":"Normal (24-hour expiry)"},
         {key:"publication_status",label:"Status",value:row=>row.publication_status||(row.is_published?"Published":"Draft")},
-        {label:"Expires",value:row=>row.is_important?"Never automatically":(row.expires_at?new Date(row.expires_at).toLocaleString("en-IN"):"After publish")},
+        {label:"Expires",value:row=>row.expires_at?new Date(row.expires_at).toLocaleString("en-IN"):(row.is_important?"No expiry set":"After publish")},
+        {label:"Automatic deletion",value:row=>row.is_important?(row.auto_delete_enabled?"ON — review only":"OFF"):"Normal rule"},
+        {label:"Review",value:row=>row.is_important?(row.keep_notification?"Kept safely":(row.deletion_review_pending?"Review pending":(row.expires_at&&Date.parse(row.expires_at)<=Date.now()?"Expired — review":"—"))):"—"},
         {label:"Created",value:row=>row.created_at?new Date(row.created_at).toLocaleString("en-IN"):"—"}
       ],
       empty:"Abhi koi notification nahi hai."
@@ -1226,6 +1248,7 @@ async function loadLists(){
     }
   }
 
+   renderImportantNotificationReview();
    refreshDropdowns();
   await loadBookAccess();
   await loadBatchAccess();
@@ -2149,6 +2172,9 @@ async function editRecord(type,id){
     $("noticeUrl").value=row.target_url || "";
     $("noticeBatch").value=row.batch_id || "";
     $("noticeImportant").value=String(!!row.is_important);
+    $("noticeExpiresAt").value=row.expires_at ? (function(value){const date=new Date(value);return Number.isNaN(date.getTime())?"":new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16)})(row.expires_at) : "";
+    $("noticeAutoDelete").value=String(!!row.auto_delete_enabled);
+    toggleImportantNotificationControls();
     $("noticePublished").value=row.publication_status || (row.is_published ? "published" : "draft");
   }
 
@@ -2593,18 +2619,26 @@ $("notificationForm").addEventListener("submit",async function(e){
     return;
   }
 
-  await saveRecord(
-    "notificationForm","noticeSave","notifications","notifications",
-    {
-      title:$("noticeTitle").value.trim(),
-      message:$("noticeMessage").value.trim(),
-      target_url:url || "",
-      batch_id:$("noticeBatch").value || null,
-      is_important:$("noticeImportant").value==="true",
-      publication_status:$("noticePublished").value,
-      is_published:$("noticePublished").value==="published"
+  const isImportant=$("noticeImportant").value==="true";
+  const payload={
+    title:$("noticeTitle").value.trim(),
+    message:$("noticeMessage").value.trim(),
+    target_url:url || "",
+    batch_id:$("noticeBatch").value || null,
+    is_important:isImportant,
+    publication_status:$("noticePublished").value,
+    is_published:$("noticePublished").value==="published",
+    auto_delete_enabled:isImportant && $("noticeAutoDelete").value==="true"
+  };
+  if(isImportant){
+    const localExpiry=$("noticeExpiresAt").value;
+    if(payload.auto_delete_enabled && !localExpiry){
+      message("Automatic deletion review ON karne ke liye expiry date/time set karein.",true);
+      return;
     }
-  );
+    payload.expires_at=localExpiry ? new Date(localExpiry).toISOString() : null;
+  }
+  await saveRecord("notificationForm","noticeSave","notifications","notifications",payload);
 });
 
 /* CHAPTER SAVE */
@@ -2780,6 +2814,71 @@ $("lectureForm").addEventListener("submit",async function(e){
   );
 });
 
+/* IMPORTANT NOTIFICATION EXPIRY REVIEW — explicit confirmation required for deletion */
+function toggleImportantNotificationControls(){
+  const controls=$("importantNotificationControls");
+  if(controls)controls.classList.toggle("hidden",$("noticeImportant").value!=="true");
+}
+$("noticeImportant").addEventListener("change",toggleImportantNotificationControls);
+toggleImportantNotificationControls();
+function renderImportantNotificationReview(){
+  const host=$("expiredImportantList"),status=$("expiredImportantStatus");
+  if(!host)return;
+  host.replaceChildren();
+  const rows=(cache.notifications||[]).filter(row=>row.is_important===true&&row.keep_notification!==true&&row.expires_at&&Number.isFinite(Date.parse(row.expires_at))&&Date.parse(row.expires_at)<=Date.now()).sort((x,y)=>Date.parse(x.expires_at)-Date.parse(y.expires_at));
+  if(status)status.textContent=rows.length?rows.length+" expired important notification(s) need review. Students cannot see them.":"Koi expired important notification review ke liye nahi hai.";
+  if(!rows.length){host.textContent="Review list empty.";return;}
+  rows.forEach(row=>{
+    const card=document.createElement("article");card.className="item";card.style.cssText="border:1px solid #d9e3f0;border-radius:12px;padding:12px;margin:10px 0;background:#fff";
+    const label=document.createElement("label");label.style.cssText="display:flex;align-items:flex-start;gap:9px;margin:0 0 10px";
+    const check=document.createElement("input");check.type="checkbox";check.dataset.expiredImportantId=row.id;check.setAttribute("aria-label","Select "+(row.title||"notification"));check.style.cssText="width:auto;margin-top:4px";
+    const title=document.createElement("strong");title.textContent=row.title||"Important notification";label.append(check,title);
+    const detail=document.createElement("p");detail.className="small";detail.textContent="Expired: "+new Date(row.expires_at).toLocaleString("en-IN")+" · Automatic deletion: "+(row.auto_delete_enabled?"ON — review only":"OFF")+(row.deletion_review_pending?" · Deletion review pending":"");
+    const msg=document.createElement("p");msg.className="small";msg.textContent=row.message||"";
+    const actions=document.createElement("div");actions.className="actions";
+    actions.append(makeButton("Keep","notification-keep","notifications",row.id,"secondary"),makeButton("Delete Now","notification-delete-confirm","notifications",row.id,"danger"));
+    card.append(label,detail,msg,actions);host.append(card);
+  });
+}
+async function keepImportantNotification(id){
+  if(busy||!db)return;busy=true;
+  try{
+    const {data,error}=await db.from("notifications").update({keep_notification:true,deletion_review_pending:false}).eq("id",id).eq("is_important",true).select("id").maybeSingle();
+    if(error)throw error;if(!data?.id)throw new Error("Keep confirm nahi hua; admin permission check karein.");
+    message("Notification Keep kar di gayi. Database mein safe rahegi.");await loadLists();
+  }catch(error){message("Keep nahi ho paya: "+(error.message||"database permission check karein"),true);}
+  finally{busy=false;}
+}
+async function deleteImportantNotificationWithConfirmation(id){
+  const row=(cache.notifications||[]).find(item=>item.id===id);if(!row||row.is_important!==true)return;
+  if(!confirm('"'+(row.title||"Important notification")+'" ko permanently delete karna hai? Yeh action undo nahi hoga.'))return;
+  if(busy||!db)return;busy=true;
+  try{
+    const {data,error}=await db.from("notifications").delete().eq("id",id).eq("is_important",true).select("id").maybeSingle();
+    if(error)throw error;if(!data?.id)throw new Error("Delete confirm nahi hua; notification safe hai.");
+    message("Selected important notification permanently delete ho gayi.");await loadLists();
+  }catch(error){message("Delete nahi hua: "+(error.message||"database permission check karein"),true);}
+  finally{busy=false;}
+}
+$("selectAllExpiredImportant")?.addEventListener("click",function(){
+  const checks=Array.from(document.querySelectorAll("[data-expired-important-id]"));const selectAll=checks.some(check=>!check.checked);
+  checks.forEach(check=>check.checked=selectAll);this.textContent=selectAll?"Deselect All":"Select All";
+});
+$("refreshExpiredImportant")?.addEventListener("click",async function(){await loadLists();});
+$("deleteSelectedExpiredImportant")?.addEventListener("click",async function(){
+  const ids=Array.from(document.querySelectorAll("[data-expired-important-id]:checked")).map(check=>check.dataset.expiredImportantId);
+  if(!ids.length){message("Delete karne ke liye pehle notifications select karein.",true);return;}
+  if(!confirm(ids.length+" selected important notification(s) ko permanently delete karna hai? Sirf selected notifications delete hongi."))return;
+  if(busy||!db)return;busy=true;const button=this,old=button.textContent;button.disabled=true;button.textContent="Deleting...";
+  try{
+    const {data,error}=await db.from("notifications").delete().in("id",ids).eq("is_important",true).select("id");if(error)throw error;
+    const deleted=new Set((data||[]).map(row=>row.id));
+    if(deleted.size!==ids.length)throw new Error(deleted.size+" of "+ids.length+" selected notifications deleted. Refresh and review remaining records.");
+    message("Sirf "+deleted.size+" selected important notification(s) delete hui.");await loadLists();
+  }catch(error){message("Bulk delete complete confirm nahi hua: "+(error.message||"permission check karein"),true);await loadLists();}
+  finally{busy=false;button.disabled=false;button.textContent=old;}
+});
+
 /* EDIT / DELETE / BOOK ACCESS BUTTONS */
 $("dashboard").addEventListener("click",async function(e){
   const button=e.target.closest("button[data-action]");
@@ -2793,6 +2892,10 @@ $("dashboard").addEventListener("click",async function(e){
     editRecord(type,id);
   }else if(action==="delete"){
     await deleteRecord(type,id);
+  }else if(action==="notification-keep"){
+    await keepImportantNotification(id);
+  }else if(action==="notification-delete-confirm"){
+    await deleteImportantNotificationWithConfirmation(id);
   }else if(action==="revoke-book-access"){
     await revokeBookAccess(id);
   }else if(action==="revoke-batch-access"){
