@@ -1532,11 +1532,14 @@ async function reviewBookRequest(row,status){
  if(!db||!["approved","rejected"].includes(status))return;
  if(!confirm(status==="approved"?"Is student ko book access approve karna hai?":"Is book request ko reject karna hai?"))return;
  try{
+  const {data:authData,error:authError}=await db.auth.getUser();
+  if(authError)throw authError;
+  if(!authData?.user)throw new Error("Admin login session nahi mili. Dobara login karein.");
   if(status==="approved"){
-   const {error:grantError}=await db.from("book_access").upsert({student_id:row.student_id,book_id:row.book_id},{onConflict:"student_id,book_id"});
-   if(grantError)throw grantError;
+   const {error:grantError}=await db.from("book_access").insert({student_id:row.student_id,book_id:row.book_id});
+   if(grantError && grantError.code!=="23505")throw grantError;
   }
-  const {error}=await db.from("book_access_requests").update({status,reviewed_by:(await db.auth.getUser()).data.user.id,reviewed_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",row.id);
+  const {error}=await db.from("book_access_requests").update({status,reviewed_by:authData.user.id,reviewed_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",row.id);
   if(error)throw error;
   message(status==="approved"?"Book request approved; access grant ho gaya.":"Book request rejected.");
   await loadBookRequests();await loadBookAccess();
