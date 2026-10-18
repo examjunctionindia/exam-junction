@@ -3279,7 +3279,10 @@ function setManagementVisibility(activeId) {
     if (section) section.classList.toggle("management-view-hidden", id !== activeId);
   });
   if (managementHome) managementHome.classList.toggle("management-view-hidden", activeId !== "managementHome");
-  if (managementCategoryHome) managementCategoryHome.classList.toggle("management-view-hidden", activeId !== "managementCategoryHome");
+  if (managementCategoryHome) {
+    managementCategoryHome.classList.toggle("management-view-hidden", activeId !== "managementCategoryHome");
+    managementCategoryHome.classList.toggle("hidden", activeId !== "managementCategoryHome");
+  }
   const account = $("adminAccount");
   if (account) account.classList.toggle("management-view-hidden", activeId !== "dashboardOverview");
 }
