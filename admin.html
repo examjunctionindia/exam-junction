@@ -738,7 +738,6 @@ button:disabled{filter:none;transform:none}
       <label class="list-search-label" for="searchNotices">Search notifications</label>
       <input id="searchNotices" class="list-search" type="search" data-list-search="noticeList" placeholder="Notification title ya status search karein">
       <div id="noticeList" class="small">Loading...</div>
-    </section>
 
     <section class="card" id="expiredImportantNotifications">
       <h2>⏳ Expired Important Notifications — Review</h2>
@@ -750,6 +749,7 @@ button:disabled{filter:none;transform:none}
       </div>
       <p id="expiredImportantStatus" class="small" role="status" aria-live="polite">Review list load ho rahi hai...</p>
       <div id="expiredImportantList" class="small">Loading...</div>
+    </section>
     </section>
 
     <section class="card" id="existingChapters">
@@ -2820,6 +2820,7 @@ function toggleImportantNotificationControls(){
   if(controls)controls.classList.toggle("hidden",$("noticeImportant").value!=="true");
 }
 $("noticeImportant").addEventListener("change",toggleImportantNotificationControls);
+$("notificationForm").addEventListener("reset",function(){setTimeout(toggleImportantNotificationControls,0);});
 toggleImportantNotificationControls();
 function renderImportantNotificationReview(){
   const host=$("expiredImportantList"),status=$("expiredImportantStatus");
