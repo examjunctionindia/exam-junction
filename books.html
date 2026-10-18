@@ -43,8 +43,16 @@ async function downloadBook(book){
 try{const auth=await db.auth.getUser();currentUser=auth?.data?.user||null;}catch(_){}
 if(currentUser){try{const {data:reqs,error:reqErr}=await db.from("book_access_requests").select("book_id,status").eq("student_id",currentUser.id);if(!reqErr)(reqs||[]).forEach(r=>bookRequests.set(r.book_id,r.status));}catch(e){console.warn("Book request status unavailable",e)}}
 try{
- const {data:catalog,error:catalogError}=await db.from("public_book_catalog").select("id,title,author,description,access_type,created_at").order("created_at",{ascending:false}).limit(100);
- if(catalogError)throw catalogError;
+ let catalog=null;
+ const {data:viewCatalog,error:catalogError}=await db.from("public_book_catalog").select("id,title,author,description,access_type,created_at").order("created_at",{ascending:false}).limit(100);
+ if(!catalogError){
+  catalog=viewCatalog||[];
+ }else{
+  console.warn("Public book view failed; trying safe metadata fallback",catalogError);
+  const {data:fallback,error:fallbackError}=await db.from("books").select("id,title,author,description,access_type,created_at,is_published,publication_status").eq("is_published",true).eq("publication_status","published").order("created_at",{ascending:false}).limit(100);
+  if(fallbackError)throw fallbackError;
+  catalog=fallback||[];
+ }
  // Show catalogue metadata independently of student file permissions.
  books=(catalog||[]).map(meta=>({...meta,isAccessible:false}));
  $("status").classList.toggle("hidden",books.length>0);
