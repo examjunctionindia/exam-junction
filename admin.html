@@ -269,7 +269,7 @@ button:disabled{filter:none;transform:none}
       <p class="small">Student directory aur recorded activity ka read-only overview. Student profile data ya activity records yahan edit/delete nahi hote.</p>
       <h3>Student Directory</h3>
       <label class="list-search-label" for="searchStudents">Search students</label>
-      <input id="searchStudents" class="list-search" type="search" data-list-search="studentDirectoryList" placeholder="Student name ya ID search karein">
+      <input id="searchStudents" class="list-search" type="search" data-list-search="studentDirectoryList" placeholder="Student name, email ya ID search karein">
       <div id="studentDirectoryList" class="small">Students load hone par yahan dikh jayenge.</div>
       <hr class="divider">
       <h3>Recent Student Activity</h3>
@@ -489,8 +489,12 @@ button:disabled{filter:none;transform:none}
       <h2>📨 Student Batch Requests</h2>
       <p class="small">Pending batch requests review karein. Approve karne par published restricted batch ka access grant hoga.</p>
       <div class="actions"><button id="refreshRequestsButton" class="secondary" type="button">Refresh Requests</button></div>
-      <label class="list-search-label" for="searchBatchRequests">Search batch requests</label>
-      <input id="searchBatchRequests" class="list-search" type="search" data-list-search="batchRequestsList" placeholder="Student, batch ya status search karein">
+      <label class="list-search-label" for="searchBatchRequests">Search batch requests (student name/email, batch, status)</label>
+      <input id="searchBatchRequests" class="list-search" type="search" data-list-search="batchRequestsList" placeholder="Student name/email, batch ya status search karein">
+      <label class="list-search-label" for="batchRequestStatusFilter">Filter by request status</label>
+      <select id="batchRequestStatusFilter" aria-label="Filter batch requests by status">
+        <option value="all">All requests</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="revoked">Revoked</option>
+      </select>
       <div id="batchRequestsList" class="small">Requests load ho rahi hain...</div>
     </section>
 
@@ -1643,6 +1647,15 @@ $("refreshBatchAccessButton").addEventListener("click",async function(){await lo
 
 /* STUDENT PROBLEM REPORTS — admin-only data, existing Supabase schema */
 /* STUDENT BATCH REQUEST MANAGEMENT */
+function applyBatchRequestStatusFilter(){
+  const filter=document.getElementById("batchRequestStatusFilter");
+  const root=document.getElementById("batchRequestsList");
+  if(!filter||!root)return;
+  const selected=String(filter.value||"all").toLowerCase();
+  root.querySelectorAll("[data-request-status]").forEach(item=>{item.hidden=selected!=="all"&&item.dataset.requestStatus!==selected;});
+}
+document.getElementById("batchRequestStatusFilter")?.addEventListener("change",applyBatchRequestStatusFilter);
+
 async function loadBatchRequests(){
   const root=$("batchRequestsList");
   if(!root||!db)return;
@@ -1659,7 +1672,7 @@ async function loadBatchRequests(){
     root.replaceChildren();
     if(!requests.length){root.textContent="Abhi koi batch join request nahi hai.";return;}
     requests.forEach(request=>{
-      const item=document.createElement("div");item.className="item";
+      const item=document.createElement("div");item.className="item";item.dataset.requestStatus=String(request.status||"").toLowerCase();
       const student=students.find(x=>x.id===request.student_id), batch=batches.find(x=>x.id===request.batch_id);
       [["Student",(student?.full_name||request.student_id)+(student?.email?" ("+student.email+")":"")],["Batch",batch?.title||request.batch_id],["Status",request.status],["Requested",request.created_at?new Date(request.created_at).toLocaleString():"—"],["Reason",request.request_reason||"Not provided"]].forEach(([label,value])=>{
         const line=document.createElement("div");line.style.marginBottom="6px";const strong=document.createElement("strong");strong.textContent=label+": ";line.append(strong,document.createTextNode(String(value??"—")));item.appendChild(line);
@@ -1701,6 +1714,7 @@ async function loadBatchRequests(){
       }
       root.appendChild(item);
     });
+    applyBatchRequestStatusFilter();
   }catch(error){console.error("Batch requests load error:",error);root.textContent="Batch requests load nahi hui"+(error?.code?" ("+error.code+")":"")+": "+(error?.message||"connection aur admin permission check karein.");}
 }
 $("refreshRequestsButton").addEventListener("click",async function(){await loadBatchRequests();await updateDashboardCounts();message("Batch requests refresh ho gayi.");});
