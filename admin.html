@@ -2632,6 +2632,10 @@ $("notificationForm").addEventListener("submit",async function(e){
   };
   if(isImportant){
     const localExpiry=$("noticeExpiresAt").value;
+    if(payload.auto_delete_enabled && !localExpiry){
+      message("Automatic deletion review ON karne ke liye expiry date/time set karein.",true);
+      return;
+    }
     payload.expires_at=localExpiry ? new Date(localExpiry).toISOString() : null;
   }
   await saveRecord("notificationForm","noticeSave","notifications","notifications",payload);
