@@ -246,15 +246,15 @@ button:disabled{filter:none;transform:none}
       <h2 id="managementNavHeading">🧭 Management Shortcuts</h2>
       <p class="management-help">Daily workflow: pehle batch banayein → uske chapters aur lectures add karein → books/notes publish karein → zaroorat par selected students ko access dein → reports aur notifications check karein. Draft items publish hone tak student website par nahi dikhte.</p>
       <nav class="management-nav" aria-label="Admin management categories">
-        <a href="#category-dashboard" data-management-category="dashboard">📊 Dashboard</a>
-        <a href="#category-batches" data-management-category="batches">➕ Batches</a>
-        <a href="#category-books" data-management-category="books">📚 Books / Notes</a>
-        <a href="#category-chapters" data-management-category="chapters">📖 Chapters</a>
-        <a href="#category-lectures" data-management-category="lectures">▶️ Lectures</a>
-        <a href="#category-notifications" data-management-category="notifications">🔔 Notifications</a>
-        <a href="#category-home" data-management-category="home">🖼️ Home</a>
-        <a href="#category-students" data-management-category="students">👥 Students</a>
-        <a href="#category-settings" data-management-category="settings">⚙️ Settings</a>
+        <a href="#category-dashboard" data-management-category="dashboard" onclick="showManagementCategory('dashboard',this);return false;">📊 Dashboard</a>
+        <a href="#category-batches" data-management-category="batches" onclick="showManagementCategory('batches',this);return false;">➕ Batches</a>
+        <a href="#category-books" data-management-category="books" onclick="showManagementCategory('books',this);return false;">📚 Books / Notes</a>
+        <a href="#category-chapters" data-management-category="chapters" onclick="showManagementCategory('chapters',this);return false;">📖 Chapters</a>
+        <a href="#category-lectures" data-management-category="lectures" onclick="showManagementCategory('lectures',this);return false;">▶️ Lectures</a>
+        <a href="#category-notifications" data-management-category="notifications" onclick="showManagementCategory('notifications',this);return false;">🔔 Notifications</a>
+        <a href="#category-home" data-management-category="home" onclick="showManagementCategory('home',this);return false;">🖼️ Home</a>
+        <a href="#category-students" data-management-category="students" onclick="showManagementCategory('students',this);return false;">👥 Students</a>
+        <a href="#category-settings" data-management-category="settings" onclick="showManagementCategory('settings',this);return false;">⚙️ Settings</a>
       </nav>
       <section id="managementCategoryHome" class="hidden" aria-live="polite">
         <button type="button" class="secondary management-home-button" id="managementCategoryBack">← Back to Main Menu</button>
@@ -3292,7 +3292,7 @@ function showManagementHome() {
   if (managementNav) managementNav.querySelectorAll("a").forEach(function(link) { link.removeAttribute("aria-current"); });
   scrollManagementTop();
 }
-function showManagementCategory(key, link) {
+window.showManagementCategory = function showManagementCategory(key, link) {
   const category = managementCategories[key];
   if (!category || !managementCategoryHome || !managementSubnav) return;
   activeManagementCategory = key;
@@ -3313,7 +3313,7 @@ function showManagementCategory(key, link) {
   if (managementNav) managementNav.querySelectorAll("a").forEach(function(item) { item.removeAttribute("aria-current"); });
   if (link) link.setAttribute("aria-current","page");
   scrollManagementTop();
-}
+};
 function addManagementBackButton(section) {
   if (!section || section.querySelector(".management-home-button")) return;
   const back = document.createElement("button");
