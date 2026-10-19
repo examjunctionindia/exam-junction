@@ -1955,6 +1955,9 @@ async function checkSession(){
     (profile.full_name || "Admin") + " · " + data.user.email;
 
   $("dashboard").classList.remove("hidden");
+  /* Restore the admin landing menu after successful verification so navigation
+     cannot remain hidden by a stale section-visibility state. */
+  if (typeof showManagementHome === "function") showManagementHome();
   message("Admin verified. Data load ho raha hai.");
 
   try {
@@ -3277,7 +3280,15 @@ function scrollManagementTop() {
 function setManagementVisibility(activeId) {
   managementSectionIds.forEach(function(id) {
     const section = $(id);
-    if (section) section.classList.toggle("management-view-hidden", id !== activeId);
+    /* Expired Important Notifications is currently nested inside
+       existingNotifications. Keep its parent visible when opening the child,
+       otherwise CSS display:none on the parent hides the review section too. */
+    const keepNotificationParentVisible =
+      activeId === "expiredImportantNotifications" && id === "existingNotifications";
+    if (section) section.classList.toggle(
+      "management-view-hidden",
+      id !== activeId && !keepNotificationParentVisible
+    );
   });
   if (managementHome) managementHome.classList.toggle("management-view-hidden", activeId !== "managementHome");
   if (managementCategoryHome) {
