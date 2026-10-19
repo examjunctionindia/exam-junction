@@ -350,7 +350,8 @@
                 margin: 20px 18px 26px;
             }
             .home-hero-banner-row > .hero { margin: 0; }
-            #published-home-banners { margin: 0; }
+            /* Keep the admin banner above the Hero/Explore Courses area on mobile. */
+            #published-home-banners { margin: 0; order: -1; }
             .published-banner-list { gap: 12px; }
             .published-home-banner { flex-basis: 82%; }
             .published-home-banner-image {
@@ -1105,7 +1106,60 @@
             list.appendChild(card);
         });
 
-        if (list.childElementCount) section.classList.add("has-banners");
+        if (list.childElementCount) {
+            section.classList.add("has-banners");
+
+            /* Auto-advance published banners horizontally; preserve manual swipe.
+               A single banner stays still. Pause while the page is hidden or
+               the user is interacting, then resume automatically. */
+            if (list.children.length > 1) {
+                const reduceMotion = window.matchMedia &&
+                    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                let autoScrollTimer = null;
+                let interactionPauseTimer = null;
+                let userInteracting = false;
+
+                const stopAutoScroll = function () {
+                    if (autoScrollTimer !== null) {
+                        window.clearInterval(autoScrollTimer);
+                        autoScrollTimer = null;
+                    }
+                };
+                const startAutoScroll = function () {
+                    stopAutoScroll();
+                    if (reduceMotion || document.hidden || userInteracting) return;
+                    autoScrollTimer = window.setInterval(function () {
+                        const cards = Array.from(list.children);
+                        if (cards.length < 2) return;
+                        const nextCard = cards.find(function (card) {
+                            return card.offsetLeft > list.scrollLeft + 8;
+                        });
+                        list.scrollTo({
+                            left: nextCard ? nextCard.offsetLeft : 0,
+                            behavior: "smooth"
+                        });
+                    }, 4000);
+                };
+                const pauseForInteraction = function () {
+                    userInteracting = true;
+                    stopAutoScroll();
+                    if (interactionPauseTimer !== null) {
+                        window.clearTimeout(interactionPauseTimer);
+                    }
+                    interactionPauseTimer = window.setTimeout(function () {
+                        userInteracting = false;
+                        startAutoScroll();
+                    }, 7000);
+                };
+
+                list.addEventListener("touchstart", pauseForInteraction, { passive: true });
+                list.addEventListener("pointerdown", pauseForInteraction);
+                list.addEventListener("mouseenter", pauseForInteraction);
+                list.addEventListener("focusin", pauseForInteraction);
+                document.addEventListener("visibilitychange", startAutoScroll);
+                startAutoScroll();
+            }
+        }
     } catch (error) {
         console.error("Published Home banners failed to load:", error);
     }
