@@ -149,27 +149,8 @@ if(activeDotRows.length){
 }
 dot.hidden=true;
 const chaptersRoot=$("chapters");
-const announcementsSection=document.createElement("section");announcementsSection.className="panel hidden";announcementsSection.id="announcementsSection";
-const announcementHeading=document.createElement("h2");announcementHeading.textContent="Announcements";announcementsSection.append(announcementHeading);
-let announcementSearch=null,announcementList=document.createElement("div");
-if(batch.announcement_search_enabled===true){announcementSearch=document.createElement("input");announcementSearch.type="search";announcementSearch.className="simple-search";announcementSearch.placeholder="Search announcements";announcementSearch.setAttribute("aria-label","Search announcements");announcementsSection.append(announcementSearch)}
-announcementsSection.append(announcementList);
-const annResult=await db.from("notifications").select("id,title,message,target_url,created_at,published_at,is_important,recipient_id,expires_at").eq("batch_id",id).eq("is_published",true).eq("is_important",false).is("recipient_id",null).order("published_at",{ascending:false}).limit(100);
-const activeAnnouncements=(annResult.data||[]).filter(n=>!n.expires_at||Date.parse(n.expires_at)>Date.now());
- if(!annResult.error&&activeAnnouncements.length){
- announcementsSection.classList.remove("hidden");
- activeAnnouncements.forEach(n=>{
-  const item=document.createElement("article");item.className="announcement";item.dataset.search=(String(n.title||"")+" "+String(n.message||"")).toLowerCase();
-  const h=document.createElement("h3");h.textContent=n.title||"Announcement";
-  const p=document.createElement("p");p.className="muted";p.textContent=n.message||"";
-  item.append(h,p);
-  if(n.published_at||n.created_at){const date=document.createElement("div");date.className="announcement-date";date.textContent=new Date(n.published_at||n.created_at).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"});item.append(date)}
-  const target=safeUrl(n.target_url);if(target){const link=document.createElement("a");link.className="btn";link.href=target;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Open Link";item.append(link)}
-  announcementList.append(item);
- });
- if(announcementSearch)announcementSearch.addEventListener("input",()=>{const q=announcementSearch.value.trim().toLowerCase();Array.from(announcementList.children).forEach(item=>item.hidden=!item.dataset.search.includes(q))});
- chaptersRoot.before(announcementsSection);
-}
+/* Batch announcements are shown only in this batch's Notifications page,
+   opened from the bell above; do not duplicate them on the batch details page. */
 const chapterSearch=batch.chapter_search_enabled===true?document.createElement("input"):null;
 if(chapterSearch){chapterSearch.type="search";chapterSearch.className="simple-search";chapterSearch.placeholder="Search chapters or lectures";chapterSearch.setAttribute("aria-label","Search chapters or lectures");chaptersRoot.before(chapterSearch)}
 const chapterResult=await db.from("chapters").select("id,title,position,created_at,is_published").eq("batch_id",id).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true});
