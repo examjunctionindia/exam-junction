@@ -269,6 +269,59 @@
             height: 17px;
         }
 
+        /* Published website banners managed from Admin > Home. */
+        #published-home-banners {
+            display: none;
+            padding: 0 18px;
+            margin: 0 0 24px;
+        }
+        #published-home-banners.has-banners { display: block; }
+        .published-banner-list {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 14px;
+        }
+        .published-home-banner {
+            overflow: hidden;
+            min-width: 0;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            background: var(--surface);
+            box-shadow: 0 6px 18px rgba(16,39,76,.08);
+        }
+        .published-home-banner-link {
+            display: block;
+            color: inherit;
+        }
+        .published-home-banner-image {
+            display: block;
+            width: 100%;
+            max-height: 360px;
+            aspect-ratio: 16 / 7;
+            object-fit: cover;
+            background: #edf3ff;
+        }
+        .published-home-banner-copy { padding: 14px 16px 16px; }
+        .published-home-banner-copy h3 {
+            margin: 0;
+            color: var(--text);
+            font-size: 17px;
+            line-height: 1.4;
+            overflow-wrap: anywhere;
+        }
+        .published-home-banner-label {
+            margin: 5px 0 0;
+            color: var(--muted);
+            font-size: 12px;
+        }
+        .published-home-banner-description {
+            margin: 8px 0 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-wrap: anywhere;
+        }
+
         /* COURSE SECTION */
 
         .section {
@@ -752,6 +805,11 @@
     </section>
 
 
+    <!-- ADMIN-MANAGED PUBLISHED HOME BANNERS -->
+    <section id="published-home-banners" aria-label="Published website banners">
+        <div id="published-home-banner-list" class="published-banner-list"></div>
+    </section>
+
     <!-- HOME: COURSES AND BATCHES ONLY -->
     <main>
 
@@ -926,6 +984,89 @@
     } catch (error) {
         console.error("Account link update failed:", error);
         accountLink.href = "login.html";
+    }
+})();
+</script>
+<script>
+/* Load only admin-published website banners. Keep drafts hidden and fail quietly
+   so the existing Home and batch experience remains available if banners fail. */
+(async function loadPublishedHomeBanners() {
+    const section = document.getElementById("published-home-banners");
+    const list = document.getElementById("published-home-banner-list");
+    if (!section || !list || !window.EXAM_JUNCTION) return;
+
+    try {
+        const ready = await window.EXAM_JUNCTION.init();
+        if (!ready) return;
+        const client = window.EXAM_JUNCTION.supabase;
+        const { data, error } = await client
+            .from("banners")
+            .select("id,title,teacher_name,description,banner_type,image_url,target_url,is_published")
+            .eq("is_published", true);
+
+        if (error) throw error;
+        const banners = (Array.isArray(data) ? data : []).filter(function (banner) {
+            return banner.is_published === true &&
+                typeof banner.image_url === "string" &&
+                /^https?:\/\//i.test(banner.image_url);
+        });
+        if (!banners.length) return;
+
+        banners.forEach(function (banner) {
+            const card = document.createElement("article");
+            card.className = "published-home-banner";
+
+            const image = document.createElement("img");
+            image.className = "published-home-banner-image";
+            image.src = banner.image_url;
+            image.alt = banner.title || "EXAM JUNCTION banner";
+            image.loading = "lazy";
+            image.addEventListener("error", function () {
+                card.remove();
+                if (!list.childElementCount) section.classList.remove("has-banners");
+            }, { once: true });
+
+            const copy = document.createElement("div");
+            copy.className = "published-home-banner-copy";
+            if (banner.title) {
+                const title = document.createElement("h3");
+                title.textContent = banner.title;
+                copy.appendChild(title);
+            }
+            if (banner.teacher_name) {
+                const label = document.createElement("p");
+                label.className = "published-home-banner-label";
+                label.textContent = banner.teacher_name;
+                copy.appendChild(label);
+            }
+            if (banner.description) {
+                const description = document.createElement("p");
+                description.className = "published-home-banner-description";
+                description.textContent = banner.description;
+                copy.appendChild(description);
+            }
+
+            const target = typeof banner.target_url === "string" ? banner.target_url.trim() : "";
+            let cardContent;
+            if (target && /^https?:\/\//i.test(target)) {
+                const link = document.createElement("a");
+                link.className = "published-home-banner-link";
+                link.href = target;
+                link.setAttribute("aria-label", banner.title ? "Open " + banner.title : "Open banner");
+                link.append(image, copy);
+                cardContent = link;
+            } else {
+                const wrapper = document.createElement("div");
+                wrapper.append(image, copy);
+                cardContent = wrapper;
+            }
+            card.appendChild(cardContent);
+            list.appendChild(card);
+        });
+
+        if (list.childElementCount) section.classList.add("has-banners");
+    } catch (error) {
+        console.error("Published Home banners failed to load:", error);
     }
 })();
 </script>
