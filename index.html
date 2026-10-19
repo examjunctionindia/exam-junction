@@ -1049,12 +1049,22 @@
 
             const image = document.createElement("img");
             image.className = "published-home-banner-image";
-            image.src = banner.image_url;
             image.alt = banner.title || "EXAM JUNCTION banner";
             image.loading = "lazy";
+
+            /* Existing admin URL is truncated to ".pn", while the actual
+               stored public PNG object ends in ".png". Repair at display time
+               only; this does not modify the database record. */
+            let imageUrl = banner.image_url.trim();
+            try {
+                const parsedImageUrl = new URL(imageUrl);
+                if (/\.pn$/i.test(parsedImageUrl.pathname)) imageUrl += "g";
+            } catch (_) {}
+            image.src = imageUrl;
+
             image.addEventListener("error", function () {
-                card.remove();
-                if (!list.childElementCount) section.classList.remove("has-banners");
+                /* Keep banner text visible if an image URL is invalid. */
+                image.style.display = "none";
             }, { once: true });
 
             const copy = document.createElement("div");
