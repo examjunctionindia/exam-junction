@@ -202,7 +202,7 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
   }
   const originalAllowed=canShowOriginal(lecture);
   const actions=document.createElement("div");actions.className="media-actions";
-  let wrap=null,player=null,fallback=null,timer=null;
+  let wrap=null,player=null,fallback=null,timer=null,alternateFrame=null;
   if(embedSrc||directVideo){
    wrap=document.createElement("div");wrap.className="media-fullscreen hidden";
    const loading=document.createElement("p");loading.className="muted media-loading";loading.textContent="Video load ho raha hai...";wrap.append(loading);
@@ -210,7 +210,21 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
    else{player=document.createElement("iframe");player.className="viewer";player.src=embedSrc;player.title=lecture.title||"Lecture";player.loading="lazy";player.allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen";player.allowFullscreen=true;player.referrerPolicy="strict-origin-when-cross-origin";player.addEventListener("load",()=>{loading.classList.add("hidden")})}
    wrap.append(player);
    fallback=document.createElement("div");fallback.className="fallback-box"+(directVideo?" hidden":"");fallback.textContent="Agar video na chale, Retry karein ya original link kholein.";
-   const retry=document.createElement("button");retry.type="button";retry.className="btn";retry.textContent="↻ Retry";retry.addEventListener("click",()=>{if(timer){clearTimeout(timer);timer=null}fallback.classList.add("hidden");loading.classList.remove("hidden");if(directVideo){player.style.display="";player.src=raw;player.load();timer=setTimeout(()=>{loading.classList.add("hidden");fallback.classList.remove("hidden");player.style.display="none"},15000)}else player.src=embedSrc+(embedSrc.includes("?")?"&":"?")+"retry="+Date.now()});fallback.append(retry);
+   const retry=document.createElement("button");retry.type="button";retry.className="btn";retry.textContent="↻ Retry";retry.addEventListener("click",()=>{if(timer){clearTimeout(timer);timer=null}fallback.classList.add("hidden");loading.classList.remove("hidden");if(directVideo){if(alternateFrame){alternateFrame.remove();alternateFrame=null}player.style.display="";player.src=raw;player.load();timer=setTimeout(()=>{loading.classList.add("hidden");fallback.classList.remove("hidden");player.style.display="none"},15000)}else player.src=embedSrc+(embedSrc.includes("?")?"&":"?")+"retry="+Date.now()});fallback.append(retry);
+   if(directVideo){
+    const alternate=document.createElement("button");alternate.type="button";alternate.className="btn";alternate.textContent="▶ Try Alternate Player";
+    alternate.addEventListener("click",()=>{
+     if(timer){clearTimeout(timer);timer=null}
+     loading.classList.add("hidden");
+     player.style.display="none";
+     if(!alternateFrame){
+      alternateFrame=document.createElement("iframe");alternateFrame.className="viewer";alternateFrame.title=(lecture.title||"Lecture")+" — alternate player";alternateFrame.allow="fullscreen";alternateFrame.allowFullscreen=true;alternateFrame.referrerPolicy="no-referrer";alternateFrame.style.height="auto";alternateFrame.style.maxHeight="70vh";alternateFrame.src=raw;
+      wrap.insertBefore(alternateFrame,fallback);
+     }else{alternateFrame.src=raw+(raw.includes("?")?"&":"?")+"retry="+Date.now()}
+     fallback.classList.remove("hidden");
+    });
+    fallback.append(alternate);
+   }
    if(originalAllowed){const ol=document.createElement("a");ol.className="btn";ol.href=raw;ol.target="_blank";ol.rel="noopener noreferrer";ol.textContent="↗ Open Original Link";fallback.append(ol)}
    wrap.append(fallback);body.append(wrap);
    if(directVideo){
