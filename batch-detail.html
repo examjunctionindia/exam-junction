@@ -219,9 +219,8 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
     alternateFrame=document.createElement("iframe");alternateFrame.className="viewer";alternateFrame.title=lecture.title||"Lecture";alternateFrame.allow="fullscreen";alternateFrame.allowFullscreen=true;alternateFrame.referrerPolicy="no-referrer";alternateFrame.style.height="auto";alternateFrame.style.maxHeight="70vh";
     alternateFrame.src=raw;
     wrap.insertBefore(alternateFrame,fallback);
-    // An iframe load event does not prove that the external video is playable.
     timer=setTimeout(showPlaybackError,12000);
-    alternateFrame.addEventListener("load",()=>{loading.classList.add("hidden")});
+    alternateFrame.addEventListener("load",()=>{if(timer){clearTimeout(timer);timer=null}loading.classList.add("hidden");fallback.classList.add("hidden")});
    }
    wrap.append(fallback);body.append(wrap);
    if(directVideo){
