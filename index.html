@@ -269,39 +269,65 @@
             height: 17px;
         }
 
-        /* Published website banners managed from Admin > Home. */
+        /* Admin-managed published banners: side panel beside the Home hero,
+           with a horizontal swipe carousel for multiple banners. */
+        .home-hero-banner-row {
+            display: grid;
+            grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+            gap: 22px;
+            align-items: stretch;
+            margin: 20px 18px 26px;
+        }
+        .home-hero-banner-row > .hero { min-width: 0; margin: 0; }
         #published-home-banners {
             display: none;
-            padding: 0 18px;
-            margin: 0 0 24px;
+            min-width: 0;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
         }
         #published-home-banners.has-banners { display: block; }
         .published-banner-list {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr);
-            gap: 14px;
+            display: flex;
+            gap: 12px;
+            height: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            overscroll-behavior-x: contain;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            padding: 0 0 8px;
         }
         .published-home-banner {
-            overflow: hidden;
+            flex: 0 0 100%;
             min-width: 0;
+            overflow: hidden;
+            align-self: stretch;
             border: 1px solid var(--border);
             border-radius: 18px;
             background: var(--surface);
             box-shadow: 0 6px 18px rgba(16,39,76,.08);
+            scroll-snap-align: start;
         }
         .published-home-banner-link {
-            display: block;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
             color: inherit;
         }
         .published-home-banner-image {
             display: block;
             width: 100%;
+            height: 100%;
+            min-height: 150px;
             max-height: 360px;
-            aspect-ratio: 16 / 7;
+            flex: 1 1 auto;
+            aspect-ratio: 4 / 5;
             object-fit: cover;
             background: #edf3ff;
         }
-        .published-home-banner-copy { padding: 14px 16px 16px; }
+        .published-home-banner-copy { padding: 12px 14px 14px; }
         .published-home-banner-copy h3 {
             margin: 0;
             color: var(--text);
@@ -309,17 +335,32 @@
             line-height: 1.4;
             overflow-wrap: anywhere;
         }
-        .published-home-banner-label {
-            margin: 5px 0 0;
-            color: var(--muted);
-            font-size: 12px;
-        }
+        .published-home-banner-label { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
         .published-home-banner-description {
             margin: 8px 0 0;
             color: var(--muted);
             font-size: 13px;
             line-height: 1.6;
             overflow-wrap: anywhere;
+        }
+        @media (max-width: 760px) {
+            .home-hero-banner-row {
+                grid-template-columns: minmax(0, 1fr);
+                gap: 14px;
+                margin: 20px 18px 26px;
+            }
+            .home-hero-banner-row > .hero { margin: 0; }
+            #published-home-banners { margin: 0; }
+            .published-banner-list { gap: 12px; }
+            .published-home-banner { flex-basis: 82%; }
+            .published-home-banner-image {
+                height: 190px;
+                min-height: 190px;
+                max-height: 240px;
+                flex: 0 0 auto;
+                aspect-ratio: 16 / 9;
+                object-fit: cover;
+            }
         }
 
         /* COURSE SECTION */
@@ -774,41 +815,31 @@
     </section>
 
 
-    <!-- HERO BANNER -->
-    <section class="hero">
-
-        <div class="hero-content">
-
-            <span class="hero-badge">WELCOME TO EXAM JUNCTION</span>
-
-            <h2>Your Goals.<br>Your Preparation. Your Success.</h2>
-
-            <p>
-                Find your batch, follow your lectures and access
-                your study material in one place.
-            </p>
-
-            <a class="hero-button" href="#courses">
-                Explore Courses
-
-                <svg viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2"
-                     stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M5 12h14"/>
-                    <path d="m12 5 7 7-7 7"/>
-                </svg>
-
-            </a>
-
-        </div>
-
-    </section>
-
-
-    <!-- ADMIN-MANAGED PUBLISHED HOME BANNERS -->
-    <section id="published-home-banners" aria-label="Published website banners">
-        <div id="published-home-banner-list" class="published-banner-list"></div>
-    </section>
+    <!-- HERO AND ADMIN-MANAGED BANNER SIDE CAROUSEL -->
+    <div class="home-hero-banner-row">
+        <section class="hero">
+            <div class="hero-content">
+                <span class="hero-badge">WELCOME TO EXAM JUNCTION</span>
+                <h2>Your Goals.<br>Your Preparation. Your Success.</h2>
+                <p>
+                    Find your batch, follow your lectures and access
+                    your study material in one place.
+                </p>
+                <a class="hero-button" href="#courses">
+                    Explore Courses
+                    <svg viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12h14"/>
+                        <path d="m12 5 7 7-7 7"/>
+                    </svg>
+                </a>
+            </div>
+        </section>
+        <section id="published-home-banners" aria-label="Published website banners">
+            <div id="published-home-banner-list" class="published-banner-list"></div>
+        </section>
+    </div>
 
     <!-- HOME: COURSES AND BATCHES ONLY -->
     <main>
