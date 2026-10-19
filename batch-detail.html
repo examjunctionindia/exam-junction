@@ -219,8 +219,9 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
     alternateFrame=document.createElement("iframe");alternateFrame.className="viewer";alternateFrame.title=lecture.title||"Lecture";alternateFrame.allow="fullscreen";alternateFrame.allowFullscreen=true;alternateFrame.referrerPolicy="no-referrer";alternateFrame.style.height="auto";alternateFrame.style.maxHeight="70vh";
     alternateFrame.src=raw;
     wrap.insertBefore(alternateFrame,fallback);
+    // An iframe load event does not prove that the external video is playable.
     timer=setTimeout(showPlaybackError,12000);
-    alternateFrame.addEventListener("load",()=>{if(timer){clearTimeout(timer);timer=null}loading.classList.add("hidden");fallback.classList.add("hidden")});
+    alternateFrame.addEventListener("load",()=>{loading.classList.add("hidden")});
    }
    wrap.append(fallback);body.append(wrap);
    if(directVideo){
@@ -246,7 +247,7 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
     });
    }
    
-   const watch=document.createElement("button");watch.className="btn";watch.type="button";watch.textContent="▶ Watch";watch.addEventListener("click",async()=>{wrap.classList.remove("hidden");if(directVideo&&!player.readyState){if(timer)clearTimeout(timer);timer=setTimeout(()=>{loading.classList.add("hidden");fallback.classList.remove("hidden");player.style.display="none"},15000)}try{await wrap.requestFullscreen()}catch(_){wrap.scrollIntoView({behavior:"smooth",block:"nearest"})}});actions.append(watch);
+   const watch=document.createElement("button");watch.className="btn";watch.type="button";watch.textContent="▶ Watch";watch.addEventListener("click",async()=>{wrap.classList.remove("hidden");if(directVideo&&!player.readyState){startLoadTimeout()}try{await wrap.requestFullscreen()}catch(_){wrap.scrollIntoView({behavior:"smooth",block:"nearest"})}});actions.append(watch);
    const full=document.createElement("button");full.className="btn";full.type="button";full.textContent="⛶ Fullscreen";full.addEventListener("click",async()=>{wrap.classList.remove("hidden");try{if(document.fullscreenElement){await document.exitFullscreen();return}if(directVideo&&player&&typeof player.webkitEnterFullscreen==="function"){player.webkitEnterFullscreen();return}if(player&&typeof player.requestFullscreen==="function"){await player.requestFullscreen()}else if(typeof wrap.requestFullscreen==="function"){await wrap.requestFullscreen()}else throw new Error("Fullscreen unsupported");if(screen.orientation&&typeof screen.orientation.lock==="function"){try{await screen.orientation.lock("landscape")}catch(_){}}}catch(error){console.warn("Fullscreen request failed",error);wrap.scrollIntoView({behavior:"smooth",block:"nearest"})}});actions.append(full);
   }else{
    const message=document.createElement("p");message.className="muted";message.textContent="Is video source ko website ke player mein nahi khola ja sakta.";body.append(message);
