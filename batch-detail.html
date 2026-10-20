@@ -209,45 +209,30 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
    if(directVideo){player=document.createElement("video");player.className="viewer";player.controls=true;player.playsInline=true;player.preload="metadata";player.referrerPolicy="no-referrer";player.src=raw;player.style.height="auto";player.style.maxHeight="70vh"}
    else{player=document.createElement("iframe");player.className="viewer";player.src=embedSrc;player.title=lecture.title||"Lecture";player.loading="lazy";player.allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen";player.allowFullscreen=true;player.referrerPolicy="strict-origin-when-cross-origin";player.addEventListener("load",()=>{loading.classList.add("hidden")})}
    wrap.append(player);
-   fallback=document.createElement("div");fallback.className="fallback-box hidden";
-   const playbackErrorMessage=document.createElement("p");playbackErrorMessage.className="muted";playbackErrorMessage.textContent="Video abhi nahi chal pa raha hai. Kripya baad mein dobara koshish karein.";fallback.append(playbackErrorMessage);
-   function stopNativePlayer(){
-    if(!player)return;
-    try{player.pause()}catch(_){}
-    try{player.removeAttribute("src");player.querySelectorAll("source").forEach(source=>source.remove());player.load()}catch(_){}
-    player.remove();
-   }
-   function showPlaybackError(error,stage){
-    if(timer){clearTimeout(timer);timer=null}
-    loading.classList.add("hidden");
-    fallback.classList.remove("hidden");
-    stopNativePlayer();
-    if(alternateFrame)alternateFrame.style.display="";
-    console.error("[EXAM JUNCTION video playback failure]",{stage:stage||"unknown",lectureId:lecture.id||null,lectureTitle:lecture.title||null,sourceHost:(()=>{try{return new URL(raw).hostname}catch(_){return "invalid-url"}})(),errorName:error?.name||null,errorMessage:error?.message||String(error||"No browser error details available"),playerErrorCode:player?.error?.code||null,playerErrorMessage:player?.error?.message||null,readyState:player?.readyState??null,networkState:player?.networkState??null});
-   }
+   fallback=document.createElement("div");fallback.className="fallback-box hidden";fallback.textContent="Video play nahi ho pa raha hai. Kripya kuch der baad dobara koshish karein.";
+   function showPlaybackError(){if(timer){clearTimeout(timer);timer=null}loading.classList.add("hidden");fallback.classList.remove("hidden");if(alternateFrame)alternateFrame.style.display="";if(player&&player.isConnected)player.remove()}
    function tryAlternatePlayer(){
-    if(!directVideo||alternateFrame){showPlaybackError(null,"alternate-player-unavailable");return}
+    if(!directVideo||alternateFrame){showPlaybackError();return}
     if(timer){clearTimeout(timer);timer=null}
     loading.classList.remove("hidden");
-    fallback.classList.add("hidden");
-    stopNativePlayer();
-    alternateFrame=document.createElement("iframe");alternateFrame.className="viewer";alternateFrame.title=(lecture.title||"Lecture")+" — alternate player";alternateFrame.allow="fullscreen";alternateFrame.allowFullscreen=true;alternateFrame.referrerPolicy="no-referrer";alternateFrame.style.height="auto";alternateFrame.style.maxHeight="70vh";
+    if(player&&player.isConnected)player.remove();
+    alternateFrame=document.createElement("iframe");alternateFrame.className="viewer";alternateFrame.title=lecture.title||"Lecture";alternateFrame.allow="fullscreen";alternateFrame.allowFullscreen=true;alternateFrame.referrerPolicy="no-referrer";alternateFrame.style.height="auto";alternateFrame.style.maxHeight="70vh";
     alternateFrame.src=raw;
     wrap.insertBefore(alternateFrame,fallback);
-    timer=setTimeout(()=>showPlaybackError(null,"alternate-player-timeout"),8000);
-    alternateFrame.addEventListener("load",()=>{if(timer){clearTimeout(timer);timer=null}loading.classList.add("hidden");fallback.classList.remove("hidden");playbackErrorMessage.textContent="Agar video nahi chal raha, Retry karein ya original link kholein.";});
+    timer=setTimeout(showPlaybackError,12000);
+    alternateFrame.addEventListener("load",()=>{if(timer){clearTimeout(timer);timer=null}loading.classList.add("hidden");fallback.classList.add("hidden")});
    }
-   const startLoadTimeout=()=>{
-    if(timer)clearTimeout(timer);
-    timer=setTimeout(()=>tryAlternatePlayer(),4000);
-   };
    wrap.append(fallback);body.append(wrap);
    if(directVideo){
+    const startLoadTimeout=()=>{
+     if(timer)clearTimeout(timer);
+     timer=setTimeout(tryAlternatePlayer,15000);
+    };
     player.addEventListener("loadstart",()=>{loading.classList.remove("hidden");startLoadTimeout()});
     player.addEventListener("waiting",()=>{loading.classList.remove("hidden");startLoadTimeout()});
-    player.addEventListener("error",()=>tryAlternatePlayer());
+    player.addEventListener("error",tryAlternatePlayer);
     player.addEventListener("stalled",startLoadTimeout);
-    player.addEventListener("abort",()=>tryAlternatePlayer());
+    player.addEventListener("abort",tryAlternatePlayer);
     player.addEventListener("canplay",()=>{
      if(timer){clearTimeout(timer);timer=null}
      loading.classList.add("hidden");
@@ -261,7 +246,7 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
     });
    }
    
-   const watch=document.createElement("button");watch.className="btn";watch.type="button";watch.textContent="▶ Watch";watch.addEventListener("click",async(event)=>{event.preventDefault();event.stopPropagation();document.querySelectorAll(".media-fullscreen").forEach(other=>{if(other===wrap)return;other.classList.add("hidden");const otherVideo=other.querySelector("video");if(otherVideo){try{otherVideo.pause()}catch(_){}}other.querySelectorAll("iframe").forEach(frame=>{try{frame.src="about:blank"}catch(_){}frame.remove()});});if(alternateFrame){try{alternateFrame.src="about:blank"}catch(_){}alternateFrame.remove();alternateFrame=null}wrap.classList.remove("hidden");if(directVideo&&player&&!player.readyState){if(timer)clearTimeout(timer);timer=setTimeout(()=>{if(!alternateFrame&&!player.readyState){loading.classList.add("hidden");fallback.classList.remove("hidden");player.style.display="none"}},15000)}wrap.scrollIntoView({behavior:"smooth",block:"nearest"});});actions.append(watch);
+   const watch=document.createElement("button");watch.className="btn";watch.type="button";watch.textContent="▶ Watch";watch.addEventListener("click",async()=>{wrap.classList.remove("hidden");if(directVideo&&!player.readyState){if(timer)clearTimeout(timer);timer=setTimeout(()=>{loading.classList.add("hidden");fallback.classList.remove("hidden");player.style.display="none"},15000)}try{await wrap.requestFullscreen()}catch(_){wrap.scrollIntoView({behavior:"smooth",block:"nearest"})}});actions.append(watch);
    const full=document.createElement("button");full.className="btn";full.type="button";full.textContent="⛶ Fullscreen";full.addEventListener("click",async()=>{wrap.classList.remove("hidden");try{if(document.fullscreenElement){await document.exitFullscreen();return}if(directVideo&&player&&typeof player.webkitEnterFullscreen==="function"){player.webkitEnterFullscreen();return}if(player&&typeof player.requestFullscreen==="function"){await player.requestFullscreen()}else if(typeof wrap.requestFullscreen==="function"){await wrap.requestFullscreen()}else throw new Error("Fullscreen unsupported");if(screen.orientation&&typeof screen.orientation.lock==="function"){try{await screen.orientation.lock("landscape")}catch(_){}}}catch(error){console.warn("Fullscreen request failed",error);wrap.scrollIntoView({behavior:"smooth",block:"nearest"})}});actions.append(full);
   }else{
    const message=document.createElement("p");message.className="muted";message.textContent="Is video source ko website ke player mein nahi khola ja sakta.";body.append(message);
