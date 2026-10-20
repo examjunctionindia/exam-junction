@@ -192,13 +192,14 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
   const h=document.createElement("summary");h.className="lesson-title";h.textContent="Lecture "+lectureNumber+" — "+(lecture.title||"Lecture");row.append(h);
   const body=document.createElement("div");body.className="lecture-content";row.append(body);
   const raw=safeUrl(lecture.youtube_url||"");
-  let embedSrc=null,directVideo=false;
+  let embedSrc=null,directVideo=false,hlsVideo=false;
   if(raw){
    const u=new URL(raw);let m=u.href.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([\w-]{11})/);
    if(m)embedSrc="https://www.youtube-nocookie.com/embed/"+m[1]+"?controls=1&playsinline=1&rel=0";
    else if(u.hostname==="drive.google.com"){let g=u.pathname.match(/\/file\/d\/([^/]+)/);if(!g&&u.pathname==="/open"&&u.searchParams.get("id"))g=[null,u.searchParams.get("id")];if(g&&g[1])embedSrc="https://drive.google.com/file/d/"+encodeURIComponent(g[1])+"/preview"}
    else if(u.hostname==="vimeo.com"||u.hostname==="www.vimeo.com"){const vm=u.pathname.match(/\/(\d+)(?:$|\/)/);if(vm)embedSrc="https://player.vimeo.com/video/"+vm[1]}
    else if(/\.(mp4|webm|ogg)$/i.test(u.pathname))directVideo=true;
+   else if(/\.m3u8$/i.test(u.pathname)){directVideo=true;hlsVideo=true;}
   }
   const originalAllowed=canShowOriginal(lecture);
   const actions=document.createElement("div");actions.className="media-actions";
@@ -229,6 +230,21 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
      timer=setTimeout(tryAlternatePlayer,15000);
     };
     player.addEventListener("loadstart",()=>{loading.classList.remove("hidden");startLoadTimeout()});
+    if(hlsVideo){
+     if(player.canPlayType("application/vnd.apple.mpegurl")){player.src=raw;}
+     else{
+      const loadHls=()=>{
+       if(window.Hls&&window.Hls.isSupported()){
+        const hls=new window.Hls();hls.loadSource(raw);hls.attachMedia(player);
+        hls.on(window.Hls.Events.MANIFEST_PARSED,()=>{loading.classList.add("hidden");if(timer){clearTimeout(timer);timer=null}});
+        hls.on(window.Hls.Events.ERROR,(_event,data)=>{if(data&&data.fatal){try{hls.destroy()}catch(_){}tryAlternatePlayer()}});
+       }else{tryAlternatePlayer()}
+      };
+      if(window.Hls)loadHls();else{
+       const script=document.createElement("script");script.src="https://cdn.jsdelivr.net/npm/hls.js@1.6.13/dist/hls.min.js";script.onload=loadHls;script.onerror=()=>showPlaybackError();document.head.append(script);
+      }
+     }
+    }
     player.addEventListener("waiting",()=>{loading.classList.remove("hidden");startLoadTimeout()});
     player.addEventListener("error",tryAlternatePlayer);
     player.addEventListener("stalled",startLoadTimeout);
@@ -246,7 +262,7 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
     });
    }
    
-   const watch=document.createElement("button");watch.className="btn";watch.type="button";watch.textContent="▶ Watch";watch.addEventListener("click",async(event)=>{event.preventDefault();event.stopPropagation();document.querySelectorAll(".media-fullscreen").forEach(other=>{if(other===wrap)return;other.classList.add("hidden");const v=other.querySelector("video");if(v){try{v.pause()}catch(_){} }other.querySelectorAll("iframe").forEach(f=>{if(f.dataset.src){try{f.src="about:blank"}catch(_){}}});});if(alternateFrame){try{alternateFrame.src="about:blank"}catch(_){}alternateFrame.remove();alternateFrame=null}if(player&&!player.isConnected&&wrap.contains(player)===false){/* Player is recreated only when the selected lecture is opened. */}if(player&&player.dataset.src&&player.getAttribute("src")!==player.dataset.src){player.src=player.dataset.src}wrap.classList.remove("hidden");if(directVideo&&player&&!player.readyState){if(timer)clearTimeout(timer);timer=setTimeout(()=>{if(!alternateFrame&&!player.readyState){loading.classList.add("hidden");fallback.classList.remove("hidden");player.style.display="none"}},15000)}try{await wrap.requestFullscreen()}catch(_){wrap.scrollIntoView({behavior:"smooth",block:"nearest"})}});actions.append(watch);
+   const watch=document.createElement("button");watch.className="btn";watch.type="button";watch.textContent="▶ Watch";watch.addEventListener("click",async(event)=>{event.preventDefault();event.stopPropagation();document.querySelectorAll(".media-fullscreen").forEach(other=>{if(other===wrap)return;other.classList.add("hidden");const v=other.querySelector("video");if(v){try{v.pause()}catch(_){} }other.querySelectorAll("iframe").forEach(f=>{if(f.dataset.src){try{f.src="about:blank"}catch(_){}}});});if(alternateFrame){try{alternateFrame.src="about:blank"}catch(_){}alternateFrame.remove();alternateFrame=null}if(player&&!player.isConnected&&wrap.contains(player)===false){/* Player is recreated only when the selected lecture is opened. */}if(player&&player.dataset.src&&!hlsVideo&&player.getAttribute("src")!==player.dataset.src){player.src=player.dataset.src}wrap.classList.remove("hidden");if(directVideo&&player&&!player.readyState){if(timer)clearTimeout(timer);timer=setTimeout(()=>{if(!alternateFrame&&!player.readyState){loading.classList.add("hidden");fallback.classList.remove("hidden");player.style.display="none"}},15000)}try{await wrap.requestFullscreen()}catch(_){wrap.scrollIntoView({behavior:"smooth",block:"nearest"})}});actions.append(watch);
    const full=document.createElement("button");full.className="btn";full.type="button";full.textContent="⛶ Fullscreen";full.addEventListener("click",async()=>{wrap.classList.remove("hidden");try{if(document.fullscreenElement){await document.exitFullscreen();return}if(directVideo&&player&&typeof player.webkitEnterFullscreen==="function"){player.webkitEnterFullscreen();return}if(player&&typeof player.requestFullscreen==="function"){await player.requestFullscreen()}else if(typeof wrap.requestFullscreen==="function"){await wrap.requestFullscreen()}else throw new Error("Fullscreen unsupported");if(screen.orientation&&typeof screen.orientation.lock==="function"){try{await screen.orientation.lock("landscape")}catch(_){}}}catch(error){console.warn("Fullscreen request failed",error);wrap.scrollIntoView({behavior:"smooth",block:"nearest"})}});actions.append(full);
   }else{
    const message=document.createElement("p");message.className="muted";message.textContent="Is video source ko website ke player mein nahi khola ja sakta.";body.append(message);
