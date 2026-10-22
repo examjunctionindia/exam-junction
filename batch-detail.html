@@ -242,7 +242,7 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
   }
   const originalAllowed=canShowOriginal(lecture);
   const actions=document.createElement("div");actions.className="media-actions";
-  let wrap=null,player=null,fallback=null,timer=null,alternateFrame=null;
+  let wrap=null,player=null,fallback=null,timer=null,alternateFrame=null,hlsInstance=null,fallbackStarted=false;
   if(embedSrc||directVideo){
    wrap=document.createElement("div");wrap.className="media-fullscreen hidden";
    const loading=document.createElement("p");loading.className="muted media-loading";loading.textContent="Video load ho raha hai...";wrap.append(loading);
@@ -250,10 +250,13 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
    else{player=document.createElement("iframe");player.className="viewer";player.dataset.src=embedSrc;player.title=lecture.title||"Lecture";player.loading="lazy";player.allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen";player.allowFullscreen=true;player.referrerPolicy="strict-origin-when-cross-origin";player.addEventListener("load",()=>{loading.classList.add("hidden")})}
    wrap.append(player);
    fallback=document.createElement("div");fallback.className="fallback-box hidden";fallback.textContent="Video play nahi ho pa raha hai. Kripya kuch der baad dobara koshish karein.";
-   function showPlaybackError(){if(timer){clearTimeout(timer);timer=null}loading.classList.add("hidden");fallback.classList.remove("hidden");if(alternateFrame)alternateFrame.style.display="";if(player&&player.isConnected)player.remove()}
+   function stopPrimaryPlayback(){if(player&&player.tagName==="VIDEO"){try{player.pause()}catch(_){}try{player.removeAttribute("src");player.querySelectorAll("source").forEach(s=>s.remove());player.load()}catch(_){}}if(hlsInstance){try{hlsInstance.destroy()}catch(_){}hlsInstance=null}}function showPlaybackError(){if(timer){clearTimeout(timer);timer=null}stopPrimaryPlayback();loading.classList.add("hidden");fallback.classList.remove("hidden");if(alternateFrame)alternateFrame.style.display="";if(player&&player.isConnected)player.remove()}
    function tryAlternatePlayer(){
+    if(fallbackStarted)return;
+    fallbackStarted=true;
     if(!directVideo||alternateFrame){showPlaybackError();return}
     if(timer){clearTimeout(timer);timer=null}
+    stopPrimaryPlayback();
     loading.classList.remove("hidden");
     if(player&&player.isConnected)player.remove();
     alternateFrame=document.createElement("iframe");alternateFrame.className="viewer";alternateFrame.title=lecture.title||"Lecture";alternateFrame.allow="fullscreen";alternateFrame.allowFullscreen=true;alternateFrame.referrerPolicy="no-referrer";alternateFrame.style.height="auto";alternateFrame.style.maxHeight="70vh";
@@ -274,9 +277,9 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
      else{
       const loadHls=()=>{
        if(window.Hls&&window.Hls.isSupported()){
-        const hls=new window.Hls();hls.loadSource(raw);hls.attachMedia(player);
-        hls.on(window.Hls.Events.MANIFEST_PARSED,()=>{loading.classList.add("hidden");if(timer){clearTimeout(timer);timer=null}});
-        hls.on(window.Hls.Events.ERROR,(_event,data)=>{if(data&&data.fatal){try{hls.destroy()}catch(_){}tryAlternatePlayer()}});
+        hlsInstance=new window.Hls();hlsInstance.loadSource(raw);hlsInstance.attachMedia(player);
+        hlsInstance.on(window.Hls.Events.MANIFEST_PARSED,()=>{if(timer){clearTimeout(timer);timer=null}});
+        hlsInstance.on(window.Hls.Events.ERROR,(_event,data)=>{if(data&&data.fatal){stopPrimaryPlayback();tryAlternatePlayer()}});
        }else{tryAlternatePlayer()}
       };
       if(window.Hls)loadHls();else{
