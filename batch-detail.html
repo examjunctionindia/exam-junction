@@ -206,6 +206,8 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
  heading.textContent="Chapter "+chapterNumber+" — "+(chapter.title||"Chapter")+(chapterNotes.length?" · Notes available":"")+(batch.show_content_counts===true?" ("+lectures.length+" lectures)":"");
  if(!lectures.length){const p=document.createElement("p");p.className="muted";p.textContent="Abhi published lectures available nahi hain.";inner.append(p)}
  for(let lectureIndex=0;lectureIndex<lectures.length;lectureIndex++){
+  // Yield periodically so very large chapters do not monopolize the mobile main thread.
+  if(lectureIndex>0&&lectureIndex%25===0)await new Promise(resolve=>setTimeout(resolve,0));
   const lecture=lectures[lectureIndex];const lectureNumber=String(lectureIndex+1).padStart(2,"0");
   const row=document.createElement("details");row.className="lecture lesson lecture-accordion";row.dataset.lectureId=lecture.id;row.dataset.chapterId=chapter.id;row.dataset.lectureSearch=("lecture "+lectureNumber+" "+(lecture.title||"Lecture")).toLowerCase();
   const h=document.createElement("summary");h.className="lesson-title";h.textContent="Lecture "+lectureNumber+" — "+(lecture.title||"Lecture");row.append(h);
