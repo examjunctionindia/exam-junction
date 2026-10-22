@@ -149,13 +149,26 @@ if(activeDotRows.length){
 }
 dot.hidden=true;
 const chaptersRoot=$("chapters");
+// Page large content explicitly; PostgREST responses have a row cap.
+async function fetchAllRows(makeQuery,pageSize=500){
+ const rows=[];
+ for(let from=0;;from+=pageSize){
+  const {data,error}=await makeQuery().range(from,from+pageSize-1);
+  if(error)throw error;
+  const page=data||[];rows.push(...page);
+  if(page.length<pageSize)break;
+ }
+ return rows;
+}
+
 /* Batch announcements are shown only in this batch's Notifications page,
    opened from the bell above; do not duplicate them on the batch details page. */
 const chapterSearch=batch.chapter_search_enabled===true?document.createElement("input"):null;
 if(chapterSearch){chapterSearch.type="search";chapterSearch.className="simple-search";chapterSearch.placeholder="Search chapters or lectures";chapterSearch.setAttribute("aria-label","Search chapters or lectures");chaptersRoot.before(chapterSearch)}
-const chapterResult=await db.from("chapters").select("id,title,position,created_at,is_published").eq("batch_id",id).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true});
-if(chapterResult.error){const p=document.createElement("p");p.className="notice";p.textContent="Chapters load nahi ho paaye. Dobara refresh karein.";chaptersRoot.append(p);console.error(chapterResult.error);return}
-const chapters=chapterResult.data||[];
+let chapters;
+try{
+ chapters=await fetchAllRows(()=>db.from("chapters").select("id,title,position,created_at,is_published").eq("batch_id",id).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true}));
+}catch(error){const p=document.createElement("p");p.className="notice";p.textContent="Chapters load nahi ho paaye. Dobara refresh karein.";chaptersRoot.append(p);console.error("Chapter pagination error",error);return}
 // Show actual published counts only after the batch access check above has succeeded.
 if(batch.show_content_counts===true){
  let lectureCount=0,countAvailable=true;
