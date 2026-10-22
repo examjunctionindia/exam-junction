@@ -41,18 +41,11 @@ async function downloadBook(book){
  try{const url=await resolveFileUrl(book,{download:true});window.open(url,"_blank","noopener,noreferrer")}catch(e){alert("Download available nahi hai. Admin se contact karein.");console.error("Book download error",e)}
 }
 try{const auth=await db.auth.getUser();currentUser=auth?.data?.user||null;}catch(_){}
+// Public catalogue is available without login. Database RLS still controls
+// which book records/files this visitor can access. Restricted books remain
+// request-only until this signed-in student has an approved book_access row.
 if(!currentUser){
- $("status").classList.remove("hidden");
- $("status").textContent="Books dekhne ke liye pehle student login karein.";
- $("list").replaceChildren();
- const loginButton=document.createElement("a");
- loginButton.className="btn";
- loginButton.href="login.html?next="+encodeURIComponent("books.html");
- loginButton.textContent="🔐 Student Login";
- $("status").appendChild(document.createElement("br"));
- $("status").appendChild(loginButton);
- $("search").disabled=true;
- return;
+ $("search").disabled=false;
 }
 if(currentUser){try{const {data:reqs,error:reqErr}=await db.from("book_access_requests").select("book_id,status").eq("student_id",currentUser.id);if(!reqErr)(reqs||[]).forEach(r=>bookRequests.set(r.book_id,r.status));}catch(e){console.warn("Book request status unavailable",e)}}
 try{
