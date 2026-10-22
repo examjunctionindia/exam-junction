@@ -173,9 +173,14 @@ try{
 if(batch.show_content_counts===true){
  let lectureCount=0,countAvailable=true;
  if(chapters.length){
-  const {count:countRows,error:countError}=await db.from("lectures").select("id",{count:"exact",head:true}).in("chapter_id",chapters.map(ch=>ch.id)).eq("is_published",true);
-  if(countError){countAvailable=false;console.warn("Published lecture count unavailable",countError);}
-  else lectureCount=Number(countRows||0);
+  try{
+   for(let i=0;i<chapters.length;i+=100){
+    const ids=chapters.slice(i,i+100).map(ch=>ch.id);
+    const {count,error}=await db.from("lectures").select("id",{count:"exact",head:true}).in("chapter_id",ids).eq("is_published",true);
+    if(error)throw error;
+    lectureCount+=Number(count||0);
+   }
+  }catch(error){countAvailable=false;console.warn("Published lecture count unavailable",error);}
  }
  if(countAvailable){
   const countText=document.createElement("span");countText.className="batch-content-counts";
