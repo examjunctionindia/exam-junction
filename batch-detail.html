@@ -189,19 +189,39 @@ if(batch.show_content_counts===true){
  }
 }
 if(!chapters.length){const p=document.createElement("p");p.className="notice";p.textContent="Abhi published chapters available nahi hain.";chaptersRoot.append(p);return}
+// Load published lectures and chapter notes in chapter-ID batches instead of
+// making two sequentially awaited database queries for every chapter.
+const contentByChapter=new Map(chapters.map(ch=>[ch.id,{lectures:[],notes:[]}]));
+try{
+ const chapterIdChunks=[];
+ for(let i=0;i<chapters.length;i+=100)chapterIdChunks.push(chapters.slice(i,i+100).map(ch=>ch.id));
+ const groupedResults=await Promise.all(chapterIdChunks.map(async ids=>{
+  const [lectures,notes]=await Promise.all([
+   fetchAllRows(()=>db.from("lectures").select("id,chapter_id,title,youtube_url,position,teacher_name,download_url,download_allowed,download_permission_mode,original_link_allowed,is_published,published_at,created_at").in("chapter_id",ids).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true})),
+   fetchAllRows(()=>db.from("chapter_notes").select("id,chapter_id,lecture_id,title,storage_path,storage_bucket,download_url,download_allowed,download_permission_mode,original_link_allowed,position,is_published,created_at").in("chapter_id",ids).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true}))
+  ]);
+  return {lectures,notes};
+ }));
+ for(const group of groupedResults){
+  for(const lecture of group.lectures){const target=contentByChapter.get(lecture.chapter_id);if(target)target.lectures.push(lecture)}
+  for(const note of group.notes){const target=contentByChapter.get(note.chapter_id);if(target)target.notes.push(note)}
+ }
+}catch(error){
+ const p=document.createElement("p");p.className="notice";p.textContent="Batch content load nahi ho paya. Dobara refresh karein.";chaptersRoot.append(p);console.error("Batch content pagination error",error);return;
+}
+for(const group of contentByChapter.values()){
+ group.lectures.sort((a,b)=>(Number(a.position)||0)-(Number(b.position)||0)||String(a.created_at||"").localeCompare(String(b.created_at||""))||String(a.id).localeCompare(String(b.id)));
+ group.notes.sort((a,b)=>(Number(a.position)||0)-(Number(b.position)||0)||String(a.created_at||"").localeCompare(String(b.created_at||""))||String(a.id).localeCompare(String(b.id)));
+}
 const allLectures=[];
 for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
  const chapter=chapters[chapterIndex];
  const chapterNumber=String(chapterIndex+1).padStart(2,"0");const section=document.createElement("details");section.className="chapter";section.dataset.chapterSearch=("chapter "+chapterNumber+" "+(chapter.title||"")).toLowerCase();section.open=chapterIndex===0;
  const heading=document.createElement("summary");heading.textContent=chapter.title||"Chapter";section.append(heading);
  const inner=document.createElement("div");inner.className="chapter-inner";section.append(inner);chaptersRoot.append(section);
- let lectures,notes;
- try{
-  [lectures,notes]=await Promise.all([
-   fetchAllRows(()=>db.from("lectures").select("id,chapter_id,title,youtube_url,position,teacher_name,download_url,download_allowed,download_permission_mode,original_link_allowed,is_published,published_at,created_at").eq("chapter_id",chapter.id).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true})),
-   fetchAllRows(()=>db.from("chapter_notes").select("id,chapter_id,lecture_id,title,storage_path,storage_bucket,download_url,download_allowed,download_permission_mode,original_link_allowed,position,is_published,created_at").eq("chapter_id",chapter.id).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true}))
-  ]);
- }catch(error){const p=document.createElement("p");p.className="muted";p.textContent="Is chapter ka content load nahi ho paya.";inner.append(p);console.error("Chapter content pagination error",error);continue}
+ const chapterContent=contentByChapter.get(chapter.id)||{lectures:[],notes:[]};
+ const lectures=chapterContent.lectures;
+ const notes=chapterContent.notes;
  const chapterNotes=notes.filter(n=>!n.lecture_id);
  heading.textContent="Chapter "+chapterNumber+" — "+(chapter.title||"Chapter")+(chapterNotes.length?" · Notes available":"")+(batch.show_content_counts===true?" ("+lectures.length+" lectures)":"");
  if(!lectures.length){const p=document.createElement("p");p.className="muted";p.textContent="Abhi published lectures available nahi hain.";inner.append(p)}
