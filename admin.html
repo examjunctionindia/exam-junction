@@ -157,6 +157,34 @@ button:disabled{filter:none;transform:none}
 @media(max-width:480px){.management-subnav{grid-template-columns:1fr}}
 @media(min-width:900px){#managementHome,#managementCategoryHome{max-width:920px;margin:0 auto;width:100%}.management-nav{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
+
+/* Easy-mode usability: mobile-first navigation, readable forms, and visible focus. */
+.management-nav{
+ position:sticky;top:0;z-index:50;display:flex;gap:8px;overflow-x:auto;
+ padding:10px 8px;background:rgba(255,255,255,.97);
+ border:1px solid #dce5f1;border-radius:12px;margin:12px 0 18px;
+ -webkit-overflow-scrolling:touch;scrollbar-width:thin;
+}
+.management-nav a{
+ flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+ min-height:42px;padding:10px 12px;border:1px solid #dce5f1;border-radius:10px;
+ background:#f5f8fd;color:#173b73;font-size:13px;font-weight:700;text-decoration:none;
+}
+.management-nav a[aria-current="page"],.management-nav a.active{background:#173b73;color:#fff;border-color:#173b73}
+input,textarea,select,button,a{touch-action:manipulation}
+input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{
+ outline:3px solid #78a7f7;outline-offset:2px;
+}
+.card{scroll-margin-top:90px}
+label{line-height:1.45}
+button,.button{min-height:42px}
+@media(max-width:520px){
+ main{padding:12px 9px 30px}
+ .card{padding:14px;border-radius:13px}
+ .management-nav{margin:10px 0 14px}
+ .actions button,.actions .button{flex:1 1 145px;text-align:center}
+ input,textarea,select{font-size:16px}
+}
 </style>
 </head>
 
