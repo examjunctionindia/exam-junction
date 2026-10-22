@@ -263,7 +263,7 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
     alternateFrame.src=raw;
     wrap.insertBefore(alternateFrame,fallback);
     timer=setTimeout(showPlaybackError,12000);
-    alternateFrame.addEventListener("load",()=>{if(timer){clearTimeout(timer);timer=null}loading.classList.add("hidden");fallback.classList.add("hidden")});
+    alternateFrame.addEventListener("load",()=>{/* An iframe load only confirms navigation, not that cross-origin media is playing. Keep the playback timeout and recovery actions available. */loading.classList.add("hidden");fallback.classList.remove("hidden")});
    }
    wrap.append(fallback);body.append(wrap);
    if(directVideo){
