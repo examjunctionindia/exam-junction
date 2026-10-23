@@ -41,7 +41,7 @@ jobs:
 
           SITE = "https://examjunctionindia.github.io/exam-junction"
           SB = "https://yzvwxautsauevfspdqnw.supabase.co"
-          KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6dnd4YXV0c2F1ZXZmc3BkcW53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3MDYyMDAsImV4cCI6MjA3NjI4MjIwMH0.public"
+          KEY = "sb_publishable_dcZFmdlOIQTUzbRUtjNNMA_POLJQHnP"
           BATCH = "c0ab40d6-0b01-47d4-9e3e-765f674fcbb5"
           VIDEO = os.environ.get("VIDEO_URL", "").strip()
           PDF = os.environ.get("PDF_URL", "").strip()
@@ -69,8 +69,8 @@ jobs:
               # Mirrors the public student-page workflow: page + public published data.
               checks = [
                   ("public_home", SITE + "/"),
-                  ("public_batch", SB + "/rest/v1/batches?id=eq." + BATCH + "&select=id,name,status,access_type"),
-                  ("public_chapters", SB + "/rest/v1/chapters?batch_id=eq." + BATCH + "&status=eq.published&select=id,title,position"),
+                  ("public_batch", SB + "/rest/v1/batches?id=eq." + BATCH + "&is_published=eq.true&select=id,title,access_type,is_published"),
+                  ("public_chapters", SB + "/rest/v1/chapters?batch_id=eq." + BATCH + "&is_published=eq.true&select=id,title,position&order=position.asc&limit=500"),
               ]
               ok = True
               for label, url in checks:
