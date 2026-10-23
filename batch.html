@@ -151,10 +151,16 @@
     try{
       const ready=await window.EXAM_JUNCTION.init();
       if(!ready)throw new Error("Supabase unavailable");
-      const {data,error}=await window.EXAM_JUNCTION.supabase.from("batches")
-        .select("id,title,description,show_description,platform_name,access_type,is_published,created_at,published_at,thumbnail_url,display_position,show_content_counts")
-        .eq("is_published",true).order("display_position",{ascending:true}).order("created_at",{ascending:false}).limit(100);
-      if(error)throw error;
+      const db=window.EXAM_JUNCTION.supabase;
+      const data=[];
+      for(let from=0;;from+=500){
+        const {data:page,error}=await db.from("batches")
+          .select("id,title,description,show_description,platform_name,access_type,is_published,created_at,published_at,thumbnail_url,display_position,show_content_counts")
+          .eq("is_published",true).order("display_position",{ascending:true}).order("created_at",{ascending:false}).range(from,from+499);
+        if(error)throw error;
+        const rows=page||[];data.push(...rows);
+        if(rows.length<500)break;
+      }
       list.replaceChildren();
       if(!data||!data.length){if(resultCount)resultCount.textContent="0 batches found";list.innerHTML='<div class="empty" style="grid-column:1/-1"><h2>Abhi koi published batch nahi hai</h2><p>Admin Panel se batch publish hone par yahan dikhega.</p></div>';return;}
       const currentUserResult=await window.EXAM_JUNCTION.supabase.auth.getUser();
