@@ -1,0 +1,151 @@
+name: EXAM JUNCTION Comprehensive Capacity Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      media_video_url:
+        description: "Public video URL (HLS .m3u8 or MP4); default is a public HLS test source"
+        required: false
+        default: "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6361863633112/6361863633112.m3u8"
+        type: string
+      media_pdf_url:
+        description: "Public PDF URL; default is the existing public Railway percentage PDF"
+        required: false
+        default: "https://selectionwayserver.hranker.com/pdfs/files/Railway%20percentage%20class%201%20board%20pdf.pdf"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  capacity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test dependencies
+        run: python -m pip install aiohttp
+      - name: Run combined capacity test
+        env:
+          VIDEO_URL: ${{ inputs.media_video_url }}
+          PDF_URL: ${{ inputs.media_pdf_url }}
+        run: |
+          cat > capacity_test.py <<'PY'
+          import asyncio, aiohttp, json, os, statistics, time
+          from urllib.parse import quote
+
+          SITE = "https://examjunctionindia.github.io/exam-junction"
+          SB = "https://yzvwxautsauevfspdqnw.supabase.co"
+          KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6dnd4YXV0c2F1ZXZmc3BkcW53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3MDYyMDAsImV4cCI6MjA3NjI4MjIwMH0.public"
+          BATCH = "c0ab40d6-0b01-47d4-9e3e-765f674fcbb5"
+          VIDEO = os.environ.get("VIDEO_URL", "").strip()
+          PDF = os.environ.get("PDF_URL", "").strip()
+          HEADERS = {"apikey": KEY, "Authorization": "Bearer " + KEY, "Accept": "application/json"}
+          results = []
+
+          async def request(session, label, url, headers=None, expected=(200, 206), timeout=25):
+              start = time.perf_counter()
+              status, size, err = 0, 0, ""
+              try:
+                  async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=timeout), allow_redirects=True) as r:
+                      status = r.status
+                      # Read only a small prefix to avoid downloading whole media files.
+                      chunk = await r.content.read(8192)
+                      size = len(chunk)
+                      if status not in expected:
+                          err = "unexpected HTTP " + str(status)
+              except Exception as e:
+                  err = type(e).__name__ + ": " + str(e)[:140]
+              elapsed = (time.perf_counter() - start) * 1000
+              results.append({"test": label, "status": status, "ms": round(elapsed, 2), "bytes_read": size, "error": err})
+              return not err, elapsed
+
+          async def user_check(session, i):
+              # Mirrors the public student-page workflow: page + public published data.
+              checks = [
+                  ("public_home", SITE + "/"),
+                  ("public_batch", SB + "/rest/v1/batches?id=eq." + BATCH + "&select=id,name,status,access_type"),
+                  ("public_chapters", SB + "/rest/v1/chapters?batch_id=eq." + BATCH + "&status=eq.published&select=id,title,position"),
+              ]
+              ok = True
+              for label, url in checks:
+                  passed, _ = await request(session, "1500-user/" + label, url, HEADERS)
+                  ok = ok and passed
+              return ok
+
+          async def media_check(session, label, url):
+              # Range request asks for only the beginning; server may ignore Range.
+              headers = {"Range": "bytes=0-1023", "User-Agent": "EXAM-JUNCTION-capacity-test/1.0"}
+              passed, ms = await request(session, label, url, headers, expected=(200, 206), timeout=30)
+              return passed
+
+          async def run_group(name, count, coro_factory):
+              start_index = len(results)
+              t0 = time.perf_counter()
+              outcomes = await asyncio.gather(*(coro_factory(i) for i in range(count)), return_exceptions=True)
+              elapsed = time.perf_counter() - t0
+              errors = sum(1 for x in outcomes if x is not True and not (isinstance(x, tuple) and x and x[0] is True))
+              # For request groups, count request-level errors recorded in this phase.
+              phase_rows = results[start_index:]
+              failures = sum(1 for r in phase_rows if r["error"])
+              times = [r["ms"] for r in phase_rows]
+              def percentile(p):
+                  return round(sorted(times)[min(len(times)-1, int((len(times)-1)*p))], 2) if times else None
+              report = {
+                  "phase": name, "workers": count, "requests": len(phase_rows),
+                  "failed_requests": failures, "failure_rate_pct": round(failures*100/len(phase_rows), 2) if phase_rows else 100,
+                  "elapsed_seconds": round(elapsed, 2),
+                  "requests_per_second": round(len(phase_rows)/elapsed, 2) if elapsed else 0,
+                  "p50_ms": percentile(.50), "p95_ms": percentile(.95), "p99_ms": percentile(.99),
+                  "pass": bool(phase_rows) and failures == 0
+              }
+              print("PHASE_RESULT " + json.dumps(report))
+              return report
+
+          async def main():
+              connector = aiohttp.TCPConnector(limit=1800, limit_per_host=800, ttl_dns_cache=300)
+              timeout = aiohttp.ClientTimeout(total=35, connect=15)
+              async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
+                  phases = []
+                  print("PHASE 1: 1500 simulated public visitors/users, each checks homepage, public batch, and published chapters.")
+                  phases.append(await run_group("1500 public users (4500 public requests)", 1500, lambda i: user_check(session, i)))
+
+                  print("PHASE 2: 500 concurrent lightweight video URL/range startup requests.")
+                  phases.append(await run_group("500 concurrent video viewers (startup/range only)", 500, lambda i: media_check(session, "video-500", VIDEO)))
+
+                  print("PHASE 3: 500 concurrent lightweight PDF URL/range startup requests.")
+                  phases.append(await run_group("500 concurrent PDF viewers (range/startup only)", 500, lambda i: media_check(session, "pdf-500", PDF)))
+
+                  print("PHASE 4: 300 concurrent requests to the SAME video URL.")
+                  phases.append(await run_group("300 viewers same video", 300, lambda i: media_check(session, "same-video-300", VIDEO)))
+
+                  print("PHASE 5: 300 concurrent requests to the SAME PDF URL.")
+                  phases.append(await run_group("300 viewers same PDF", 300, lambda i: media_check(session, "same-pdf-300", PDF)))
+
+              overall = {
+                  "site": SITE,
+                  "phases": phases,
+                  "overall_pass": all(p["pass"] and p["failure_rate_pct"] < 5 and (p["p95_ms"] is None or p["p95_ms"] < 5000) for p in phases),
+                  "important_limit": "This tests public page/DB reads and media URL startup/range responses from one GitHub runner. It does NOT simulate 500 full-length streams, sustained bandwidth, authenticated student sessions, private Google Drive files, or 500 distinct devices/networks."
+              }
+              with open("capacity-report.json", "w") as f:
+                  json.dump({"summary": overall, "requests": results}, f, indent=2)
+              print("FINAL_CAPACITY_REPORT " + json.dumps(overall))
+              print("REPORT saved to capacity-report.json")
+              if not overall["overall_pass"]:
+                  raise SystemExit("Capacity test did not meet thresholds; inspect report artifact.")
+          asyncio.run(main())
+          PY
+          python capacity_test.py
+      - name: Upload capacity report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exam-junction-capacity-report
+          path: capacity-report.json
+          if-no-files-found: warn
