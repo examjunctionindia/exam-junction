@@ -11,6 +11,12 @@
         config: CONFIG,
         supabase: null,
 
+        // Coalesce repeated public catalogue requests within one page session.
+        // This is deliberately short-lived and never caches authorization decisions.
+        _publishedBatchesCache: null,
+        _publishedBatchesCacheAt: 0,
+        _publishedBatchesInFlight: null,
+
         async init() {
             if (
                 !CONFIG.SUPABASE_URL ||
@@ -90,14 +96,35 @@
 
         async getPublishedBatches() {
             if (!(await this.init())) return [];
+
+            const now = Date.now();
+            if (this._publishedBatchesCache && now - this._publishedBatchesCacheAt < 15000) {
+                return this._publishedBatchesCache.map(row => ({ ...row }));
+            }
+            if (this._publishedBatchesInFlight) {
+                const rows = await this._publishedBatchesInFlight;
+                return rows.map(row => ({ ...row }));
+            }
+
+            this._publishedBatchesInFlight = (async () => {
+                try {
+                    return await this.fetchAllRows(() => this.supabase
+                        .from("batches").select("*").eq("is_published", true)
+                        .order("display_position", { ascending: true })
+                        .order("created_at", { ascending: false }).order("id", { ascending: true }));
+                } catch (error) {
+                    console.error("Batches load nahi hue:", error.message);
+                    return [];
+                }
+            })();
+
             try {
-                return await this.fetchAllRows(() => this.supabase
-                    .from("batches").select("*").eq("is_published", true)
-                    .order("display_position", { ascending: true })
-                    .order("created_at", { ascending: false }).order("id", { ascending: true }));
-            } catch (error) {
-                console.error("Batches load nahi hue:", error.message);
-                return [];
+                const rows = await this._publishedBatchesInFlight;
+                this._publishedBatchesCache = rows.map(row => ({ ...row }));
+                this._publishedBatchesCacheAt = Date.now();
+                return rows.map(row => ({ ...row }));
+            } finally {
+                this._publishedBatchesInFlight = null;
             }
         },
 
