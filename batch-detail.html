@@ -64,7 +64,7 @@ function makeNoteRow(note){
   // Keep recovery actions available: cross-origin PDF viewers can fire iframe load on provider error pages.
   const fallback=document.createElement("div");fallback.className="fallback-box";fallback.append(document.createTextNode("PDF nahi khul raha? Retry karein ya allowed original link kholein. "));
   const retry=document.createElement("button");retry.className="btn";retry.type="button";retry.textContent="↻ Retry";
-  retry.addEventListener("click",async()=>{try{frame.src=await resolveNoteUrl(note)}catch(e){console.error("PDF retry error",e)}});
+  retry.addEventListener("click",async()=>{retry.disabled=true;try{frame.src=await resolveNoteUrl(note);fallback.classList.add("hidden")}catch(e){console.error("PDF retry error",e)}finally{retry.disabled=false}});
   fallback.append(retry);
   if(canShowOriginal(note)){
     const original=document.createElement("button");original.className="btn";original.type="button";original.textContent="↗ Open Original Link";
@@ -72,7 +72,17 @@ function makeNoteRow(note){
     fallback.append(original);
   }
   wrap.append(fallback);
-  view.addEventListener("click",async()=>{wrap.classList.remove("hidden");wrap.scrollIntoView({behavior:"smooth",block:"nearest"});try{frame.src=await resolveNoteUrl(note)}catch(e){console.error("PDF open error",e)}});
+  let pdfLoadPromise=null;
+  view.addEventListener("click",async()=>{
+    wrap.classList.remove("hidden");wrap.scrollIntoView({behavior:"smooth",block:"nearest"});
+    if(frame.getAttribute("src")&&frame.getAttribute("src")!=="about:blank")return;
+    if(pdfLoadPromise)return;
+    view.disabled=true;view.textContent="⏳ PDF load ho raha hai...";
+    pdfLoadPromise=resolveNoteUrl(note);
+    try{frame.src=await pdfLoadPromise;fallback.classList.add("hidden")}
+    catch(e){fallback.classList.remove("hidden");console.error("PDF open error",e)}
+    finally{pdfLoadPromise=null;view.disabled=false;view.textContent="📖 View PDF"}
+  });
   const downloadAllowed=getDownloadAllowed(note);
   if(downloadAllowed&&(note.download_url||isPrivate||raw)){
     const dl=document.createElement("button");dl.className="btn";dl.type="button";dl.textContent="⬇ Download";
@@ -288,7 +298,11 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
     alternateFrame.addEventListener("error",()=>{notePlaybackIssue("alternate-frame-error","Alternate iframe error event");showPlaybackError()});
    }
    wrap.append(fallback);body.append(wrap);
-   if(directVideo){
+   let directVideoInitialized=false;
+   const initializeDirectVideo=()=>{
+    if(!directVideo||directVideoInitialized)return;
+    directVideoInitialized=true;
+    if(directVideo){
     const startLoadTimeout=()=>{
      if(timer)clearTimeout(timer);
      timer=setTimeout(tryAlternatePlayer,15000);
@@ -324,10 +338,22 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
      loading.classList.add("hidden");
      fallback.classList.add("hidden");
     });
-   }
+    }
+   };
    
-   const watch=document.createElement("button");watch.className="btn";watch.type="button";watch.textContent="▶ Watch";watch.addEventListener("click",async(event)=>{event.preventDefault();event.stopPropagation();watch.hidden=false;fallback.classList.add("hidden");fallbackStarted=false;playbackDiagnostics.length=0;document.querySelectorAll(".media-fullscreen").forEach(other=>{if(other===wrap)return;other.classList.add("hidden");const v=other.querySelector("video");if(v){try{v.pause()}catch(_){} }other.querySelectorAll("iframe").forEach(f=>{try{f.src="about:blank"}catch(_){}});});if(alternateFrame){try{alternateFrame.src="about:blank"}catch(_){}alternateFrame.remove();alternateFrame=null}if(player){player.style.display="";if(player.tagName==="IFRAME"&&player.getAttribute("src")==="about:blank")player.src=player.dataset.src||embedSrc||raw;if(player.tagName==="VIDEO"&&player.dataset.src&&player.getAttribute("src")!==player.dataset.src){player.src=player.dataset.src;player.load()}}wrap.classList.remove("hidden");loading.classList.remove("hidden");if(directVideo&&player&&!player.readyState){if(timer)clearTimeout(timer);timer=setTimeout(()=>{if(!alternateFrame&&!player.readyState){tryAlternatePlayer()}},15000)}try{await wrap.requestFullscreen()}catch(_){wrap.scrollIntoView({behavior:"smooth",block:"nearest"})}});actions.append(watch);
-   const full=document.createElement("button");full.className="btn";full.type="button";full.textContent="⛶ Fullscreen";full.addEventListener("click",async()=>{wrap.classList.remove("hidden");try{if(document.fullscreenElement){await document.exitFullscreen();return}if(directVideo&&player&&typeof player.webkitEnterFullscreen==="function"){player.webkitEnterFullscreen();return}if(player&&typeof player.requestFullscreen==="function"){await player.requestFullscreen()}else if(typeof wrap.requestFullscreen==="function"){await wrap.requestFullscreen()}else throw new Error("Fullscreen unsupported");if(screen.orientation&&typeof screen.orientation.lock==="function"){try{await screen.orientation.lock("landscape")}catch(_){}}}catch(error){console.warn("Fullscreen request failed",error);wrap.scrollIntoView({behavior:"smooth",block:"nearest"})}});actions.append(full);
+   const activatePlayer=()=>{
+    if(directVideo)initializeDirectVideo();
+    if(player&&player.tagName==="IFRAME"){
+     const currentSrc=player.getAttribute("src");
+     if(!currentSrc||currentSrc==="about:blank")player.src=player.dataset.src||embedSrc||raw;
+    }
+    if(player&&player.tagName==="VIDEO"&&player.dataset.src&&player.getAttribute("src")!==player.dataset.src){
+     player.src=player.dataset.src;player.load();
+    }
+   };
+   
+   const watch=document.createElement("button");watch.className="btn";watch.type="button";watch.textContent="▶ Watch";watch.addEventListener("click",async(event)=>{event.preventDefault();event.stopPropagation();watch.hidden=false;fallback.classList.add("hidden");fallbackStarted=false;playbackDiagnostics.length=0;document.querySelectorAll(".media-fullscreen").forEach(other=>{if(other===wrap)return;other.classList.add("hidden");const v=other.querySelector("video");if(v){try{v.pause()}catch(_){} }other.querySelectorAll("iframe").forEach(f=>{try{f.src="about:blank"}catch(_){}});});if(alternateFrame){try{alternateFrame.src="about:blank"}catch(_){}alternateFrame.remove();alternateFrame=null}if(player)player.style.display="";activatePlayer();wrap.classList.remove("hidden");loading.classList.remove("hidden");if(directVideo&&player&&!player.readyState){if(timer)clearTimeout(timer);timer=setTimeout(()=>{if(!alternateFrame&&!player.readyState){tryAlternatePlayer()}},15000)}try{await wrap.requestFullscreen()}catch(_){wrap.scrollIntoView({behavior:"smooth",block:"nearest"})}});actions.append(watch);
+   const full=document.createElement("button");full.className="btn";full.type="button";full.textContent="⛶ Fullscreen";full.addEventListener("click",async()=>{activatePlayer();wrap.classList.remove("hidden");try{if(document.fullscreenElement){await document.exitFullscreen();return}if(directVideo&&player&&typeof player.webkitEnterFullscreen==="function"){player.webkitEnterFullscreen();return}if(player&&typeof player.requestFullscreen==="function"){await player.requestFullscreen()}else if(typeof wrap.requestFullscreen==="function"){await wrap.requestFullscreen()}else throw new Error("Fullscreen unsupported");if(screen.orientation&&typeof screen.orientation.lock==="function"){try{await screen.orientation.lock("landscape")}catch(_){}}}catch(error){console.warn("Fullscreen request failed",error);wrap.scrollIntoView({behavior:"smooth",block:"nearest"})}});actions.append(full);
   }else{
    const message=document.createElement("p");message.className="muted";message.textContent="Is video source ko website ke player mein nahi khola ja sakta.";body.append(message);
    if(originalAllowed&&raw){const open=document.createElement("a");open.className="btn";open.href=raw;open.target="_blank";open.rel="noopener noreferrer";open.textContent="▶ Watch / Open Original Link";actions.append(open)}
