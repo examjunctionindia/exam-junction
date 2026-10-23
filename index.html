@@ -1260,16 +1260,26 @@
                     .in("batch_id",[...countableBatchIds])
                     .order("id",{ascending:true}));
                 chapters.forEach(ch=>{chapterCounts[ch.batch_id]=(chapterCounts[ch.batch_id]||0)+1});
-                const chapterMap=new Map(chapters.map(ch=>[ch.id,ch.batch_id]));
-                const chapterIds=chapters.map(ch=>ch.id);
-                for(let i=0;i<chapterIds.length;i+=100){
-                    const ids=chapterIds.slice(i,i+100);
-                    const lectures=await fetchAllRows(()=>client.from("lectures")
-                        .select("id,chapter_id")
-                        .eq("is_published",true)
-                        .in("chapter_id",ids)
-                        .order("id",{ascending:true}));
-                    lectures.forEach(lecture=>{const bid=chapterMap.get(lecture.chapter_id);if(bid)lectureCounts[bid]=(lectureCounts[bid]||0)+1});
+                // Count lectures on the server instead of downloading every
+                // lecture ID to the visitor's browser. This matters as the
+                // library grows to thousands of lectures.
+                const chapterIdsByBatch=new Map();
+                chapters.forEach(ch=>{
+                    if(!chapterIdsByBatch.has(ch.batch_id))chapterIdsByBatch.set(ch.batch_id,[]);
+                    chapterIdsByBatch.get(ch.batch_id).push(ch.id);
+                });
+                for(const [batchId,chapterIds] of chapterIdsByBatch){
+                    let totalLectures=0;
+                    for(let i=0;i<chapterIds.length;i+=100){
+                        const ids=chapterIds.slice(i,i+100);
+                        const {count,error}=await client.from("lectures")
+                            .select("id",{count:"exact",head:true})
+                            .eq("is_published",true)
+                            .in("chapter_id",ids);
+                        if(error)throw error;
+                        totalLectures+=Number(count||0);
+                    }
+                    lectureCounts[batchId]=totalLectures;
                 }
             }catch(error){
                 contentCountsAvailable=false;
