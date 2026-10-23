@@ -1,6 +1,14 @@
 name: EXAM JUNCTION Comprehensive Capacity Test
 
 on:
+  # Run the same capacity test automatically after the test definition or
+  # shared public batch-fetch code changes on main.
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/ej-comprehensive-capacity-test.yml"
+      - "assets/js/common.js"
   workflow_dispatch:
     inputs:
       media_video_url:
