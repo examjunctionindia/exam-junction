@@ -195,12 +195,23 @@ const contentByChapter=new Map(chapters.map(ch=>[ch.id,{lectures:[],notes:[]}]))
 try{
  const chapterIdChunks=[];
  for(let i=0;i<chapters.length;i+=100)chapterIdChunks.push(chapters.slice(i,i+100).map(ch=>ch.id));
- const groupedResults=await Promise.all(chapterIdChunks.map(async ids=>{
-  const [lectures,notes]=await Promise.all([
-   fetchAllRows(()=>db.from("lectures").select("id,chapter_id,title,youtube_url,position,teacher_name,download_url,download_allowed,download_permission_mode,original_link_allowed,is_published,published_at,created_at").in("chapter_id",ids).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true})),
-   fetchAllRows(()=>db.from("chapter_notes").select("id,chapter_id,lecture_id,title,storage_path,storage_bucket,download_url,download_allowed,download_permission_mode,original_link_allowed,position,is_published,created_at").in("chapter_id",ids).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true}))
-  ]);
-  return {lectures,notes};
+ // Bound the number of simultaneous database query groups. With a very
+ // large batch, an unbounded Promise.all can burst dozens/hundreds of queries
+ // at once for every visitor.
+ const groupedResults=new Array(chapterIdChunks.length);
+ let nextChunk=0;
+ const workerCount=Math.min(3,chapterIdChunks.length);
+ await Promise.all(Array.from({length:workerCount},async()=>{
+  while(true){
+   const chunkIndex=nextChunk++;
+   if(chunkIndex>=chapterIdChunks.length)return;
+   const ids=chapterIdChunks[chunkIndex];
+   const [lectures,notes]=await Promise.all([
+    fetchAllRows(()=>db.from("lectures").select("id,chapter_id,title,youtube_url,position,teacher_name,download_url,download_allowed,download_permission_mode,original_link_allowed,is_published,published_at,created_at").in("chapter_id",ids).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true})),
+    fetchAllRows(()=>db.from("chapter_notes").select("id,chapter_id,lecture_id,title,storage_path,storage_bucket,download_url,download_allowed,download_permission_mode,original_link_allowed,position,is_published,created_at").in("chapter_id",ids).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true}))
+   ]);
+   groupedResults[chunkIndex]={lectures,notes};
+  }
  }));
  for(const group of groupedResults){
   for(const lecture of group.lectures){const target=contentByChapter.get(lecture.chapter_id);if(target)target.lectures.push(lecture)}
