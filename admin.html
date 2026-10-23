@@ -1231,18 +1231,28 @@ async function loadLists(){
       .select("*")
       .order(job.order,{ascending:true});
     if(job.order2) listQuery = listQuery.order(job.order2,{ascending:false});
-    const result = await listQuery.limit(200);
+    const allRows=[];
+    let from=0;
+    let fetchError=null;
+    while(true){
+      const result=await listQuery.range(from,from+499);
+      if(result.error){fetchError=result.error;break;}
+      const pageRows=result.data||[];
+      allRows.push(...pageRows);
+      if(pageRows.length<500)break;
+      from+=500;
+    }
 
-    if(result.error){
+    if(fetchError){
   $(job.element).textContent = formatAdminError(
-    result.error,
+    fetchError,
     "Data load failed for table: " + job.table
   );
 
-  console.error("Supabase error:", job.table, result.error);
+  console.error("Supabase error:", job.table, fetchError);
   cache[job.key] = [];
 }else{
-      cache[job.key] = result.data || [];
+      cache[job.key] = allRows;
 
       showList(
         job.element,
