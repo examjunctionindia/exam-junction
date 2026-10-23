@@ -65,8 +65,8 @@ jobs:
               results.append({"test": label, "status": status, "ms": round(elapsed, 2), "bytes_read": size, "error": err})
               return not err, elapsed
 
-          async def user_check(session, i):
-              # Mirrors the public student-page workflow: page + public published data.
+          async def user_check(session, i, stage):
+              # Each simulated visitor requests homepage + batch + chapter data.
               checks = [
                   ("public_home", SITE + "/"),
                   ("public_batch", SB + "/rest/v1/batches?id=eq." + BATCH + "&is_published=eq.true&select=id,title,access_type,is_published"),
@@ -74,7 +74,7 @@ jobs:
               ]
               ok = True
               for label, url in checks:
-                  passed, _ = await request(session, "1500-user/" + label, url, HEADERS)
+                  passed, _ = await request(session, stage + "/" + label, url, HEADERS)
                   ok = ok and passed
               return ok
 
@@ -112,8 +112,10 @@ jobs:
               timeout = aiohttp.ClientTimeout(total=35, connect=15)
               async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
                   phases = []
-                  print("PHASE 1: 1500 simulated public visitors/users, each checks homepage, public batch, and published chapters.")
-                  phases.append(await run_group("1500 public users (4500 public requests)", 1500, lambda i: user_check(session, i)))
+                  print("PHASE 1: ramped public traffic at 100, 300, 500, then 1000 concurrent visitors; each checks homepage, batch API, and chapters API.")
+                  for stage_count in (100, 300, 500, 1000):
+                      stage_name = str(stage_count) + "-users"
+                      phases.append(await run_group(stage_name + " (3 public requests per visitor)", stage_count, lambda i, s=stage_name: user_check(session, i, s)))
 
                   print("PHASE 2: 500 concurrent lightweight video URL/range startup requests.")
                   phases.append(await run_group("500 concurrent video viewers (startup/range only)", 500, lambda i: media_check(session, "video-500", VIDEO)))
@@ -128,8 +130,8 @@ jobs:
                   phases.append(await run_group("300 viewers same PDF", 300, lambda i: media_check(session, "same-pdf-300", PDF)))
 
               endpoint_diagnostics = []
-              for endpoint in ("public_home", "public_batch", "public_chapters"):
-                  rows = [r for r in results if r["test"] == "1500-user/" + endpoint]
+              for endpoint in ("100-users/public_home", "100-users/public_batch", "100-users/public_chapters", "300-users/public_home", "300-users/public_batch", "300-users/public_chapters", "500-users/public_home", "500-users/public_batch", "500-users/public_chapters", "1000-users/public_home", "1000-users/public_batch", "1000-users/public_chapters"):
+                  rows = [r for r in results if r["test"] == endpoint]
                   vals = sorted(r["ms"] for r in rows)
                   def ep_pct(p):
                       return round(vals[min(len(vals)-1, int((len(vals)-1)*p))], 2) if vals else None
@@ -150,7 +152,7 @@ jobs:
                   "public_endpoint_diagnostics": endpoint_diagnostics,
                   "phases": phases,
                   "overall_pass": all(p["pass"] and p["failure_rate_pct"] < 5 and (p["p95_ms"] is None or p["p95_ms"] < 5000) for p in phases),
-                  "important_limit": "This tests public page/DB reads and media URL startup/range responses from one GitHub runner. It does NOT simulate 500 full-length streams, sustained bandwidth, authenticated student sessions, private Google Drive files, or 500 distinct devices/networks."
+                  "important_limit": "This ramps 100/300/500/1000 simulated public visitors from one GitHub runner and tests media URL startup/range only. It does NOT simulate full-length streams, sustained bandwidth, authenticated sessions, private Drive files, or distinct real devices/networks."
               }
               with open("capacity-report.json", "w") as f:
                   json.dump({"summary": overall, "requests": results}, f, indent=2)
