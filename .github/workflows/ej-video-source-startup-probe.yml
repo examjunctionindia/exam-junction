@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       max_users:
-        description: "Low-volume concurrent HLS playlist checks (start with 1 or 5)"
+        description: "Maximum concurrent virtual users for HLS playlist response checks"
         required: true
         type: choice
         options:
@@ -12,6 +12,12 @@ on:
           - "5"
           - "10"
           - "25"
+          - "50"
+          - "100"
+          - "250"
+          - "500"
+          - "750"
+          - "1000"
         default: "1"
 
 permissions:
@@ -20,7 +26,7 @@ permissions:
 jobs:
   video-source-probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -42,15 +48,23 @@ jobs:
           const maxUsers = Number(__ENV.MAX_USERS || '1');
           const url = __ENV.HLS_PLAYLIST_URL;
 
+          const stages = [
+            { duration: '5s', target: Math.min(1, maxUsers) },
+            { duration: '10s', target: Math.min(1, maxUsers) },
+            ...(maxUsers >= 5 ? [{ duration: '5s', target: 5 }, { duration: '10s', target: 5 }] : []),
+            ...(maxUsers >= 10 ? [{ duration: '5s', target: 10 }, { duration: '10s', target: 10 }] : []),
+            ...(maxUsers >= 25 ? [{ duration: '5s', target: 25 }, { duration: '10s', target: 25 }] : []),
+            ...(maxUsers >= 50 ? [{ duration: '5s', target: 50 }, { duration: '10s', target: 50 }] : []),
+            ...(maxUsers >= 100 ? [{ duration: '5s', target: 100 }, { duration: '10s', target: 100 }] : []),
+            ...(maxUsers >= 250 ? [{ duration: '5s', target: 250 }, { duration: '10s', target: 250 }] : []),
+            ...(maxUsers >= 500 ? [{ duration: '5s', target: 500 }, { duration: '10s', target: 500 }] : []),
+            ...(maxUsers >= 750 ? [{ duration: '5s', target: 750 }, { duration: '10s', target: 750 }] : []),
+            ...(maxUsers >= 1000 ? [{ duration: '5s', target: 1000 }, { duration: '5s', target: 1000 }] : []),
+            { duration: '5s', target: 0 },
+          ];
+
           export const options = {
-            stages: [
-              { duration: '5s', target: Math.min(1, maxUsers) },
-              { duration: '10s', target: Math.min(1, maxUsers) },
-              ...(maxUsers >= 5 ? [{ duration: '5s', target: 5 }, { duration: '10s', target: 5 }] : []),
-              ...(maxUsers >= 10 ? [{ duration: '5s', target: 10 }, { duration: '10s', target: 10 }] : []),
-              ...(maxUsers >= 25 ? [{ duration: '5s', target: 25 }, { duration: '10s', target: 25 }] : []),
-              { duration: '5s', target: 0 },
-            ],
+            stages,
             thresholds: {
               http_req_failed: ['rate<0.05'],
               http_req_duration: ['p(95)<5000'],
@@ -89,8 +103,8 @@ jobs:
               '- p99 response (ms): ' + (m.http_req_duration?.values?.['p(99)']?.toFixed(1) ?? 'n/a'),
               '',
               'Important: this probe only checks playlist delivery. It does not establish capacity for concurrent full video playback.'
-            ].join('\n');
-            return { stdout: summary + '\n' };
+            ].join('\\n');
+            return { stdout: summary + '\\n' };
           }
           EOF
           k6 run video-source-probe.js
