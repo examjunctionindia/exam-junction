@@ -1,0 +1,107 @@
+name: EXAM JUNCTION Deep Media Check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deep-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Verify HLS playlists, one media segment, PDF signature, and Drive access
+        run: |
+          python3 - <<'PY'
+          import urllib.request, urllib.error, urllib.parse, csv, time, re
+          from urllib.parse import urljoin, urlparse, parse_qs
+          urls = [
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6361863633112/6361863633112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362050309112/6362050309112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362144277112/6362144277112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362195945112/6362195945112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362246563112/6362246563112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362325410112/6362325410112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362420462112/6362420462112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362480054112/6362480054112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362519335112/6362519335112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362657696112/6362657696112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362698549112/6362698549112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362778783112/6362778783112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/vod_non_drm_hls/migration/B9Y2zltVlcQ/B9Y2zltVlcQ.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/vod_non_drm_hls/migration/dRFueT194Mg/dRFueT194Mg.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/vod_non_drm_hls/migration/MydBIInCwgQ/MydBIInCwgQ.m3u8",
+            "https://selectionwayserver.hranker.com/pdfs/files/Railway%20percentage%20class%201%20board%20pdf.pdf",
+            "https://drive.google.com/file/d/13E6emK93Fkf7YyLFOfdy-4_eeWx8makZ/view?usp=drivesdk",
+            "https://drive.google.com/file/d/1OKkOQIL665HhhFS4bAZQEubQ2VDHIooB/view?usp=drivesdk",
+            "https://example.com/test.pdf"
+          ]
+          rows=[]
+          def fetch(url, byte_range=None, timeout=20):
+            headers={"User-Agent":"Mozilla/5.0 EXAM-JUNCTION-DeepCheck"}
+            if byte_range: headers["Range"]=byte_range
+            req=urllib.request.Request(url,headers=headers)
+            with urllib.request.urlopen(req,timeout=timeout) as r:
+              return r.status, r.geturl(), r.headers.get("Content-Type",""), r.read(65536)
+          for original in urls:
+            kind="HLS" if ".m3u8" in original.lower() else ("PDF" if ".pdf" in original.lower() else "Google Drive")
+            status="ERROR"; final_url=original; ctype=""; signature=""; segment_status=""; notes=""
+            try:
+              target=original
+              if "drive.google.com/file/d/" in original:
+                fid=original.split("/file/d/")[1].split("/")[0]
+                target="https://drive.google.com/uc?export=download&id="+urllib.parse.quote(fid)
+              status,final_url,ctype,data=fetch(target, "bytes=0-2047" if kind=="PDF" else None)
+              if kind=="HLS":
+                body=data.decode("utf-8","ignore")
+                signature="EXTM3U="+str("#EXTM3U" in body)
+                lines=[x.strip() for x in body.splitlines() if x.strip() and not x.strip().startswith("#")]
+                if lines:
+                  child=urljoin(final_url,lines[0])
+                  # If this is a master playlist, try the first child playlist, then one segment.
+                  if lines[0].endswith(".m3u8") or "EXT-X-STREAM-INF" in body:
+                    try:
+                      cs,cf,ct,cd=fetch(child)
+                      segment_status="child_playlist="+str(cs)
+                      cb=cd.decode("utf-8","ignore")
+                      segs=[x.strip() for x in cb.splitlines() if x.strip() and not x.strip().startswith("#")]
+                      if segs:
+                        seg=urljoin(cf,segs[0])
+                        ss,sf,st,sd=fetch(seg,"bytes=0-1023")
+                        segment_status += "; first_segment="+str(ss)+"; segment_bytes="+str(len(sd))
+                      else: notes="child playlist has no media URI"
+                    except Exception as e: segment_status="child_playlist_error="+str(e)[:120]
+                  else:
+                    try:
+                      ss,sf,st,sd=fetch(child,"bytes=0-1023")
+                      segment_status="first_segment="+str(ss)+"; segment_bytes="+str(len(sd))+"; segment_type="+st
+                    except Exception as e: segment_status="segment_error="+str(e)[:120]
+                else: notes="playlist contains no URI lines"
+              elif kind=="PDF":
+                signature="PDF_magic="+str(data.startswith(b"%PDF-"))+"; first_bytes="+repr(data[:8])
+                if not data.startswith(b"%PDF-"): notes="Response did not begin with PDF signature"
+              else:
+                if "drive.google.com" in final_url and (b"<html" in data[:2048].lower() or b"<!doctype html" in data[:2048].lower()):
+                  signature="HTML_page_not_file"
+                  notes="Drive endpoint returned HTML page; actual file access not verified"
+                elif data.startswith(b"%PDF-"): signature="PDF_magic=True"
+                else: signature="non-PDF/unknown response; bytes="+str(len(data))
+            except urllib.error.HTTPError as e:
+              status=e.code; notes=str(e.reason)
+            except Exception as e:
+              notes=str(e)[:180]
+            rows.append([kind,str(status),original,final_url,ctype,signature,segment_status,notes])
+            print(kind,status,original,"|",signature,"|",segment_status,"|",notes)
+            time.sleep(.25)
+          with open("deep-media-check-report.csv","w",newline="",encoding="utf-8") as f:
+            w=csv.writer(f); w.writerow(["kind","status","original_url","final_url","content_type","signature_check","first_segment_check","notes"]); w.writerows(rows)
+          print("SUMMARY total=",len(rows),"HTTP_2xx=",sum(1 for r in rows if str(r[1]).startswith("2")),"non_2xx_or_error=",sum(1 for r in rows if not str(r[1]).startswith("2")))
+          PY
+      - name: Save report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deep-media-check-report
+          path: deep-media-check-report.csv
+          if-no-files-found: warn
