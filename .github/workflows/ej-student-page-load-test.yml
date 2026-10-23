@@ -66,6 +66,7 @@ jobs:
             thresholds: {
               http_req_failed: ['rate<0.05'],
               http_req_duration: ['p(95)<5000'],
+              checks: ['rate>0.95'],
             },
           };
 
@@ -131,6 +132,9 @@ jobs:
               '- Failed HTTP requests: ' + (m.http_req_failed?.values?.passes ?? 'n/a'),
               '- Successful HTTP requests: ' + (m.http_req_failed?.values?.fails ?? 'n/a'),
               '- HTTP failure rate (%): ' + (m.http_req_failed?.values?.rate != null ? (m.http_req_failed.values.rate * 100).toFixed(2) : 'n/a'),
+              '- Checks passed: ' + (m.checks?.values?.passes ?? 'n/a'),
+              '- Checks failed: ' + (m.checks?.values?.fails ?? 'n/a'),
+              '- Check pass rate (%): ' + (m.checks?.values?.rate != null ? (m.checks.values.rate * 100).toFixed(2) : 'n/a'),
               '- Average HTTP response time (ms): ' + (m.http_req_duration?.values?.avg?.toFixed(1) ?? 'n/a'),
               '- p95 HTTP response time (ms): ' + (m.http_req_duration?.values?.['p(95)']?.toFixed(1) ?? 'n/a'),
               '- p99 HTTP response time (ms): ' + (m.http_req_duration?.values?.['p(99)']?.toFixed(1) ?? 'n/a'),
