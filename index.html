@@ -1268,19 +1268,28 @@
                     if(!chapterIdsByBatch.has(ch.batch_id))chapterIdsByBatch.set(ch.batch_id,[]);
                     chapterIdsByBatch.get(ch.batch_id).push(ch.id);
                 });
+                const countJobs=[];
                 for(const [batchId,chapterIds] of chapterIdsByBatch){
-                    let totalLectures=0;
                     for(let i=0;i<chapterIds.length;i+=100){
-                        const ids=chapterIds.slice(i,i+100);
+                        countJobs.push({batchId,ids:chapterIds.slice(i,i+100)});
+                    }
+                }
+                // Keep query concurrency bounded even if the library grows
+                // to thousands of chapters and many count-enabled batches.
+                let nextCountJob=0;
+                await Promise.all(Array.from({length:Math.min(3,countJobs.length)},async()=>{
+                    while(true){
+                        const jobIndex=nextCountJob++;
+                        if(jobIndex>=countJobs.length)return;
+                        const job=countJobs[jobIndex];
                         const {count,error}=await client.from("lectures")
                             .select("id",{count:"exact",head:true})
                             .eq("is_published",true)
-                            .in("chapter_id",ids);
+                            .in("chapter_id",job.ids);
                         if(error)throw error;
-                        totalLectures+=Number(count||0);
+                        lectureCounts[job.batchId]=(lectureCounts[job.batchId]||0)+Number(count||0);
                     }
-                    lectureCounts[batchId]=totalLectures;
-                }
+                }));
             }catch(error){
                 contentCountsAvailable=false;
                 console.warn("Home content counts unavailable; hiding incomplete counts.",error);
