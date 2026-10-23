@@ -158,8 +158,16 @@ jobs:
                   json.dump({"summary": overall, "requests": results}, f, indent=2)
               print("FINAL_CAPACITY_REPORT " + json.dumps(overall))
               print("REPORT saved to capacity-report.json")
-              if not overall["overall_pass"]:
-                  raise SystemExit("Capacity test did not meet thresholds; inspect report artifact.")
+              failed_rows = [r for r in results if r["error"]]
+              if failed_rows:
+                  print("FAILED_REQUEST_SAMPLES " + json.dumps(failed_rows[:30]))
+              slow_rows = [r for r in results if r["ms"] >= 5000]
+              if slow_rows:
+                  print("SLOW_REQUEST_SAMPLES " + json.dumps(sorted(slow_rows, key=lambda r: r["ms"], reverse=True)[:30]))
+              latency_failures = [p for p in phases if p["p95_ms"] is not None and p["p95_ms"] >= 5000]
+              print("LATENCY_THRESHOLD_FAILURES " + json.dumps([{"phase": p["phase"], "p95_ms": p["p95_ms"], "failed_requests": p["failed_requests"]} for p in latency_failures]))
+              if failed_rows or latency_failures:
+                  raise SystemExit("Capacity test failed: inspect the phase summary, failure samples, slow-request samples, and capacity-report artifact.")
           asyncio.run(main())
           PY
           python capacity_test.py
