@@ -1219,17 +1219,23 @@
         }
 
         const client = window.EXAM_JUNCTION.supabase;
-        const { data, error } = await client
+        async function fetchAllRows(makeQuery,pageSize=500){
+            const rows=[];
+            for(let from=0;;from+=pageSize){
+                const {data,error}=await makeQuery().range(from,from+pageSize-1);
+                if(error)throw error;
+                const page=data||[];rows.push(...page);
+                if(page.length<pageSize)break;
+            }
+            return rows;
+        }
+        const batches = await fetchAllRows(()=>client
             .from("batches")
             .select("id,title,description,show_description,platform_name,access_type,is_published,thumbnail_url,display_position,created_at,published_at,show_content_counts")
             .eq("is_published", true)
             .order("display_position", { ascending: true })
             .order("created_at", { ascending: false })
-            .limit(100);
-
-        if (error) throw error;
-
-        const batches = data || [];
+            .order("id", {ascending:true}));
         let currentUser=null,grantedBatchIds=new Set();
         try{
             const authResult=await client.auth.getUser();currentUser=authResult?.data?.user||null;
@@ -1237,15 +1243,16 @@
         }catch(_){}
         const chapterCounts={},lectureCounts={};
         try{
-            const cr=await client.from("chapters").select("id,batch_id").eq("is_published",true);
-            if(!cr.error){
-                (cr.data||[]).forEach(ch=>{chapterCounts[ch.batch_id]=(chapterCounts[ch.batch_id]||0)+1});
-                const chapterIds=(cr.data||[]).map(ch=>ch.id);
-                if(chapterIds.length){const lr=await client.from("lectures").select("id,chapter_id").eq("is_published",true).in("chapter_id",chapterIds);
-                    if(!lr.error){const map=new Map((cr.data||[]).map(ch=>[ch.id,ch.batch_id]));(lr.data||[]).forEach(l=>{const bid=map.get(l.chapter_id);if(bid)lectureCounts[bid]=(lectureCounts[bid]||0)+1})}
-                }
+            const chapters=await fetchAllRows(()=>client.from("chapters").select("id,batch_id").eq("is_published",true).order("id",{ascending:true}));
+            chapters.forEach(ch=>{chapterCounts[ch.batch_id]=(chapterCounts[ch.batch_id]||0)+1});
+            const chapterMap=new Map(chapters.map(ch=>[ch.id,ch.batch_id]));
+            const chapterIds=chapters.map(ch=>ch.id);
+            for(let i=0;i<chapterIds.length;i+=100){
+                const ids=chapterIds.slice(i,i+100);
+                const lectures=await fetchAllRows(()=>client.from("lectures").select("id,chapter_id").eq("is_published",true).in("chapter_id",ids).order("id",{ascending:true}));
+                lectures.forEach(lecture=>{const bid=chapterMap.get(lecture.chapter_id);if(bid)lectureCounts[bid]=(lectureCounts[bid]||0)+1});
             }
-        }catch(_){}
+        }catch(error){console.warn("Home content counts unavailable; hiding incomplete counts.",error)}
         count.textContent = batches.length + (batches.length === 1 ? " Batch" : " Batches");
         list.replaceChildren();
 
