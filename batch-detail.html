@@ -326,7 +326,7 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
     player.addEventListener("waiting",()=>{loading.classList.remove("hidden");startLoadTimeout()});
     player.addEventListener("error",()=>{notePlaybackIssue("primary-error",player.error?{code:player.error.code,message:player.error.message}:"Video element error");tryAlternatePlayer()});
     player.addEventListener("stalled",()=>{notePlaybackIssue("primary-stalled","Video stream stalled");startLoadTimeout()});
-    player.addEventListener("abort",tryAlternatePlayer);
+    // The browser may emit "abort" during normal source changes/reloads; do not treat it as a fatal playback failure.
     player.addEventListener("canplay",()=>{
      if(timer){clearTimeout(timer);timer=null}
      loading.classList.add("hidden");
