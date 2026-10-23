@@ -76,51 +76,41 @@
             window.location.href = "login.html";
         },
 
+        async fetchAllRows(makeQuery, pageSize = 500) {
+            const rows = [];
+            for (let from = 0; ; from += pageSize) {
+                const { data, error } = await makeQuery().range(from, from + pageSize - 1);
+                if (error) throw error;
+                const page = data || [];
+                rows.push(...page);
+                if (page.length < pageSize) break;
+            }
+            return rows;
+        },
+
         async getPublishedBatches() {
-            if (!(await this.init())) {
+            if (!(await this.init())) return [];
+            try {
+                return await this.fetchAllRows(() => this.supabase
+                    .from("batches").select("*").eq("is_published", true)
+                    .order("display_position", { ascending: true })
+                    .order("created_at", { ascending: false }).order("id", { ascending: true }));
+            } catch (error) {
+                console.error("Batches load nahi hue:", error.message);
                 return [];
             }
-
-            const { data, error } = await this.supabase
-                .from("batches")
-                .select("*")
-                .eq("is_published", true)
-                .order("display_position", { ascending: true })
-                .order("created_at", { ascending: false })
-                .limit(100);
-
-            if (error) {
-                console.error(
-                    "Batches load nahi hue:",
-                    error.message
-                );
-                return [];
-            }
-
-            return data || [];
         },
 
         async getPublishedBooks() {
-            if (!(await this.init())) {
+            if (!(await this.init())) return [];
+            try {
+                return await this.fetchAllRows(() => this.supabase
+                    .from("books").select("*").eq("is_published", true)
+                    .order("created_at", { ascending: false }).order("id", { ascending: true }));
+            } catch (error) {
+                console.error("Books load nahi hui:", error.message);
                 return [];
             }
-
-            const { data, error } = await this.supabase
-                .from("books")
-                .select("*")
-                .eq("is_published", true)
-                .order("created_at", { ascending: false })
-                .limit(100);
-
-            if (error) {
-                console.error(
-                    "Books load nahi hui:",
-                    error.message
-                );
-                return [];
-            }
-
-            return data || [];
         },
 
         async getNotifications() {
