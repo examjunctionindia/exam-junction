@@ -305,7 +305,7 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
        }else{tryAlternatePlayer()}
       };
       if(window.Hls)loadHls();else{
-       const script=document.createElement("script");script.src="https://cdn.jsdelivr.net/npm/hls.js@1.6.13/dist/hls.min.js";script.onload=loadHls;script.onerror=()=>showPlaybackError();document.head.append(script);
+       const script=document.createElement("script");script.src="https://cdn.jsdelivr.net/npm/hls.js@1.6.13/dist/hls.min.js";script.onload=loadHls;script.onerror=()=>{notePlaybackIssue("hls-library-load-error","Hls.js CDN failed to load; trying alternate player");tryAlternatePlayer()};document.head.append(script);
       }
      }
     }
