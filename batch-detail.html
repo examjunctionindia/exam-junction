@@ -260,7 +260,7 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
   if(embedSrc||directVideo){
    wrap=document.createElement("div");wrap.className="media-fullscreen hidden";
    const loading=document.createElement("p");loading.className="muted media-loading";loading.textContent="Video load ho raha hai...";wrap.append(loading);
-   if(directVideo){player=document.createElement("video");player.className="viewer";player.controls=true;player.playsInline=true;player.preload="metadata";player.referrerPolicy="no-referrer";player.dataset.src=raw;player.style.height="auto";player.style.maxHeight="70vh"}
+   if(directVideo){player=document.createElement("video");player.className="viewer";player.controls=true;player.playsInline=true;player.preload="metadata";player.referrerPolicy="strict-origin-when-cross-origin";player.dataset.src=raw;player.style.height="auto";player.style.maxHeight="70vh"}
    else{player=document.createElement("iframe");player.className="viewer";player.dataset.src=embedSrc;player.title=lecture.title||"Lecture";player.loading="lazy";player.allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen";player.allowFullscreen=true;player.referrerPolicy="strict-origin-when-cross-origin";player.addEventListener("load",()=>{loading.classList.add("hidden")})}
    wrap.append(player);
    fallback=document.createElement("div");fallback.className="fallback-box hidden";
@@ -300,7 +300,7 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
       const loadHls=()=>{
        if(window.Hls&&window.Hls.isSupported()){
         hlsInstance=new window.Hls();hlsInstance.loadSource(raw);hlsInstance.attachMedia(player);
-        hlsInstance.on(window.Hls.Events.MANIFEST_PARSED,()=>{if(timer){clearTimeout(timer);timer=null}});
+        hlsInstance.on(window.Hls.Events.MANIFEST_PARSED,()=>{notePlaybackIssue("hls-manifest-parsed","Playlist loaded; waiting for video data/playback")});
         hlsInstance.on(window.Hls.Events.ERROR,(_event,data)=>{if(data&&data.fatal){stopPrimaryPlayback();tryAlternatePlayer()}});
        }else{tryAlternatePlayer()}
       };
