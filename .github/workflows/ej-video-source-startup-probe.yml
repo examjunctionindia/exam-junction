@@ -49,17 +49,8 @@ jobs:
           const url = __ENV.HLS_PLAYLIST_URL;
 
           const stages = [
-            { duration: '5s', target: Math.min(1, maxUsers) },
-            { duration: '10s', target: Math.min(1, maxUsers) },
-            ...(maxUsers >= 5 ? [{ duration: '5s', target: 5 }, { duration: '10s', target: 5 }] : []),
-            ...(maxUsers >= 10 ? [{ duration: '5s', target: 10 }, { duration: '10s', target: 10 }] : []),
-            ...(maxUsers >= 25 ? [{ duration: '5s', target: 25 }, { duration: '10s', target: 25 }] : []),
-            ...(maxUsers >= 50 ? [{ duration: '5s', target: 50 }, { duration: '10s', target: 50 }] : []),
-            ...(maxUsers >= 100 ? [{ duration: '5s', target: 100 }, { duration: '10s', target: 100 }] : []),
-            ...(maxUsers >= 250 ? [{ duration: '5s', target: 250 }, { duration: '10s', target: 250 }] : []),
-            ...(maxUsers >= 500 ? [{ duration: '5s', target: 500 }, { duration: '10s', target: 500 }] : []),
-            ...(maxUsers >= 750 ? [{ duration: '5s', target: 750 }, { duration: '10s', target: 750 }] : []),
-            ...(maxUsers >= 1000 ? [{ duration: '5s', target: 1000 }, { duration: '5s', target: 1000 }] : []),
+            { duration: '10s', target: maxUsers },
+            { duration: '30s', target: maxUsers },
             { duration: '5s', target: 0 },
           ];
 
