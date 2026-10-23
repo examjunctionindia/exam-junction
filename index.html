@@ -1242,6 +1242,7 @@
             if(currentUser){const grantsResult=await client.from("batch_access").select("batch_id").eq("student_id",currentUser.id);grantedBatchIds=new Set((grantsResult.data||[]).map(item=>item.batch_id));}
         }catch(_){}
         const chapterCounts={},lectureCounts={};
+        let contentCountsAvailable=true;
         try{
             const chapters=await fetchAllRows(()=>client.from("chapters").select("id,batch_id").eq("is_published",true).order("id",{ascending:true}));
             chapters.forEach(ch=>{chapterCounts[ch.batch_id]=(chapterCounts[ch.batch_id]||0)+1});
@@ -1252,7 +1253,7 @@
                 const lectures=await fetchAllRows(()=>client.from("lectures").select("id,chapter_id").eq("is_published",true).in("chapter_id",ids).order("id",{ascending:true}));
                 lectures.forEach(lecture=>{const bid=chapterMap.get(lecture.chapter_id);if(bid)lectureCounts[bid]=(lectureCounts[bid]||0)+1});
             }
-        }catch(error){console.warn("Home content counts unavailable; hiding incomplete counts.",error)}
+        }catch(error){contentCountsAvailable=false;console.warn("Home content counts unavailable; hiding incomplete counts.",error)}
         count.textContent = batches.length + (batches.length === 1 ? " Batch" : " Batches");
         list.replaceChildren();
 
@@ -1310,7 +1311,7 @@
                 teacher.textContent = "Teacher: " + batch.platform_name;
                 meta.append(teacher);
             }
-            const canSeeCounts=batch.show_content_counts===true&&(batch.access_type==="free"||grantedBatchIds.has(batch.id));
+            const canSeeCounts=contentCountsAvailable&&batch.show_content_counts===true&&(batch.access_type==="free"||grantedBatchIds.has(batch.id));
             if(canSeeCounts){
                 const chapterChip=document.createElement("span");chapterChip.className="count-chip";chapterChip.textContent=(chapterCounts[batch.id]||0)+" Chapters";meta.append(chapterChip);
                 const lectureChip=document.createElement("span");lectureChip.className="count-chip";lectureChip.textContent=(lectureCounts[batch.id]||0)+" Lectures";meta.append(lectureChip);
