@@ -144,7 +144,9 @@
                 if (elapsed > 0 && elapsed <= 60) {
                     await this.recordActiveTime(elapsed);
                 }
-            }, 30000);
+            // A single heartbeat per minute halves write volume at scale.
+            // The database function accepts up to 60 seconds per event.
+            }, 60000);
         },
 
         stopHeartbeat() {
