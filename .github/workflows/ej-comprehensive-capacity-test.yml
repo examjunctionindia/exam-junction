@@ -92,6 +92,51 @@ jobs:
               passed, ms = await request(session, label, url, headers, expected=(200, 206), timeout=30)
               return passed
 
+          async def inspect_media_sources(session):
+              # Validate that the configured media endpoints are more than merely reachable.
+              # For HLS, parse the playlist and request one actual media segment when possible.
+              checks = []
+              video_kind = "unknown"
+              try:
+                  async with session.get(VIDEO, headers={"User-Agent": "EXAM-JUNCTION-capacity-test/1.0"}, timeout=aiohttp.ClientTimeout(total=30), allow_redirects=True) as r:
+                      body = await r.content.read(1024 * 1024)
+                      ctype = r.headers.get("Content-Type", "")
+                      ok = r.status == 200 and bool(body)
+                      video_kind = "hls" if (".m3u8" in VIDEO.lower() or b"#EXTM3U" in body[:4096]) else "file"
+                      if video_kind == "hls" and b"#EXTM3U" not in body[:4096]:
+                          ok = False
+                      checks.append({"test":"video_playlist_or_file", "status":r.status, "content_type":ctype, "bytes_read":len(body), "kind":video_kind, "pass":ok, "error":"" if ok else "empty body, unexpected status, or invalid HLS playlist"})
+                      if video_kind == "hls" and ok:
+                          lines = [line.strip() for line in body.decode("utf-8", "replace").splitlines() if line.strip() and not line.lstrip().startswith("#")]
+                          # A master playlist points to a child playlist; otherwise this is a media playlist.
+                          if lines:
+                              child_url = __import__("urllib.parse", fromlist=["urljoin"]).urljoin(str(r.url), lines[0])
+                              async with session.get(child_url, timeout=aiohttp.ClientTimeout(total=30), allow_redirects=True) as child:
+                                  child_body = await child.content.read(1024 * 1024)
+                                  child_ok = child.status == 200 and bool(child_body)
+                                  is_playlist = b"#EXTM3U" in child_body[:4096]
+                                  checks.append({"test":"hls_child_playlist_or_first_segment", "status":child.status, "content_type":child.headers.get("Content-Type",""), "bytes_read":len(child_body), "pass":child_ok, "error":"" if child_ok else "child playlist/segment request failed"})
+                                  if child_ok and is_playlist:
+                                      seg_lines = [line.strip() for line in child_body.decode("utf-8", "replace").splitlines() if line.strip() and not line.lstrip().startswith("#")]
+                                      if seg_lines:
+                                          seg_url = __import__("urllib.parse", fromlist=["urljoin"]).urljoin(str(child.url), seg_lines[0])
+                                          async with session.get(seg_url, headers={"Range":"bytes=0-2047"}, timeout=aiohttp.ClientTimeout(total=30), allow_redirects=True) as seg:
+                                              seg_data = await seg.content.read(2048)
+                                              seg_ok = seg.status in (200,206) and bool(seg_data)
+                                              checks.append({"test":"hls_first_media_segment", "status":seg.status, "content_type":seg.headers.get("Content-Type",""), "bytes_read":len(seg_data), "pass":seg_ok, "error":"" if seg_ok else "first media segment request failed"})
+              except Exception as e:
+                  checks.append({"test":"video_source_inspection", "pass":False, "error":type(e).__name__ + ": " + str(e)[:180]})
+              try:
+                  async with session.get(PDF, headers={"Range":"bytes=0-1023", "User-Agent":"EXAM-JUNCTION-capacity-test/1.0"}, timeout=aiohttp.ClientTimeout(total=30), allow_redirects=True) as r:
+                      data = await r.content.read(1024)
+                      pdf_ok = r.status in (200,206) and bool(data) and (b"%PDF-" in data[:20] or "pdf" in r.headers.get("Content-Type","").lower())
+                      checks.append({"test":"pdf_header_and_response", "status":r.status, "content_type":r.headers.get("Content-Type",""), "bytes_read":len(data), "pass":pdf_ok, "error":"" if pdf_ok else "response does not look like a PDF"})
+              except Exception as e:
+                  checks.append({"test":"pdf_header_and_response", "pass":False, "error":type(e).__name__ + ": " + str(e)[:180]})
+              for check in checks:
+                  print("MEDIA_SOURCE_DIAGNOSTIC " + json.dumps(check))
+              return checks
+
           async def run_group(name, count, coro_factory):
               start_index = len(results)
               t0 = time.perf_counter()
@@ -120,6 +165,8 @@ jobs:
               timeout = aiohttp.ClientTimeout(total=35, connect=15)
               async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
                   phases = []
+                  print("PHASE 0: inspect video playlist/file, one HLS child/segment when possible, and PDF response.")
+                  media_source_checks = await inspect_media_sources(session)
                   print("PHASE 1: ramped public traffic at 100, 300, 500, then 1000 concurrent visitors; each checks homepage, batch API, and chapters API.")
                   for stage_count in (100, 300, 500, 1000):
                       stage_name = str(stage_count) + "-users"
@@ -158,8 +205,9 @@ jobs:
               overall = {
                   "site": SITE,
                   "public_endpoint_diagnostics": endpoint_diagnostics,
+                  "media_source_checks": media_source_checks,
                   "phases": phases,
-                  "overall_pass": all(p["pass"] and p["failure_rate_pct"] < 5 and (p["p95_ms"] is None or p["p95_ms"] < 5000) for p in phases),
+                  "overall_pass": all(c.get("pass", False) for c in media_source_checks) and all(p["pass"] and p["failure_rate_pct"] < 5 and (p["p95_ms"] is None or p["p95_ms"] < 5000) for p in phases),
                   "important_limit": "This ramps 100/300/500/1000 simulated public visitors from one GitHub runner and tests media URL startup/range only. It does NOT simulate full-length streams, sustained bandwidth, authenticated sessions, private Drive files, or distinct real devices/networks."
               }
               with open("capacity-report.json", "w") as f:
@@ -174,8 +222,8 @@ jobs:
                   print("SLOW_REQUEST_SAMPLES " + json.dumps(sorted(slow_rows, key=lambda r: r["ms"], reverse=True)[:30]))
               latency_failures = [p for p in phases if p["p95_ms"] is not None and p["p95_ms"] >= 5000]
               print("LATENCY_THRESHOLD_FAILURES " + json.dumps([{"phase": p["phase"], "p95_ms": p["p95_ms"], "failed_requests": p["failed_requests"]} for p in latency_failures]))
-              if failed_rows or latency_failures:
-                  raise SystemExit("Capacity test failed: inspect the phase summary, failure samples, slow-request samples, and capacity-report artifact.")
+              if failed_rows or latency_failures or not all(c.get("pass", False) for c in media_source_checks):
+                  raise SystemExit("Capacity test failed: inspect media-source diagnostics, phase summary, failure samples, slow-request samples, and capacity-report artifact.")
           asyncio.run(main())
           PY
           python capacity_test.py
