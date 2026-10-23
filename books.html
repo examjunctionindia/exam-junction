@@ -9,6 +9,16 @@ const db=window.EXAM_JUNCTION.supabase;
 let books=[];
 let currentUser=null;
 let bookRequests=new Map();
+async function fetchAllRows(makeQuery,pageSize=500){
+ const rows=[];
+ for(let from=0;;from+=pageSize){
+  const {data,error}=await makeQuery().range(from,from+pageSize-1);
+  if(error)throw error;
+  const page=data||[];rows.push(...page);
+  if(page.length<pageSize)break;
+ }
+ return rows;
+}
 const safeHttps=value=>{try{const u=new URL(String(value||""));return u.protocol==="https:"&&u.hostname?u.href:""}catch(_){return ""}};
 function normalizeStudyUrl(value){
  const raw=safeHttps(value);if(!raw)return "";
@@ -47,17 +57,14 @@ try{const auth=await db.auth.getUser();currentUser=auth?.data?.user||null;}catch
 if(!currentUser){
  $("search").disabled=false;
 }
-if(currentUser){try{const {data:reqs,error:reqErr}=await db.from("book_access_requests").select("book_id,status").eq("student_id",currentUser.id);if(!reqErr)(reqs||[]).forEach(r=>bookRequests.set(r.book_id,r.status));}catch(e){console.warn("Book request status unavailable",e)}}
+if(currentUser){try{const reqs=await fetchAllRows(()=>db.from("book_access_requests").select("book_id,status").eq("student_id",currentUser.id).order("book_id",{ascending:true}));reqs.forEach(r=>bookRequests.set(r.book_id,r.status));}catch(e){console.warn("Book request status unavailable",e)}}
 try{
  let catalog=null;
- const {data:viewCatalog,error:catalogError}=await db.from("public_book_catalog").select("id,title,author,description,access_type,created_at").order("created_at",{ascending:false}).limit(100);
- if(!catalogError){
-  catalog=viewCatalog||[];
- }else{
+ try{
+  catalog=await fetchAllRows(()=>db.from("public_book_catalog").select("id,title,author,description,access_type,created_at").order("created_at",{ascending:false}).order("id",{ascending:true}));
+ }catch(catalogError){
   console.warn("Public book view failed; trying safe metadata fallback",catalogError);
-  const {data:fallback,error:fallbackError}=await db.from("books").select("id,title,author,description,access_type,created_at,is_published,publication_status").eq("is_published",true).eq("publication_status","published").order("created_at",{ascending:false}).limit(100);
-  if(fallbackError)throw fallbackError;
-  catalog=fallback||[];
+  catalog=await fetchAllRows(()=>db.from("books").select("id,title,author,description,access_type,created_at,is_published,publication_status").eq("is_published",true).eq("publication_status","published").order("created_at",{ascending:false}).order("id",{ascending:true}));
  }
  // Show catalogue metadata independently of student file permissions.
  books=(catalog||[]).map(meta=>({...meta,isAccessible:false}));
@@ -65,9 +72,8 @@ try{
  if(!books.length)$("status").textContent="Abhi koi published book nahi hai.";
  render();
  try{
-  const {data:allowed,error:allowedError}=await db.from("books").select("id,title,author,description,cover_path,storage_path,storage_bucket,external_url,access_type,download_url,download_allowed,original_link_allowed,publication_status,is_published,created_at").eq("is_published",true).eq("publication_status","published").order("created_at",{ascending:false}).limit(100);
-  if(allowedError)throw allowedError;
-  const allowedById=new Map((allowed||[]).map(b=>[b.id,b]));
+  const allowed=await fetchAllRows(()=>db.from("books").select("id,title,author,description,cover_path,storage_path,storage_bucket,external_url,access_type,download_url,download_allowed,original_link_allowed,publication_status,is_published,created_at").eq("is_published",true).eq("publication_status","published").order("created_at",{ascending:false}).order("id",{ascending:true}));
+  const allowedById=new Map(allowed.map(b=>[b.id,b]));
   books=(catalog||[]).map(meta=>({...meta,...(allowedById.get(meta.id)||{}),isAccessible:allowedById.has(meta.id)}));
   render();
  }catch(fileError){
