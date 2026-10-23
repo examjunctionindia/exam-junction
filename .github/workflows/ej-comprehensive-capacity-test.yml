@@ -127,8 +127,27 @@ jobs:
                   print("PHASE 5: 300 concurrent requests to the SAME PDF URL.")
                   phases.append(await run_group("300 viewers same PDF", 300, lambda i: media_check(session, "same-pdf-300", PDF)))
 
+              endpoint_diagnostics = []
+              for endpoint in ("public_home", "public_batch", "public_chapters"):
+                  rows = [r for r in results if r["test"] == "1500-user/" + endpoint]
+                  vals = sorted(r["ms"] for r in rows)
+                  def ep_pct(p):
+                      return round(vals[min(len(vals)-1, int((len(vals)-1)*p))], 2) if vals else None
+                  item = {
+                      "endpoint": endpoint,
+                      "requests": len(rows),
+                      "failed_requests": sum(1 for r in rows if r["error"]),
+                      "p50_ms": ep_pct(.50),
+                      "p95_ms": ep_pct(.95),
+                      "p99_ms": ep_pct(.99),
+                      "max_ms": round(max(vals), 2) if vals else None
+                  }
+                  endpoint_diagnostics.append(item)
+                  print("ENDPOINT_DIAGNOSTIC " + json.dumps(item))
+
               overall = {
                   "site": SITE,
+                  "public_endpoint_diagnostics": endpoint_diagnostics,
                   "phases": phases,
                   "overall_pass": all(p["pass"] and p["failure_rate_pct"] < 5 and (p["p95_ms"] is None or p["p95_ms"] < 5000) for p in phases),
                   "important_limit": "This tests public page/DB reads and media URL startup/range responses from one GitHub runner. It does NOT simulate 500 full-length streams, sustained bandwidth, authenticated student sessions, private Google Drive files, or 500 distinct devices/networks."
