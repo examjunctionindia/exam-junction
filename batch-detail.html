@@ -284,7 +284,7 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
     alternateFrame.src=raw;
     wrap.insertBefore(alternateFrame,fallback);
     timer=setTimeout(()=>{notePlaybackIssue("alternate-timeout","Alternate player did not confirm playback before timeout");showPlaybackError()},12000);
-    alternateFrame.addEventListener("load",()=>{/* Cross-origin iframe load is navigation only, not proof of playback. */loading.classList.add("hidden");notePlaybackIssue("alternate-frame-load","Iframe loaded; actual playback cannot be verified cross-origin")});
+    alternateFrame.addEventListener("load",()=>{/* The external host has opened its own video player. Cross-origin playback cannot be inspected, so do not let the fallback timeout destroy a player that may already be playing. */if(timer){clearTimeout(timer);timer=null}loading.classList.add("hidden");notePlaybackIssue("alternate-frame-load","External player loaded; cross-origin playback state cannot be inspected")});
     alternateFrame.addEventListener("error",()=>{notePlaybackIssue("alternate-frame-error","Alternate iframe error event");showPlaybackError()});
    }
    wrap.append(fallback);body.append(wrap);
