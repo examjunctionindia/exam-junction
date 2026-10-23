@@ -954,17 +954,47 @@ function makeItem(root,row,type,lines){
   root.appendChild(item);
 }
 
-function showList(elementId,rows,type,lines,emptyText){
-  const root = $(elementId);
+const adminListPages = Object.create(null);
+function renderAdminList(elementId){
+  const state=adminListPages[elementId],root=$(elementId);
+  if(!state||!root)return;
+  const input=document.querySelector('[data-list-search="'+elementId+'"]');
+  const q=(input?.value||"").trim().toLowerCase();
+  const rows=state.rows.filter(row=>{
+    if(!q)return true;
+    const extra=[row.title,row.author,row.platform_name,row.description,row.access_type,row.publication_status,row.youtube_url,row.storage_path,row.position,findById("batches",row.batch_id)?.title,findById("chapters",row.chapter_id)?.title,findById("lectures",row.lecture_id)?.title].filter(Boolean).join(" ").toLowerCase();
+    return extra.includes(q);
+  });
+  const size=50,pages=Math.max(1,Math.ceil(rows.length/size));
+  state.page=Math.min(Math.max(1,state.page),pages);
   root.replaceChildren();
-
-  if(!rows || !rows.length){
-    root.textContent = emptyText;
-    return;
-  }
-
-  rows.forEach(row => makeItem(root,row,type,lines));
+  if(!rows.length)root.textContent=q?"Koi matching record nahi mila.":state.emptyText;
+  else rows.slice((state.page-1)*size,state.page*size).forEach(row=>makeItem(root,row,state.type,state.lines));
+  let nav=$(elementId+"PageNav");
+  if(!nav){nav=document.createElement("div");nav.id=elementId+"PageNav";nav.className="actions";root.after(nav);}
+  nav.replaceChildren();
+  if(state.type==="batches"||rows.length<=size){nav.hidden=true;return;}
+  nav.hidden=false;
+  const label=document.createElement("span");label.className="small";label.textContent="Total "+rows.length+" · Page "+state.page+"/"+pages;
+  const prev=makeButton("Previous","list-prev",state.type,elementId,"secondary");prev.disabled=state.page===1;
+  const next=makeButton("Next","list-next",state.type,elementId,"secondary");next.disabled=state.page===pages;
+  nav.append(label,prev,next);
 }
+function showList(elementId,rows,type,lines,emptyText){
+  const root=$(elementId);if(!root)return;
+  if(type==="batches"){
+    root.replaceChildren();
+    if(!rows||!rows.length){root.textContent=emptyText;return;}
+    rows.forEach(row=>makeItem(root,row,type,lines));return;
+  }
+  adminListPages[elementId]={rows:rows||[],type,lines,emptyText,page:1};
+  renderAdminList(elementId);
+}
+document.addEventListener("click",function(event){
+  const button=event.target.closest('button[data-action^="list-"]');if(!button)return;
+  const state=adminListPages[button.dataset.id];if(!state)return;
+  state.page+=button.dataset.action==="list-next"?1:-1;renderAdminList(button.dataset.id);
+});
 
 /* Live search for existing records, access grants, requests and reports. */
 document.addEventListener("input",function(event){
@@ -973,6 +1003,7 @@ document.addEventListener("input",function(event){
   const root=$(input.dataset.listSearch);
   if(!root) return;
   if(root.id==="batchList"){applyBatchFilters();return;}
+  if(adminListPages[root.id]){adminListPages[root.id].page=1;renderAdminList(root.id);return;}
   const query=input.value.trim().toLocaleLowerCase();
   Array.from(root.children).forEach(function(item){
     if(!item.classList.contains("item")) return;
