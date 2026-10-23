@@ -1,0 +1,225 @@
+name: EXAM JUNCTION Confirmed Media Capacity Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      video_url:
+        description: "Public HLS (.m3u8) or MP4 test video URL"
+        required: false
+        default: "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6361863633112/6361863633112.m3u8"
+        type: string
+      pdf_url:
+        description: "Public PDF test URL"
+        required: false
+        default: "https://selectionwayserver.hranker.com/pdfs/files/Railway%20percentage%20class%201%20board%20pdf.pdf"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  confirmed-capacity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test dependency
+        run: python -m pip install aiohttp
+      - name: Run real media endpoint capacity checks
+        env:
+          VIDEO_URL: ${{ inputs.video_url || 'https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6361863633112/6361863633112.m3u8' }}
+          PDF_URL: ${{ inputs.pdf_url || 'https://selectionwayserver.hranker.com/pdfs/files/Railway%20percentage%20class%201%20board%20pdf.pdf' }}
+        run: |
+          cat > confirmed_test.py <<'PY'
+          import asyncio, aiohttp, json, os, time
+          from urllib.parse import urljoin, urlparse
+
+          SB = "https://yzvwxautsauevfspdqnw.supabase.co"
+          KEY = "sb_publishable_dcZFmdlOIQTUzbRUtjNNMA_POLJQHnP"
+          VIDEO = os.environ["VIDEO_URL"].strip()
+          PDF = os.environ["PDF_URL"].strip()
+          API_HEADERS = {"apikey": KEY, "Authorization": "Bearer " + KEY, "Accept": "application/json"}
+          UA = {"User-Agent": "EXAM-JUNCTION-Confirmed-Capacity-Test/1.0"}
+          request_rows, phase_summaries = [], []
+
+          def emit(label, value):
+              print(label + " " + json.dumps(value, ensure_ascii=False))
+
+          async def read_request(session, label, url, byte_limit=8192, timeout=30, force_range=True):
+              t0 = time.perf_counter()
+              row = {"test": label, "host": urlparse(url).netloc, "status": 0, "bytes_read": 0, "ms": 0, "error": ""}
+              headers = dict(UA)
+              if force_range:
+                  headers["Range"] = f"bytes=0-{byte_limit-1}"
+              try:
+                  async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=timeout), allow_redirects=True) as resp:
+                      row["status"] = resp.status
+                      row["content_type"] = resp.headers.get("Content-Type", "")
+                      data = await resp.content.read(byte_limit)
+                      row["bytes_read"] = len(data)
+                      if resp.status not in (200, 206):
+                          row["error"] = "unexpected HTTP " + str(resp.status)
+                      elif not data:
+                          row["error"] = "empty response body"
+              except Exception as exc:
+                  row["error"] = type(exc).__name__ + ": " + str(exc)[:140]
+              row["ms"] = round((time.perf_counter()-t0)*1000, 2)
+              request_rows.append(row)
+              return row
+
+          async def get_text(session, url, headers=None):
+              try:
+                  async with session.get(url, headers=headers or UA, timeout=aiohttp.ClientTimeout(total=25), allow_redirects=True) as r:
+                      if r.status != 200:
+                          return None, {"status":r.status,"url_host":urlparse(url).netloc}
+                      return await r.text(), {"status":r.status,"url_host":urlparse(url).netloc}
+              except Exception as exc:
+                  return None, {"status":0,"url_host":urlparse(url).netloc,"error":type(exc).__name__+": "+str(exc)[:120]}
+
+          def collect_urls(obj):
+              found=[]
+              def walk(value, key=""):
+                  if isinstance(value, dict):
+                      for k,v in value.items(): walk(v,str(k).lower())
+                  elif isinstance(value,list):
+                      for v in value: walk(v,key)
+                  elif isinstance(value,str) and value.startswith(("https://","http://")):
+                      if any(term in key for term in ("video","pdf","lecture","file","source","document","media","url","link","attachment")):
+                          if not any(value.lower().split("?")[0].endswith(ext) for ext in (".jpg",".jpeg",".png",".webp",".svg",".gif")):
+                              found.append(value)
+              walk(obj)
+              return list(dict.fromkeys(found))
+
+          async def discover_catalogue(session):
+              endpoints = [
+                  SB+"/rest/v1/lectures?is_published=eq.true&select=*&limit=2000",
+                  SB+"/rest/v1/lecture_notes?select=*&limit=2000",
+                  SB+"/rest/v1/chapters?is_published=eq.true&select=*&limit=2000"
+              ]
+              found, diag = [], []
+              for endpoint in endpoints:
+                  try:
+                      async with session.get(endpoint, headers=API_HEADERS, timeout=aiohttp.ClientTimeout(total=25)) as r:
+                          item={"table":endpoint.split("/rest/v1/")[-1].split("?")[0],"status":r.status}
+                          if r.status == 200:
+                              body=await r.json(content_type=None)
+                              item["rows"]=len(body) if isinstance(body,list) else 1
+                              urls=collect_urls(body)
+                              item["candidate_urls"]=len(urls)
+                              found.extend(urls)
+                          else:
+                              item["note"]="Public read unavailable; no database changes attempted."
+                          diag.append(item)
+                  except Exception as exc:
+                      diag.append({"table":endpoint.split("/rest/v1/")[-1].split("?")[0],"error":type(exc).__name__+": "+str(exc)[:100]})
+              unique=list(dict.fromkeys(found))
+              emit("PUBLIC_CATALOGUE",{"tables":diag,"unique_candidate_urls":len(unique)})
+              return unique
+
+          async def concurrent_phase(session, name, urls, concurrency, byte_limit):
+              start_idx=len(request_rows)
+              t0=time.perf_counter()
+              sem=asyncio.Semaphore(concurrency)
+              async def one(i,url):
+                  async with sem:
+                      return await read_request(session,name,url,byte_limit=byte_limit)
+              await asyncio.gather(*(one(i,u) for i,u in enumerate(urls)),return_exceptions=True)
+              rows=request_rows[start_idx:]
+              durations=sorted(r["ms"] for r in rows)
+              def pct(p):
+                  return durations[min(len(durations)-1,int((len(durations)-1)*p))] if durations else None
+              failed=sum(bool(r["error"]) for r in rows)
+              summary={
+                  "phase":name,"requested":len(urls),"completed":len(rows),"failed":failed,
+                  "failure_rate_pct":round(failed*100/len(rows),2) if rows else None,
+                  "elapsed_seconds":round(time.perf_counter()-t0,2),
+                  "requests_per_second":round(len(rows)/(time.perf_counter()-t0),2) if time.perf_counter()>t0 else 0,
+                  "p50_ms":pct(.50),"p95_ms":pct(.95),"p99_ms":pct(.99),
+                  "max_bytes_read_per_client":byte_limit,"pass":bool(rows) and failed==0
+              }
+              phase_summaries.append(summary)
+              emit("PHASE_RESULT",summary)
+              return summary
+
+          async def resolve_hls_segment(session, master_url):
+              text, info = await get_text(session, master_url)
+              if not text:
+                  return None, {"stage":"manifest","result":info}
+              lines=[line.strip() for line in text.splitlines() if line.strip()]
+              # If this is a master playlist, follow one child media playlist.
+              child=None
+              for i,line in enumerate(lines):
+                  if line.startswith("#EXT-X-STREAM-INF") and i+1<len(lines):
+                      child=urljoin(master_url,lines[i+1]); break
+              media_url=child or master_url
+              media_text, media_info = (text,info) if child is None else await get_text(session,child)
+              if not media_text:
+                  return None, {"stage":"child_playlist","result":media_info}
+              media_lines=[line.strip() for line in media_text.splitlines() if line.strip()]
+              segments=[line for line in media_lines if not line.startswith("#")]
+              if not segments:
+                  return None, {"stage":"segment","result":"No media segment URI found in playlist"}
+              return urljoin(media_url,segments[0]), {"manifest_status":info.get("status"),"child_playlist_followed":bool(child),"segment_host":urlparse(urljoin(media_url,segments[0])).netloc}
+
+          async def main():
+              connector=aiohttp.TCPConnector(limit=800,limit_per_host=400,ttl_dns_cache=300)
+              async with aiohttp.ClientSession(connector=connector) as session:
+                  catalogue=await discover_catalogue(session)
+
+                  # Test every unique public catalogue URL discovered, without pretending these are 500 distinct files.
+                  if catalogue:
+                      await concurrent_phase(session,"ALL unique public catalogue media URLs (up to 34 observed)",catalogue,min(len(catalogue),100),8192)
+                  else:
+                      emit("PHASE_SKIPPED",{"phase":"unique public catalogue media URLs","reason":"No public candidate URLs were discoverable."})
+
+                  # 500 concurrent client requests are distributed across actual discovered URLs. This is a concurrent request test, not 500 unique files.
+                  pool=catalogue if catalogue else [VIDEO,PDF]
+                  distributed=[pool[i % len(pool)] for i in range(500)]
+                  await concurrent_phase(session,"500 concurrent requests distributed across discovered public media URLs",distributed,500,8192)
+
+                  # 300 bounded media-data reads against a real HLS media segment, rather than repeatedly fetching only the .m3u8 text manifest.
+                  segment_url, hls_info=await resolve_hls_segment(session,VIDEO)
+                  emit("HLS_SEGMENT_DISCOVERY",hls_info if segment_url else {"error":hls_info})
+                  if segment_url:
+                      await concurrent_phase(session,"300 concurrent HLS media-segment data reads (max 64 KiB/client)",[segment_url]*300,300,65536)
+                  else:
+                      # MP4 fallback: test a bounded byte range against the configured video URL.
+                      await concurrent_phase(session,"300 concurrent bounded video-source reads (HLS segment unavailable; fallback source check)",[VIDEO]*300,300,65536)
+
+                  await concurrent_phase(session,"300 concurrent PDF data range reads (max 64 KiB/client)",[PDF]*300,300,65536)
+
+                  video_check=await read_request(session,"configured-video-source-check",VIDEO,4096)
+                  pdf_check=await read_request(session,"configured-pdf-source-check",PDF,4096)
+
+              source_ok=not video_check["error"] and not pdf_check["error"]
+              summary={
+                  "overall_pass":source_ok and bool(phase_summaries) and all(p["pass"] for p in phase_summaries),
+                  "phases":phase_summaries,
+                  "catalogue_unique_candidate_urls":len(catalogue),
+                  "configured_source_checks":{"video":{"status":video_check["status"],"content_type":video_check.get("content_type",""),"bytes_read":video_check["bytes_read"],"pass":not bool(video_check["error"])},"pdf":{"status":pdf_check["status"],"content_type":pdf_check.get("content_type",""),"bytes_read":pdf_check["bytes_read"],"pass":not bool(pdf_check["error"])}},
+                  "limitations":[
+                      "The 500-client phase distributes requests across the real public URLs discovered; it is not 500 unique media files.",
+                      "Video/PDF clients read bounded data (maximum 64 KiB in the segment/PDF phases), not entire files or hours of sustained playback.",
+                      "This checks source delivery from one GitHub runner, not real-world users on separate devices/networks.",
+                      "Private or login-protected student media is not tested; only read-only public catalogue data and configured public URLs are used.",
+                      "A PASS does not guarantee a specific production capacity or no buffering for every user."
+                  ]
+              }
+              with open("confirmed-media-capacity-report.json","w") as f:
+                  json.dump({"summary":summary,"requests":request_rows},f,indent=2)
+              emit("FINAL_REPORT",summary)
+              if not summary["overall_pass"]:
+                  raise SystemExit("One or more media capacity checks failed; inspect the uploaded report.")
+          asyncio.run(main())
+          PY
+          python confirmed_test.py
+      - name: Upload detailed report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exam-junction-confirmed-media-capacity-report
+          path: confirmed-media-capacity-report.json
+          if-no-files-found: warn
