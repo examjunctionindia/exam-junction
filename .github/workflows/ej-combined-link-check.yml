@@ -1,0 +1,100 @@
+name: EXAM JUNCTION Combined Link Check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check saved video and PDF URLs
+        run: |
+          python3 - <<'PY'
+          import urllib.request, urllib.error, urllib.parse, csv, time
+          urls = [
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6361863633112/6361863633112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362050309112/6362050309112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362144277112/6362144277112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362195945112/6362195945112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362246563112/6362246563112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362325410112/6362325410112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362420462112/6362420462112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362480054112/6362480054112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362519335112/6362519335112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362657696112/6362657696112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362698549112/6362698549112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6362778783112/6362778783112.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/vod_non_drm_hls/migration/B9Y2zltVlcQ/B9Y2zltVlcQ.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/vod_non_drm_hls/migration/dRFueT194Mg/dRFueT194Mg.m3u8",
+            "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/vod_non_drm_hls/migration/MydBIInCwgQ/MydBIInCwgQ.m3u8",
+            "https://drive.google.com/file/d/13E6emK93Fkf7YyLFOfdy-4_eeWx8makZ/view?usp=drivesdk",
+            "https://drive.google.com/file/d/1OKkOQIL665HhhFS4bAZQEubQ2VDHIooB/view?usp=drivesdk",
+            "https://example.com/test.pdf",
+            "https://selectionwayrecorded.hranker.com/696cc469719de161eeed8120/output_480p.mp4",
+            "https://selectionwayrecorded.hranker.com/696f1889719de161eefc9b13/output_720p.mp4",
+            "https://selectionwayrecorded.hranker.com/696fd036719de161ee087a9b/output_720p.mp4",
+            "https://selectionwayrecorded.hranker.com/6971a609719de161ee16baff/output_720p.mp4",
+            "https://selectionwayrecorded.hranker.com/6971faf2719de161ee29ec60/output_720p.mp4",
+            "https://selectionwayrecorded.hranker.com/69780e53c566674bff87e31c/output_720p.mp4",
+            "https://selectionwayrecorded.hranker.com/6978e673c566674bff8e73b4/output_720p.mp4",
+            "https://selectionwayrecorded.hranker.com/6979cc50c566674bff94d04e/output_720p.mp4",
+            "https://selectionwayrecorded.hranker.com/697bad944d8dc840697c1521/output_720p.mp4",
+            "https://selectionwayrecorded.hranker.com/697fab344ca8c7fbe8fc3fd4/output_720p.mp4",
+            "https://selectionwayrecorded.hranker.com/6980754c4ca8c7fbe80200f5/output_720p.mp4",
+            "https://selectionwayrecorded.hranker.com/6981b8674ca8c7fbe80fb84f/output_720p.mp4",
+            "https://selectionwayrecorded.hranker.com/69831e0bfc5097091c0783c6/output_720p.mp4",
+            "https://selectionwayrecorded.hranker.com/69845955fdd21a8a2d150ecd/output_720p.mp4",
+            "https://selectionwayrecorded.hranker.com/6985cb820df4ffd2b9b0aa04/output_720p.mp4",
+            "https://selectionwayrecorded.hranker.com/6989aba15b61b5fe0009979a/output_720p.mp4",
+            "https://selectionwayrecorded.hranker.com/698b74e4a003679fb8ae21ba/output_480p.mp4",
+            "https://selectionwayrecorded.hranker.com/698c7341a003679fb8c17581/output_720p.mp4",
+            "https://selectionwayrecorded.hranker.com/698db8bd8f7f447d5626bf65/output_720p.mp4",
+            "https://selectionwayrecorded.hranker.com/69920949e23f1dc0e52d6607/output_480p.mp4",
+            "https://selectionwayrecordedmp4.hranker.com/561/692d0419dd258fd3235d0129/mp4/class_01_percentage_480p.mp4",
+            "https://selectionwayserver.hranker.com/pdfs/files/Railway%20percentage%20class%201%20board%20pdf.pdf",
+            "https://www.youtube.com/live/_Ok_2J-5G28?si=Il3AZnxW6-B5FHtj",
+            "https://www.youtube.com/live/dutehmHv0E4?si=ormTceZn-y14mDaQ",
+            "https://youtu.be/cUkpeCpGK3s?si=i8syXzZa3EiSQg1A",
+            "https://youtu.be/fKFQtt4qk0Q?si=sYDTFHeH47L18ioS",
+            "https://youtu.be/hP48QCkiQVI?si=NOw1Z1p9DkxGgwDs",
+            "https://youtu.be/jB_8xNHpuKY?si=K8Jgp2bnSugC7X4T",
+            "https://youtu.be/q4-JMbfikTo?si=yLKIfPgQpRkuuR7w",
+            "https://youtu.be/VZ9hIWTxOck?si=7-fnBSH2zHasg_tT",
+            "https://youtu.be/YJpIXVb-OdI?si=sqcEF5eNZoh-g_pR",
+            "https://youtu.be/Za1a_xCXyTc?si=IRJ1vIeOGX_szOts"
+          ]
+          rows=[]
+          for url in urls:
+            status="ERROR"; detail=""
+            try:
+              req=urllib.request.Request(url, headers={"User-Agent":"Mozilla/5.0 EXAM-JUNCTION-LinkCheck","Range":"bytes=0-1023"}, method="GET")
+              with urllib.request.urlopen(req, timeout=15) as r:
+                status=str(r.status)
+                data=r.read(2048)
+                detail="type="+str(r.headers.get("Content-Type",""))+"; bytes="+str(len(data))
+                if url.lower().endswith(".m3u8"):
+                  body=data.decode("utf-8","ignore")
+                  detail += "; playlist_marker="+str("#EXTM3U" in body)
+            except urllib.error.HTTPError as e:
+              status=str(e.code); detail=str(e.reason)
+            except Exception as e:
+              detail=str(e)[:180]
+            print(status, urllib.parse.urlparse(url).netloc, url, detail)
+            rows.append([status,url,detail])
+            time.sleep(.2)
+          with open("combined-link-check-report.csv","w",newline="",encoding="utf-8") as f:
+            w=csv.writer(f); w.writerow(["status","url","details"]); w.writerows(rows)
+          ok=sum(1 for r in rows if r[0].startswith("2") or r[0]=="206")
+          print("SUMMARY total=",len(rows),"2xx=",ok,"other=",len(rows)-ok)
+          PY
+      - name: Save report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: combined-link-check-report
+          path: combined-link-check-report.csv
+          if-no-files-found: warn
