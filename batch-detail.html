@@ -268,7 +268,7 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
    const adminDetails=document.createElement("details");adminDetails.className="admin-playback-diagnostics hidden";
    const adminSummary=document.createElement("summary");adminSummary.textContent="Admin: Video error details";adminDetails.append(adminSummary);
    const adminLog=document.createElement("pre");adminLog.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;";adminDetails.append(adminLog);fallback.append(adminDetails);
-   function notePlaybackIssue(stage,detail){playbackDiagnostics.push({time:new Date().toISOString(),stage,detail:String(detail||"").slice(0,300)});console.warn("[EXAM JUNCTION video]",stage,detail)}
+   function notePlaybackIssue(stage,detail){let readable=detail;if(detail&&typeof detail==="object"){try{readable=JSON.stringify(detail)}catch(_){readable=String(detail)}}playbackDiagnostics.push({time:new Date().toISOString(),stage,detail:String(readable||"").slice(0,600)});console.warn("[EXAM JUNCTION video]",stage,detail)}
    function stopPrimaryPlayback(){if(player&&player.tagName==="VIDEO"){try{player.pause()}catch(_){}try{player.removeAttribute("src");player.querySelectorAll("source").forEach(s=>s.remove());player.load()}catch(_){}}if(hlsInstance){try{hlsInstance.destroy()}catch(_){}hlsInstance=null}}
    async function showPlaybackError(){if(timer){clearTimeout(timer);timer=null}stopPrimaryPlayback();if(player&&player.tagName==="IFRAME"){try{player.src="about:blank"}catch(_){}}if(alternateFrame){try{alternateFrame.src="about:blank"}catch(_){}alternateFrame.remove();alternateFrame=null}if(player){player.style.display="none"}loading.classList.add("hidden");fallback.classList.remove("hidden");await adminCheck;if(isAdminViewer){adminDetails.classList.remove("hidden");adminLog.textContent=JSON.stringify({lectureId:lecture.id,lectureTitle:lecture.title||"Lecture",sourceType:hlsVideo?"HLS/M3U8":directVideo?"direct video":"embedded provider",sourceHost:(()=>{try{return new URL(raw).hostname}catch(_){return "invalid URL"}})(),playerReadyState:player?.readyState??null,networkState:player?.networkState??null,issues:playbackDiagnostics},null,2)}}
    function tryAlternatePlayer(){
@@ -310,9 +310,8 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
      }
     }
     player.addEventListener("waiting",()=>{loading.classList.remove("hidden");startLoadTimeout()});
-    player.addEventListener("error",()=>{notePlaybackIssue("primary-error",player.error?{code:player.error.code,message:player.error.message}:"Video element error");tryAlternatePlayer()});
+    player.addEventListener("error",()=>{const mediaError=player.error;notePlaybackIssue("primary-error",{code:mediaError?.code??null,message:mediaError?.message||null,networkState:player.networkState,readyState:player.readyState,currentSrc:player.currentSrc||player.dataset.src||raw});tryAlternatePlayer()});
     player.addEventListener("stalled",()=>{notePlaybackIssue("primary-stalled","Video stream stalled");startLoadTimeout()});
-    player.addEventListener("abort",tryAlternatePlayer);
     player.addEventListener("canplay",()=>{
      if(timer){clearTimeout(timer);timer=null}
      loading.classList.add("hidden");
