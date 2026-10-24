@@ -1,0 +1,159 @@
+name: EXAM JUNCTION Sustained Real-World Capacity Ramp
+
+on:
+  workflow_dispatch:
+    inputs:
+      video_url:
+        description: "Public HLS (.m3u8) or MP4 video URL"
+        required: false
+        default: "https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6361863633112/6361863633112.m3u8"
+        type: string
+      pdf_url:
+        description: "Public PDF URL"
+        required: false
+        default: "https://selectionwayserver.hranker.com/pdfs/files/Railway%20percentage%20class%201%20board%20pdf.pdf"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  sustained-ramp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test dependency
+        run: python -m pip install aiohttp
+      - name: Run paced sustained session ramp
+        env:
+          VIDEO_URL: ${{ inputs.video_url || 'https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6361863633112/6361863633112.m3u8' }}
+          PDF_URL: ${{ inputs.pdf_url || 'https://selectionwayserver.hranker.com/pdfs/files/Railway%20percentage%20class%201%20board%20pdf.pdf' }}
+        run: |
+          cat > sustained_test.py <<'PY'
+          import asyncio, aiohttp, json, os, time
+          from urllib.parse import urljoin, urlparse
+
+          VIDEO=os.environ["VIDEO_URL"].strip()
+          PDF=os.environ["PDF_URL"].strip()
+          UA={"User-Agent":"EXAM-JUNCTION-Paced-Sustained-Capacity-Test/1.0"}
+          all_rows=[]
+          phases=[]
+
+          async def get_text(session,url):
+              try:
+                  async with session.get(url,headers=UA,timeout=aiohttp.ClientTimeout(total=20),allow_redirects=True) as r:
+                      text=await r.text()
+                      return (text if r.status==200 else None), {"status":r.status,"host":urlparse(url).netloc}
+              except Exception as e:
+                  return None,{"status":0,"error":type(e).__name__+": "+str(e)[:120]}
+
+          async def discover_segment(session):
+              text,info=await get_text(session,VIDEO)
+              if not text:
+                  return VIDEO,{"mode":"video URL byte-range fallback","manifest":info}
+              lines=[x.strip() for x in text.splitlines() if x.strip()]
+              playlist=VIDEO
+              for i,line in enumerate(lines):
+                  if line.startswith("#EXT-X-STREAM-INF") and i+1<len(lines):
+                      playlist=urljoin(VIDEO,lines[i+1]); break
+              if playlist!=VIDEO:
+                  text2,info2=await get_text(session,playlist)
+                  if text2: text=text2
+                  else: return VIDEO,{"mode":"video URL byte-range fallback","child_playlist":info2}
+              segs=[x for x in text.splitlines() if x.strip() and not x.strip().startswith("#")]
+              if not segs:
+                  return VIDEO,{"mode":"video URL byte-range fallback","note":"No segment found"}
+              return urljoin(playlist,segs[0].strip()),{"mode":"actual HLS media segment","segment_host":urlparse(urljoin(playlist,segs[0].strip())).netloc}
+
+          async def fetch(session,kind,url,limit):
+              start=time.perf_counter()
+              row={"kind":kind,"host":urlparse(url).netloc,"status":0,"bytes":0,"error":None}
+              headers=dict(UA,Range=f"bytes=0-{limit-1}")
+              try:
+                  async with session.get(url,headers=headers,timeout=aiohttp.ClientTimeout(total=20),allow_redirects=True) as r:
+                      row["status"]=r.status
+                      data=await r.content.read(limit)
+                      row["bytes"]=len(data)
+                      if r.status not in (200,206): row["error"]="HTTP "+str(r.status)
+                      elif not data: row["error"]="empty body"
+              except Exception as e:
+                  row["error"]=type(e).__name__+": "+str(e)[:120]
+              row["ms"]=round((time.perf_counter()-start)*1000,2)
+              all_rows.append(row)
+              return row
+
+          async def session_worker(session,client_id,video_url,duration,stop):
+              # Simulates light viewing behaviour: video segment fetch every ~4s, occasional PDF range fetch.
+              idx=0
+              while time.monotonic()<stop:
+                  r=await fetch(session,"video_segment",video_url,32768)
+                  idx+=1
+                  if r["error"]: pass
+                  if idx%4==0 and time.monotonic()<stop:
+                      await fetch(session,"pdf_range",PDF,16384)
+                  remaining=stop-time.monotonic()
+                  if remaining>0: await asyncio.sleep(min(4.0,remaining))
+
+          async def run_phase(session,video_url,clients,duration):
+              start_i=len(all_rows)
+              t0=time.monotonic()
+              stop=t0+duration
+              await asyncio.gather(*(session_worker(session,i,video_url,duration,stop) for i in range(clients)))
+              rows=all_rows[start_i:]
+              errors=[r for r in rows if r["error"]]
+              lat=sorted(r["ms"] for r in rows if r["ms"] is not None)
+              def pct(p):
+                  return round(lat[min(len(lat)-1,int((len(lat)-1)*p))],2) if lat else None
+              summary={"simulated_concurrent_viewers":clients,"phase_duration_seconds":round(time.monotonic()-t0,1),
+                "requests_total":len(rows),"video_segment_requests":sum(r["kind"]=="video_segment" for r in rows),
+                "pdf_range_requests":sum(r["kind"]=="pdf_range" for r in rows),"failed_requests":len(errors),
+                "failure_rate_pct":round(100*len(errors)/len(rows),2) if rows else None,
+                "p50_response_ms":pct(.50),"p95_response_ms":pct(.95),"p99_response_ms":pct(.99),
+                "pass":bool(rows) and len(errors)==0}
+              phases.append(summary)
+              print("SUSTAINED_PHASE "+json.dumps(summary))
+              if errors[:5]: print("SAMPLE_ERRORS "+json.dumps(errors[:5]))
+              return summary
+
+          async def main():
+              connector=aiohttp.TCPConnector(limit=600,limit_per_host=400,ttl_dns_cache=300)
+              async with aiohttp.ClientSession(connector=connector) as session:
+                  segment,detail=await discover_segment(session)
+                  print("VIDEO_TARGET "+json.dumps(detail))
+                  print("NOTE: paced test; maximum 32 KiB per video request and 16 KiB per PDF request.")
+                  # Short stepped ramp; avoids an uncontrolled, indefinite load test on third-party hosts.
+                  for clients in (50,100,200,300):
+                      result=await run_phase(session,segment,clients,30)
+                      # Stop escalating when any requests fail or p95 exceeds 5 seconds.
+                      if not result["pass"] or (result["p95_response_ms"] is not None and result["p95_response_ms"]>5000):
+                          print("RAMP_STOPPED: failure or high latency at this level.")
+                          break
+                  summary={"overall_pass":bool(phases) and all(p["pass"] for p in phases),
+                    "highest_tested_concurrency":phases[-1]["simulated_concurrent_viewers"] if phases else 0,
+                    "phases":phases,
+                    "limitations":[
+                      "These are simulated paced sessions from one GitHub-hosted runner, not real users on independent devices and networks.",
+                      "Each video request reads at most 32 KiB and each PDF range request at most 16 KiB; this does not reproduce full-length playback or full PDF downloads.",
+                      "The highest tested concurrency is not the absolute maximum capacity. It is only the highest level reached by this bounded test.",
+                      "Third-party hosting, browser behaviour, mobile networks, authentication and Supabase application endpoints can have different limits.",
+                      "A passing result does not guarantee no buffering or a production user limit."
+                    ]}
+                  with open("sustained-capacity-report.json","w") as f:
+                      json.dump({"summary":summary,"requests":all_rows},f,indent=2)
+                  print("FINAL_REPORT "+json.dumps(summary))
+                  if not summary["overall_pass"]:
+                      raise SystemExit("Sustained test had failures; see artifact.")
+          asyncio.run(main())
+          PY
+          python sustained_test.py
+      - name: Upload sustained capacity report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exam-junction-sustained-capacity-report
+          path: sustained-capacity-report.json
+          if-no-files-found: warn
