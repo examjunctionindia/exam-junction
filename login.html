@@ -558,6 +558,14 @@
      * password-reset link. Then show the new-password form.
      */
     async function initializeRecovery() {
+        // Capture the recovery marker before Supabase processes the URL hash.
+        // Supabase may consume/remove the hash before this page subscribes to auth events.
+        const initialHash = window.location.hash || "";
+        const recoveryLinkPresent =
+            /(?:^|[&#])type=recovery(?:&|$)/i.test(initialHash) ||
+            /(?:^|[&#])access_token=[^&]+/i.test(initialHash) &&
+            /(?:^|[&#])type=recovery(?:&|$)/i.test(initialHash);
+
         try {
             const client = await getClient();
 
@@ -572,14 +580,21 @@
                 }
             });
 
-            const { data } = await client.auth.getSession();
+            const { data, error } = await client.auth.getSession();
+            if (error) throw error;
 
-            if (data.session && window.location.hash.includes("type=recovery")) {
+            // Use the captured URL marker, not the possibly-cleared current hash.
+            if (recoveryLinkPresent && data.session) {
                 recoveryReady = true;
                 setMode("recovery");
                 showMessage(
-                    "Ab apna naya password set karein.",
+                    "Reset link verify ho gaya. Ab naya password set karein.",
                     "success"
+                );
+            } else if (recoveryLinkPresent && !data.session) {
+                showMessage(
+                    "Reset link verify nahi ho saka ya expire ho gaya. Forgot Password se naya link mangwayein.",
+                    "error"
                 );
             }
         } catch (error) {
