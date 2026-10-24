@@ -1,0 +1,142 @@
+name: EXAM JUNCTION Full Readiness - 1500 Visitors and Media
+on:
+  workflow_dispatch:
+    inputs:
+      video_url:
+        description: Public HLS or MP4 lecture URL
+        required: false
+        default: https://d14v4v80cpjht7.cloudfront.net/file_library/videos/migration/brightcove/6361863633112/6361863633112.m3u8
+        type: string
+      pdf_url:
+        description: Public PDF URL
+        required: false
+        default: https://selectionwayserver.hranker.com/pdfs/files/Railway%20percentage%20class%201%20board%20pdf.pdf
+        type: string
+permissions:
+  contents: read
+jobs:
+  full-readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install aiohttp
+      - name: Test 1500 visitors, same media and mixed content
+        env:
+          VIDEO_URL: ${{ inputs.video_url }}
+          PDF_URL: ${{ inputs.pdf_url }}
+        run: |
+          cat > test.py <<'PY'
+          import asyncio, aiohttp, json, os, time
+          from urllib.parse import urlparse
+          SITE="https://examjunctionindia.github.io/exam-junction/"
+          SB="https://yzvwxautsauevfspdqnw.supabase.co"
+          KEY="sb_publishable_dcZFmdlOIQTUzbRUtjNNMA_POLJQHnP"
+          BATCH="c0ab40d6-0b01-47d4-9e3e-765f674fcbb5"
+          VIDEO=os.environ["VIDEO_URL"].strip()
+          PDF=os.environ["PDF_URL"].strip()
+          H={"apikey":KEY,"Authorization":"Bearer "+KEY,"Accept":"application/json","User-Agent":"EJ-readiness-test"}
+          rows=[]; phases=[]; urls=set()
+          async def get(s,phase,kind,url,cap=4096,headers=None):
+            start=time.perf_counter(); row={"phase":phase,"kind":kind,"host":urlparse(url).netloc,"status":0,"bytes":0,"ms":0,"error":""}
+            try:
+              async with s.get(url,headers=headers or H,timeout=aiohttp.ClientTimeout(total=25),allow_redirects=True) as r:
+                row["status"]=r.status; b=await r.content.read(cap); row["bytes"]=len(b)
+                if r.status not in (200,206): row["error"]="HTTP "+str(r.status)
+                elif not b: row["error"]="empty response"
+            except Exception as e: row["error"]=type(e).__name__+": "+str(e)[:100]
+            row["ms"]=round((time.perf_counter()-start)*1000,2); rows.append(row); return row
+          def summary(name,rs,target,note):
+            lat=sorted(x["ms"] for x in rs); bad=[x for x in rs if x["error"]]
+            def pct(p): return round(lat[min(len(lat)-1,int((len(lat)-1)*p))],2) if lat else None
+            x={"phase":name,"target":target,"requests":len(rs),"failed":len(bad),"failure_pct":round(100*len(bad)/len(rs),2) if rs else 100,"p50_ms":pct(.5),"p95_ms":pct(.95),"p99_ms":pct(.99),"pass":bool(rs) and not bad,"note":note}
+            phases.append(x); print("PHASE "+json.dumps(x))
+            if bad: print("ERRORS "+json.dumps(bad[:5]))
+            return x
+          async def discover(s):
+            for table in ("lectures","lecture_notes","chapter_notes"):
+              try:
+                async with s.get(f"{SB}/rest/v1/{table}?select=*&limit=1000",headers=H,timeout=aiohttp.ClientTimeout(total=15)) as r:
+                  data=await r.json(content_type=None)
+                  if r.status!=200 or not isinstance(data,list):
+                    print("CATALOG "+json.dumps({"table":table,"status":r.status,"unique_urls":len(urls)})); continue
+                  for obj in data:
+                    for k,v in obj.items():
+                      if isinstance(v,str) and v.startswith("https://") and any(t in k.lower() for t in ("url","link","file","video","pdf","source")): urls.add(v)
+                  print("CATALOG "+json.dumps({"table":table,"status":r.status,"rows":len(data),"unique_urls_so_far":len(urls)}))
+              except Exception as e: print("CATALOG_ERROR "+table+" "+str(e)[:100])
+          async def site_user(s,i,n):
+            for kind,url in (("home",SITE),("batch",f"{SB}/rest/v1/batches?id=eq.{BATCH}&is_published=eq.true&select=id,title,access_type"),("chapters",f"{SB}/rest/v1/chapters?batch_id=eq.{BATCH}&is_published=eq.true&select=id,title,position&limit=500")):
+              await get(s,str(n)+"-visitors",kind,url,4096,H if "supabase.co" in url else {"User-Agent":"EJ-readiness-test"})
+          async def media(s,phase,kind,url,cap):
+            return await get(s,phase,kind,url,cap,{"User-Agent":"EJ-readiness-test","Range":f"bytes=0-{cap-1}"})
+          async def main():
+            conn=aiohttp.TCPConnector(limit=1900,limit_per_host=1600,ttl_dns_cache=300)
+            async with aiohttp.ClientSession(connector=conn) as s:
+              print("TARGETS "+json.dumps({"visitors":1500,"same_video":300,"same_pdf":300,"mixed_sessions":500,"writes":False,"deletes":False}))
+              await discover(s)
+              # Validate configured video URL and PDF response/signature.
+              for kind,url in (("video",VIDEO),("pdf",PDF)):
+                r=await media(s,"source-validation",kind,url,4096)
+                if kind=="pdf":
+                  try:
+                    async with s.get(url,headers={"Range":"bytes=0-1023","User-Agent":"EJ-readiness-test"},timeout=aiohttp.ClientTimeout(total=20)) as p:
+                      b=await p.content.read(1024); r["pdf_signature"]=b"%PDF-" in b[:1024]
+                      if not r["pdf_signature"]: r["error"]="PDF signature not found in first 1 KiB"
+                  except Exception as e: r["error"]=str(e)[:100]
+                summary("source "+kind,[r],1,"Initial response only")
+              # Ramp public site endpoints through 1500 simultaneous simulated visitors.
+              for n in (100,300,500,1000,1500):
+                start=len(rows); await asyncio.gather(*(site_user(s,i,n) for i in range(n)),return_exceptions=True)
+                rep=summary(f"{n} simultaneous simulated website visitors",rows[start:],n,"Three public GETs per simulated visitor; not logged-in browser sessions.")
+                if rep["failure_pct"]>1 or (rep["p95_ms"] or 0)>5000:
+                  print("SAFE_STOP: visitor ramp stopped on >1% errors or P95 >5 seconds"); break
+              for name,kind,url in (("300 same-video viewers","same_video",VIDEO),("300 same-PDF viewers","same_pdf",PDF)):
+                start=len(rows); await asyncio.gather(*(media(s,name,kind,url,32768) for _ in range(300)),return_exceptions=True)
+                summary(name,rows[start:],300,"Each request reads at most 32 KiB; not full playback/download.")
+              # 500 mixed sessions. Distinct URLs are only claimed if catalogue actually supplies them.
+              pool=list(dict.fromkeys(list(urls)+[VIDEO,PDF])); start=len(rows); sem=asyncio.Semaphore(500)
+              async def mixed(i):
+                async with sem:
+                  await media(s,"500 mixed sessions","mixed_content",pool[i%len(pool)],8192)
+                  if i%2==0: await media(s,"500 mixed sessions","pdf",PDF,8192)
+              await asyncio.gather(*(mixed(i) for i in range(500)),return_exceptions=True)
+              mix=summary("500 concurrent mixed-content sessions",rows[start:],500,f"{len(pool)} unique URLs discovered; URL sharing used if fewer than 500.")
+              mix["unique_urls"]=len(pool); mix["500_distinct_urls"]=len(pool)>=500
+              # Paced sustained mixed load; each session repeatedly requests small media ranges.
+              for n in (50,100,200,300):
+                start=len(rows); stop=time.monotonic()+30
+                async def viewer(i):
+                  while time.monotonic()<stop:
+                    url=pool[(i+int(time.monotonic()))%len(pool)]
+                    await media(s,f"sustained-{n}","content",url,8192)
+                    if i%2==0: await media(s,f"sustained-{n}","pdf",PDF,8192)
+                    await asyncio.sleep(2)
+                await asyncio.gather(*(viewer(i) for i in range(n)),return_exceptions=True)
+                rep=summary(f"{n} sustained mixed-media sessions for 30 seconds",rows[start:],n,"Bounded requests, not full stream/download.")
+                if rep["failed"] or (rep["p95_ms"] or 0)>5000:
+                  print("SAFE_STOP: sustained ramp stopped due to errors or P95 >5 seconds"); break
+            report={"phases":phases,"catalogue_unique_urls":len(urls),"all_executed_phases_pass":all(p["pass"] for p in phases),
+              "1500_visitors_pass":any(p["target"]==1500 and p["pass"] for p in phases),
+              "300_same_video_pass":any(p["phase"]=="300 same-video viewers" and p["pass"] for p in phases),
+              "300_same_pdf_pass":any(p["phase"]=="300 same-PDF viewers" and p["pass"] for p in phases),
+              "500_distinct_urls_available":len(set(urls)|{VIDEO,PDF})>=500,
+              "real_user_guarantee":False,
+              "limitations":["One GitHub runner, not real independent phones/networks.","Media tests read bounded chunks; no full playback or full PDF download guarantee.","Private login/restricted access paths are not tested.","If fewer than 500 distinct public URLs are available, 500 unique-content coverage is not achieved.","Passing does not guarantee zero issues for every real student."]}
+            with open("full-readiness-report.json","w") as f: json.dump({"summary":report,"requests":rows},f,indent=2)
+            print("FINAL_REPORT "+json.dumps(report))
+            required=report["all_executed_phases_pass"] and report["1500_visitors_pass"] and report["300_same_video_pass"] and report["300_same_pdf_pass"] and report["500_distinct_urls_available"]
+            if not required: raise SystemExit("NOT FULLY PASSED: inspect artifact; one or more required targets failed or were not verifiable.")
+          asyncio.run(main())
+          PY
+          python test.py
+      - name: Upload detailed report even when a test fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exam-junction-full-readiness-report
+          path: full-readiness-report.json
+          if-no-files-found: warn
