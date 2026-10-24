@@ -1,0 +1,136 @@
+name: EXAM JUNCTION Real Student Journey Test
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ej-real-student-journey.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  journey:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install Playwright and browser
+        run: |
+          npm init -y
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Exercise public student journeys and media sources
+        run: |
+          cat > journey.cjs <<'JS'
+          const { chromium } = require('playwright');
+          const fs = require('fs');
+          const BASE='https://examjunctionindia.github.io/exam-junction/';
+          const SB='https://yzvwxautsauevfspdqnw.supabase.co';
+          const KEY='sb_publishable_dcZFmdlOIQTUzbRUtjNNMA_POLJQHnP';
+          const headers={apikey:KEY,Authorization:'Bearer '+KEY,Accept:'application/json'};
+          const results=[];
+          async function api(path){
+            const r=await fetch(SB+'/rest/v1/'+path,{headers});
+            const text=await r.text(); let data; try{data=JSON.parse(text)}catch{data=text}
+            return {status:r.status,data};
+          }
+          function urlsIn(data){
+            const out=[];
+            for(const row of (Array.isArray(data)?data:[])) for(const [k,v] of Object.entries(row||{}))
+              if(typeof v==='string' && /^https?:\/\//i.test(v) && /(url|link|file|video|pdf|source|document|drive)/i.test(k)) out.push({field:k,url:v});
+            return out;
+          }
+          async function main(){
+            // Public visitor pages, desktop and phone-sized browser.
+            const browser=await chromium.launch({headless:true});
+            for(const device of [{name:'desktop',viewport:{width:1365,height:900}},{name:'mobile',viewport:{width:390,height:844},isMobile:true,hasTouch:true}]){
+              const context=await browser.newContext({viewport:device.viewport,isMobile:!!device.isMobile,hasTouch:!!device.hasTouch});
+              for(const path of ['index.html','batch.html','books.html','login.html','notifications.html','about.html']){
+                const page=await context.newPage(); const jsErrors=[]; const failed=[];
+                page.on('pageerror',e=>jsErrors.push(e.message));
+                page.on('requestfailed',r=>failed.push({url:r.url().slice(0,180),error:r.failure()?.errorText||'failed'}));
+                let status=0, title='', text='', horizontalOverflow=false;
+                try{const res=await page.goto(BASE+path,{waitUntil:'domcontentloaded',timeout:30000});status=res?.status()||0;
+                  await page.waitForTimeout(3500); title=await page.title(); text=(await page.locator('body').innerText().catch(()=>'' )).slice(0,3500);
+                  horizontalOverflow=await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+2);
+                }catch(e){results.push({test:'page',device:device.name,path,error:String(e).slice(0,220)});await page.close();continue}
+                results.push({test:'page',device:device.name,path,status,title,hasContent:!!text.trim(),horizontalOverflow,jsErrors,failedRequests:failed.slice(0,8)});
+                // Check batch list interaction and navigation if cards exist.
+                if(path==='batch.html'){
+                  const card=page.locator('.card, .batch-card, [data-batch-id]').first();
+                  if(await card.count()){
+                    const before=page.url();
+                    await card.click({timeout:5000}).catch(()=>{});
+                    await page.waitForTimeout(1000);
+                    results.push({test:'batch-card-interaction',device:device.name,found:true,navigated:page.url()!==before,url:page.url()});
+                  }else results.push({test:'batch-card-interaction',device:device.name,found:false,note:'No visible batch card matched common selectors; see page artifact/logs.'});
+                }
+                await page.close();
+              }
+              await context.close();
+            }
+            // Inspect publicly readable catalogue; never attempt restricted credentials or bypass RLS.
+            let media=[];
+            for(const table of ['batches','chapters','lectures','chapter_notes','lecture_notes','books']){
+              const q=table==='batches'?'?select=*&is_published=eq.true&limit=100':
+                table==='chapters'?'?select=*&is_published=eq.true&limit=300':
+                '?select=*&limit=300';
+              const r=await api(table+q);
+              results.push({test:'public-catalogue',table,status:r.status,rowCount:Array.isArray(r.data)?r.data.length:null,error:r.status===200?null:JSON.stringify(r.data).slice(0,200)});
+              if(r.status===200) media.push(...urlsIn(r.data).map(x=>({...x,table})));
+            }
+            const unique=[...new Map(media.map(x=>[x.url,x])).values()];
+            results.push({test:'media-discovery',publiclyReadableUniqueMediaUrls:unique.length,videoCandidates:unique.filter(x=>/video|lecture|mp4|m3u8/i.test(x.field+' '+x.url)).length,pdfCandidates:unique.filter(x=>/pdf|note|book|document/i.test(x.field+' '+x.url)).length});
+            // Actual browser checks for media sources: video metadata/play attempt and PDF viewer load.
+            const mediaBrowser=await chromium.launch({headless:true});
+            const candidates=unique.filter(x=>/^https?:\/\//i.test(x.url)).slice(0,80);
+            for(const item of candidates){
+              const isPdf=/pdf/i.test(item.field+' '+item.url)||/\.pdf(?:$|[?#])/i.test(item.url);
+              const isVideo=/video|lecture|mp4|m3u8/i.test(item.field+' '+item.url)||/\.(mp4|m3u8)(?:$|[?#])/i.test(item.url);
+              if(!isPdf&&!isVideo) continue;
+              const page=await mediaBrowser.newPage();
+              try{
+                if(isVideo){
+                  await page.setContent('<!doctype html><video controls muted playsinline style="width:90vw"></video>');
+                  const outcome=await page.evaluate(async url=>new Promise(resolve=>{
+                    const v=document.querySelector('video');let finished=false;
+                    const done=x=>{if(!finished){finished=true;resolve(x)}};
+                    v.onloadedmetadata=()=>done({event:'loadedmetadata',duration:Number.isFinite(v.duration)?v.duration:null,readyState:v.readyState});
+                    v.onerror=()=>done({event:'error',code:v.error?.code||null,message:v.error?.message||'video media error'});
+                    v.src=url;v.load();setTimeout(()=>done({event:'timeout',readyState:v.readyState,networkState:v.networkState}),12000);
+                  }),item.url);
+                  results.push({test:'video-browser-load',field:item.field,host:new URL(item.url).host,outcome});
+                }else{
+                  await page.setContent('<!doctype html><iframe id="pdf" style="width:95vw;height:90vh"></iframe>');
+                  const outcome=await page.evaluate(async url=>new Promise(resolve=>{
+                    const f=document.querySelector('iframe');let finished=false;
+                    const done=x=>{if(!finished){finished=true;resolve(x)}};
+                    f.onload=()=>done({event:'iframe-load'});
+                    f.onerror=()=>done({event:'error'});
+                    f.src=url;setTimeout(()=>done({event:'timeout'}),10000);
+                  }),item.url);
+                  results.push({test:'pdf-browser-load',field:item.field,host:new URL(item.url).host,outcome});
+                }
+              }catch(e){results.push({test:isPdf?'pdf-browser-load':'video-browser-load',field:item.field,urlHost:(()=>{try{return new URL(item.url).host}catch{return ''}})(),error:String(e).slice(0,180)})}
+              await page.close();
+            }
+            await mediaBrowser.close(); await browser.close();
+            fs.writeFileSync('real-student-journey-results.json',JSON.stringify(results,null,2));
+            console.log('RESULTS_JSON '+JSON.stringify(results));
+            const badPages=results.filter(x=>x.test==='page'&&(x.status!==200||!x.hasContent||x.error));
+            const badMedia=results.filter(x=>(x.test==='video-browser-load'||x.test==='pdf-browser-load')&&(x.error||x.outcome?.event==='error'));
+            console.log('SUMMARY '+JSON.stringify({pageChecks:results.filter(x=>x.test==='page').length,badPages:badPages.length,mediaChecks:results.filter(x=>x.test==='video-browser-load'||x.test==='pdf-browser-load').length,mediaErrors:badMedia.length,restrictedLoginFlow:'NOT TESTED: no student test credentials supplied; no access controls bypassed'}));
+            if(badPages.length) process.exitCode=1;
+          }
+          main().catch(e=>{console.error(e);process.exit(1)});
+          JS
+          node journey.cjs
+      - name: Save journey results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ej-real-student-journey-results
+          path: real-student-journey-results.json
+          if-no-files-found: ignore
