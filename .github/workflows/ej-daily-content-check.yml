@@ -1,0 +1,184 @@
+name: EXAM JUNCTION Daily Content & Embedded Link Check
+
+on:
+  schedule:
+    - cron: "30 3,9,15,21 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ej-daily-content-check
+  cancel-in-progress: false
+
+jobs:
+  daily-content-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check live site, published catalogue and external media links
+        env:
+          SITE_URL: "https://examjunctionindia.github.io/exam-junction"
+          SUPABASE_URL: "https://yzvwxautsauevfspdqnw.supabase.co"
+          SUPABASE_PUBLISHABLE_KEY: "sb_publishable_dcZFmdlOIQTUzbRUtjNNMA_POLJQHnP"
+        run: |
+          cat > daily-content-check.cjs <<'JS'
+          const fs = require('fs');
+          const BASE = process.env.SITE_URL;
+          const SB = process.env.SUPABASE_URL;
+          const KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
+          const headers = { apikey: KEY, Authorization: 'Bearer ' + KEY, Accept: 'application/json' };
+          const results = {
+            generatedAt: new Date().toISOString(),
+            note: 'Public read-only checks. No database writes, no content changes, no restricted access bypass.',
+            pages: [],
+            catalogue: [],
+            media: [],
+            summary: {}
+          };
+
+          async function timedFetch(url, options = {}, ms = 12000) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), ms);
+            try { return await fetch(url, { ...options, signal: controller.signal, redirect: 'follow' }); }
+            finally { clearTimeout(timer); }
+          }
+
+          async function checkPage(path) {
+            try {
+              const r = await timedFetch(BASE + '/' + path, {}, 15000);
+              const text = await r.text();
+              results.pages.push({
+                path, status: r.status, hasHtml: /<html|<!doctype html/i.test(text),
+                hasContent: text.trim().length > 100, bytes: Buffer.byteLength(text)
+              });
+            } catch (e) {
+              results.pages.push({ path, error: String(e).slice(0, 220) });
+            }
+          }
+
+          async function readTable(table, query) {
+            const url = SB + '/rest/v1/' + table + query;
+            try {
+              const r = await timedFetch(url, { headers }, 15000);
+              const text = await r.text();
+              let data = null;
+              try { data = JSON.parse(text); } catch {}
+              results.catalogue.push({
+                table, status: r.status,
+                rows: Array.isArray(data) ? data.length : null,
+                error: r.ok ? null : text.slice(0, 180)
+              });
+              return r.ok && Array.isArray(data) ? data : [];
+            } catch (e) {
+              results.catalogue.push({ table, error: String(e).slice(0, 180) });
+              return [];
+            }
+          }
+
+          function findUrls(rows, table) {
+            const found = [];
+            for (const row of rows) {
+              for (const [field, value] of Object.entries(row || {})) {
+                if (typeof value !== 'string' || !/^https?:\/\//i.test(value)) continue;
+                if (!/(url|link|file|video|pdf|source|document|drive|embed|thumbnail)/i.test(field)) continue;
+                found.push({ table, field, url: value.trim() });
+              }
+            }
+            return found;
+          }
+
+          async function checkMedia(item) {
+            const host = (() => { try { return new URL(item.url).host; } catch { return 'invalid-url'; } })();
+            if (host === 'invalid-url') {
+              results.media.push({ ...item, host, status: 'INVALID_URL' });
+              return;
+            }
+            // HEAD is lightweight; some media providers reject HEAD, so retry with a one-byte range GET.
+            try {
+              let r = await timedFetch(item.url, { method: 'HEAD' }, 10000);
+              let method = 'HEAD';
+              if (r.status === 403 || r.status === 405 || r.status === 501 || r.status === 0) {
+                r = await timedFetch(item.url, { headers: { Range: 'bytes=0-0' } }, 10000);
+                method = 'GET_RANGE';
+                if (r.body) await r.body.cancel().catch(() => {});
+              }
+              results.media.push({
+                table: item.table, field: item.field, host, method,
+                status: r.status, ok: r.status >= 200 && r.status < 400,
+                contentType: r.headers.get('content-type'),
+                note: r.status === 401 || r.status === 403 ? 'Host may block automated probes or require authorization; verify in the website player.'
+                  : r.status === 405 || r.status === 501 ? 'Host does not support this probe method; manually verify embed.'
+                  : null
+              });
+            } catch (e) {
+              results.media.push({
+                table: item.table, field: item.field, host, status: 'NETWORK_ERROR',
+                ok: false, error: String(e).slice(0, 180),
+                note: 'Could be temporary network/host bot protection; confirm by opening the item on the site.'
+              });
+            }
+          }
+
+          (async () => {
+            const pages = ['index.html','batch.html','books.html','login.html','notifications.html','about.html'];
+            await Promise.all(pages.map(checkPage));
+
+            // Only query published catalogue rows. RLS remains in force; this workflow does not sign in or bypass it.
+            const tableQueries = [
+              ['batches', '?select=*&is_published=eq.true&limit=500'],
+              ['chapters', '?select=*&is_published=eq.true&limit=1000'],
+              ['lectures', '?select=*&is_published=eq.true&limit=1000'],
+              ['chapter_notes', '?select=*&is_published=eq.true&limit=1000'],
+              ['lecture_notes', '?select=*&is_published=eq.true&limit=1000'],
+              ['books', '?select=*&is_published=eq.true&limit=1000']
+            ];
+            const catalogue = await Promise.all(tableQueries.map(async ([t,q]) => ({ table:t, rows: await readTable(t,q) })));
+            let all = catalogue.flatMap(x => findUrls(x.rows, x.table));
+            all = [...new Map(all.map(x => [x.url, x])).values()];
+
+            // Check a bounded sample every run to keep the monitor lightweight; rotates through URLs between scheduled runs.
+            const offset = Math.floor(Date.now() / (6 * 60 * 60 * 1000)) * 40;
+            const sampleSize = Math.min(120, all.length);
+            const sample = sampleSize ? Array.from({length:sampleSize}, (_,i) => all[(offset+i)%all.length]) : [];
+            results.summary.discoveredUniquePublicLinks = all.length;
+            results.summary.checkedThisRun = sample.length;
+            results.summary.sampling = 'Up to 120 unique publicly readable published-content URLs per run; rotates by time slot.';
+            for (let i = 0; i < sample.length; i += 8) {
+              await Promise.all(sample.slice(i, i + 8).map(checkMedia));
+            }
+
+            const pageFailures = results.pages.filter(x => x.error || x.status !== 200 || !x.hasHtml || !x.hasContent);
+            const catalogueFailures = results.catalogue.filter(x => x.error || (x.status && x.status !== 200));
+            const mediaFailures = results.media.filter(x => x.ok === false && ![401,403,405,501].includes(x.status));
+            results.summary.pageChecks = results.pages.length;
+            results.summary.pageFailures = pageFailures.length;
+            results.summary.catalogueChecks = results.catalogue.length;
+            results.summary.catalogueFailures = catalogueFailures.length;
+            results.summary.mediaProbeFailures = mediaFailures.length;
+            results.summary.mediaNeedsManualVerification = results.media.filter(x => x.status === 401 || x.status === 403 || x.status === 405 || x.status === 501 || x.status === 'NETWORK_ERROR').length;
+            results.summary.limits = 'This checks URL reachability, not full video playback, every PDF page, simultaneous students, or restricted login/approval flows. Some hosts block HEAD/range probes.';
+            fs.writeFileSync('ej-daily-content-check.json', JSON.stringify(results, null, 2));
+            console.log(JSON.stringify(results.summary, null, 2));
+            if (pageFailures.length || catalogueFailures.length || mediaFailures.length) process.exitCode = 1;
+          })().catch(e => { console.error(e); process.exit(1); });
+          JS
+          node daily-content-check.cjs
+
+      - name: Save daily check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ej-daily-content-check-report
+          path: ej-daily-content-check.json
+          if-no-files-found: ignore
+          retention-days: 30
