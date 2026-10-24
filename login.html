@@ -325,6 +325,13 @@
                 </div>
             </div>
 
+            <div class="field" id="turnstile-field">
+                <div id="turnstile-container" aria-label="Security verification"></div>
+                <p style="margin:8px 0 0;color:#718096;font-size:12px;line-height:1.5">
+                    Security verification helps protect your account.
+                </p>
+            </div>
+
             <button class="submit" id="submit-button" type="submit">
                 Login to Your Account
             </button>
@@ -344,6 +351,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 <script src="assets/js/config.js"></script>
 <script src="assets/js/common.js"></script>
 
@@ -370,6 +378,41 @@
     let mode = "login";
     let busy = false;
     let recoveryReady = false;
+    let turnstileWidgetId = null;
+    let turnstileToken = "";
+    let turnstileInitAttempts = 0;
+
+    function initializeTurnstile() {
+        if (turnstileWidgetId !== null) return;
+        if (!window.turnstile || typeof window.turnstile.render !== "function") {
+            if (turnstileInitAttempts++ < 100) {
+                window.setTimeout(initializeTurnstile, 100);
+            }
+            return;
+        }
+
+        try {
+            turnstileWidgetId = window.turnstile.render("#turnstile-container", {
+                sitekey: "0x4AAAAAAFkG73TdbS_dxXN6",
+                callback: token => { turnstileToken = token || ""; },
+                "expired-callback": () => { turnstileToken = ""; },
+                "error-callback": () => { turnstileToken = ""; }
+            });
+        } catch (error) {
+            console.error("Turnstile initialization error:", error);
+        }
+    }
+
+    function getCaptchaToken() {
+        return turnstileToken || undefined;
+    }
+
+    function resetTurnstile() {
+        turnstileToken = "";
+        if (turnstileWidgetId !== null && window.turnstile) {
+            try { window.turnstile.reset(turnstileWidgetId); } catch (_) {}
+        }
+    }
 
     document.querySelectorAll(".toggle-password").forEach(toggle => {
         toggle.addEventListener("click", () => {
@@ -421,6 +464,7 @@
         signupTab.setAttribute("aria-pressed", String(signup));
 
         nameField.hidden = !signup;
+        $("turnstile-field").hidden = recovery;
         confirmField.hidden = !(signup || recovery);
         fullName.required = signup;
         confirmPassword.required = signup || recovery;
@@ -593,7 +637,7 @@
 
                 const { error } = await client.auth.resetPasswordForEmail(
                     userEmail,
-                    { redirectTo }
+                    { redirectTo, captchaToken: getCaptchaToken() }
                 );
 
                 if (error) throw error;
@@ -636,7 +680,8 @@
                         emailRedirectTo: window.location.origin +
                             window.location.pathname.replace(
                                 /[^/]*$/, "login.html"
-                            )
+                            ),
+                        captchaToken: getCaptchaToken()
                     }
                 });
 
@@ -661,7 +706,8 @@
                 const { data, error } =
                     await client.auth.signInWithPassword({
                         email: userEmail,
-                        password: userPassword
+                        password: userPassword,
+                        options: { captchaToken: getCaptchaToken() }
                     });
 
                 if (error) throw error;
@@ -687,6 +733,7 @@
                 "error"
             );
         } finally {
+            resetTurnstile();
             busy = false;
             button.disabled = false;
 
@@ -703,6 +750,7 @@
         }
     });
 
+    initializeTurnstile();
     initializeRecovery();
 })();
 </script>
