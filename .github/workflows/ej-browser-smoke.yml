@@ -1,0 +1,74 @@
+name: EXAM JUNCTION Browser Smoke Test
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ej-browser-smoke.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install Playwright
+        run: |
+          npm init -y
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Test live website pages on desktop and mobile
+        run: |
+          cat > browser-test.cjs <<'JS'
+          const { chromium } = require('playwright');
+          const fs = require('fs');
+          const base = 'https://examjunctionindia.github.io/exam-junction/';
+          const pages = ['index.html','batch.html','books.html','login.html','notifications.html','about.html'];
+          (async () => {
+            const browser = await chromium.launch({headless:true});
+            const results = [];
+            for (const device of [
+              {name:'desktop', viewport:{width:1365,height:900}},
+              {name:'mobile', viewport:{width:390,height:844}, isMobile:true, hasTouch:true}
+            ]) {
+              const context = await browser.newContext({viewport:device.viewport,isMobile:!!device.isMobile,hasTouch:!!device.hasTouch});
+              for (const path of pages) {
+                const page = await context.newPage();
+                const errors = [];
+                page.on('pageerror', e => errors.push('pageerror: '+e.message));
+                page.on('console', msg => { if (msg.type()==='error') errors.push('console: '+msg.text().slice(0,180)); });
+                let status = 0, title = '';
+                try {
+                  const response = await page.goto(base+path,{waitUntil:'domcontentloaded',timeout:30000});
+                  status = response ? response.status() : 0;
+                  await page.waitForTimeout(2500);
+                  title = await page.title();
+                  const bodyText = (await page.locator('body').innerText().catch(()=>'' )).trim();
+                  const horizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
+                  results.push({device:device.name,path,status,title,bodyHasContent:bodyText.length>0,horizontalOverflow,jsErrors:errors});
+                } catch(e) {
+                  results.push({device:device.name,path,status,error:String(e).slice(0,250),jsErrors:errors});
+                }
+                await page.close();
+              }
+              await context.close();
+            }
+            await browser.close();
+            fs.writeFileSync('browser-smoke-results.json',JSON.stringify(results,null,2));
+            console.log(JSON.stringify(results,null,2));
+            const bad = results.filter(r => r.status!==200 || r.error || !r.bodyHasContent);
+            if (bad.length) process.exitCode=1;
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+          node browser-test.cjs
+      - name: Upload browser test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ej-browser-smoke-results
+          path: browser-smoke-results.json
+          if-no-files-found: ignore
