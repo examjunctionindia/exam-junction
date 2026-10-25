@@ -16,6 +16,17 @@ header p{font-size:13px;margin:0;color:#d9e5ff}
 main{max-width:800px;margin:auto;padding:16px 12px 40px}
 .card{background:white;border:1px solid #e2e8f0;border-radius:15px;padding:17px;margin-bottom:15px}
 h2{font-size:18px;margin:0 0 15px}
+.lecture-batch-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;margin-bottom:12px}
+.lecture-batch-controls label{margin-top:0}
+.lecture-batch-controls button{min-height:42px;white-space:nowrap}
+.lecture-batch-breadcrumb{background:#f3f6fb;border-radius:9px;padding:10px;margin:10px 0;color:#344a68}
+.lecture-batch-wise-list .item{margin:0 0 10px}
+.lecture-batch-wise-list .lecture-browse-button{width:100%;text-align:left;display:flex;justify-content:space-between;gap:10px;align-items:center;background:#f8faff;color:#173b73;border:1px solid #dce5f2;padding:13px;border-radius:10px}
+.lecture-batch-wise-list .lecture-browse-button strong{font-size:14px}
+.lecture-batch-wise-list .lecture-browse-button span{color:#536782;font-size:12px}
+.lecture-batch-wise-list .lecture-list-meta{font-size:12px;color:#52627a;margin:5px 0 10px;white-space:pre-line}
+@media(max-width:480px){.lecture-batch-controls{grid-template-columns:minmax(0,1fr) auto;gap:7px}.lecture-batch-controls button{padding:10px 9px;font-size:12px}}
+
 h3{font-size:15px;margin:0 0 8px}
 label{display:block;font-size:13px;font-weight:bold;margin:12px 0 6px}
 input,textarea,select{
@@ -788,6 +799,26 @@ button:disabled{filter:none;transform:none}
       <input id="searchLectures" class="list-search" type="search" data-list-search="lectureList" placeholder="Lecture title ya external link search karein">
       <div id="lectureList" class="small">Loading...</div>
     </section>
+
+    <section class="card" id="existingLectureBatchWise">
+      <h2>Existing Lecture Batch Wise</h2>
+      <p class="small">Batch chunein, phir uske chapters aur lectures ek hi list mein dekhein.</p>
+      <label for="searchLectureBatches">Search Batch</label>
+      <input id="searchLectureBatches" type="search" placeholder="Batch ka naam likhein..." autocomplete="off">
+      <div class="lecture-batch-controls">
+        <div>
+          <label for="lectureBatchWiseSelect">Select Batch</label>
+          <select id="lectureBatchWiseSelect">
+            <option value="">Select Batch</option>
+          </select>
+        </div>
+        <button type="button" id="lectureBatchWiseAll" class="secondary">All Batches</button>
+      </div>
+      <div id="lectureBatchWiseBreadcrumb" class="small lecture-batch-breadcrumb" aria-live="polite">All batches ke liye “All Batches” chunein, ya neeche koi batch chunein.</div>
+      <div id="lectureBatchWiseList" class="lecture-batch-wise-list">
+        <p class="small">Loading...</p>
+      </div>
+    </section>
   </div>
 
   <p class="small">
@@ -1140,6 +1171,118 @@ async function updateDashboardCounts(){
   }
 }
 
+function renderExistingLectureBatchWise(){
+  const root=$("lectureBatchWiseList");
+  const search=$("searchLectureBatches");
+  const select=$("lectureBatchWiseSelect");
+  const allButton=$("lectureBatchWiseAll");
+  const crumb=$("lectureBatchWiseBreadcrumb");
+  if(!root||!search||!select||!allButton||!crumb)return;
+
+  const query=search.value.trim().toLocaleLowerCase();
+  const matchingBatches=cache.batches.filter(batch=>String(batch.title||"").toLocaleLowerCase().includes(query));
+  const selectedBatchId=select.value;
+  const selectedBatch=selectedBatchId?findById("batches",selectedBatchId):null;
+  const mode=root.dataset.mode||"batches";
+  const selectedChapterId=root.dataset.chapterId||"";
+
+  const currentOptions=Array.from(select.options).slice(1).map(option=>option.value);
+  if(currentOptions.length!==matchingBatches.length||matchingBatches.some((batch,index)=>currentOptions[index]!==String(batch.id))){
+    const keep=select.value;
+    select.replaceChildren();
+    const placeholder=document.createElement("option");placeholder.value="";placeholder.textContent="Select Batch";select.appendChild(placeholder);
+    matchingBatches.forEach(batch=>{const option=document.createElement("option");option.value=String(batch.id);option.textContent=batch.title||"Untitled Batch";select.appendChild(option)});
+    select.value=matchingBatches.some(batch=>String(batch.id)===keep)?keep:"";
+  }
+  root.replaceChildren();
+
+  function makeBrowseRow(title,subtitle,action,id){
+    const button=document.createElement("button");
+    button.type="button";button.className="lecture-browse-button";
+    button.dataset.action=action;button.dataset.type="lectures";button.dataset.id=String(id);
+    const left=document.createElement("span");
+    const strong=document.createElement("strong");strong.textContent=title;left.appendChild(strong);
+    if(subtitle){const detail=document.createElement("div");detail.className="lecture-list-meta";detail.textContent=subtitle;left.appendChild(detail)}
+    const arrow=document.createElement("span");arrow.textContent="›";arrow.setAttribute("aria-hidden","true");
+    button.append(left,arrow);root.appendChild(button);
+  }
+  function addLectureCard(lecture){
+    const chapter=findById("chapters",lecture.chapter_id);
+    const batch=chapter?findById("batches",chapter.batch_id):null;
+    const card=document.createElement("article");card.className="item";card.dataset.recordId=String(lecture.id);card.dataset.recordType="lectures";
+    const title=document.createElement("strong");title.textContent=lecture.title||"Untitled Lecture";card.appendChild(title);
+    const meta=document.createElement("div");meta.className="lecture-list-meta";
+    meta.textContent="Batch: "+(batch?.title||"Unknown batch")+"\nChapter: "+(chapter?.title||"Unknown chapter")+"\nPosition: "+(lecture.position??"—")+" · Status: "+(lecture.publication_status||(lecture.is_published?"Published":"Draft"));
+    card.appendChild(meta);
+    const actions=document.createElement("div");actions.className="actions";
+    actions.appendChild(makeButton("Edit","edit","lectures",lecture.id,"secondary"));
+    actions.appendChild(makeButton("Delete","delete","lectures",lecture.id,"danger"));
+    card.appendChild(actions);root.appendChild(card);
+  }
+
+  if(mode==="all"){
+    const matchingIds=new Set(matchingBatches.map(batch=>String(batch.id)));
+    const chapterIds=new Set(cache.chapters.filter(chapter=>matchingIds.has(String(chapter.batch_id))).map(chapter=>String(chapter.id)));
+    const lectures=cache.lectures.filter(lecture=>chapterIds.has(String(lecture.chapter_id))).slice().sort((a,b)=>{
+      const ca=findById("chapters",a.chapter_id),cb=findById("chapters",b.chapter_id);
+      const ba=ca?findById("batches",ca.batch_id):null,bb=cb?findById("batches",cb.batch_id):null;
+      return String(ba?.title||"").localeCompare(String(bb?.title||""))||String(ca?.title||"").localeCompare(String(cb?.title||""))||Number(a.position||0)-Number(b.position||0);
+    });
+    crumb.textContent="All Batches · "+lectures.length+" lectures";
+    allButton.classList.add("active");
+    if(!lectures.length){root.textContent="Koi lecture nahi mila.";return}
+    lectures.forEach(addLectureCard);return;
+  }
+  allButton.classList.remove("active");
+
+  if(mode==="chapters"&&selectedBatch){
+    crumb.textContent=(selectedBatch.title||"Batch")+" · Chapters";
+    const chapters=cache.chapters.filter(chapter=>String(chapter.batch_id)===String(selectedBatch.id)).slice().sort((a,b)=>Number(a.position||0)-Number(b.position||0));
+    if(!chapters.length){root.textContent="Abhi is batch mein koi chapter available nahi hai.";return}
+    chapters.forEach(chapter=>makeBrowseRow(chapter.title||"Untitled Chapter","Position: "+(chapter.position??"—"),"lecture-batch-wise-chapter",chapter.id));
+    return;
+  }
+  if(mode==="lectures"&&selectedBatch){
+    const chapter=findById("chapters",selectedChapterId);
+    if(!chapter||String(chapter.batch_id)!==String(selectedBatch.id)){root.dataset.mode="chapters";renderExistingLectureBatchWise();return}
+    crumb.textContent=(selectedBatch.title||"Batch")+" · "+(chapter.title||"Chapter")+" · Lectures";
+    const lectures=cache.lectures.filter(lecture=>String(lecture.chapter_id)===String(chapter.id)).slice().sort((a,b)=>Number(a.position||0)-Number(b.position||0));
+    if(!lectures.length){root.textContent="Abhi is chapter mein koi lecture available nahi hai.";return}
+    lectures.forEach(addLectureCard);return;
+  }
+
+  root.dataset.mode="batches";root.dataset.chapterId="";
+  crumb.textContent="Batch chunein, phir Chapter aur Lecture dekhein.";
+  if(!matchingBatches.length){root.textContent="Koi matching batch nahi mila.";return}
+  matchingBatches.forEach(batch=>makeBrowseRow(batch.title||"Untitled Batch","Batch kholne ke liye tap karein","lecture-batch-wise-batch",batch.id));
+}
+$("searchLectureBatches")?.addEventListener("input",function(){
+  const root=$("lectureBatchWiseList");
+  if(root?.dataset.mode==="chapters"||root?.dataset.mode==="lectures"){
+    root.dataset.mode="batches";root.dataset.chapterId="";$("lectureBatchWiseSelect").value="";
+  }
+  renderExistingLectureBatchWise();
+});
+$("lectureBatchWiseSelect")?.addEventListener("change",function(){
+  const root=$("lectureBatchWiseList");
+  root.dataset.mode=this.value?"chapters":"batches";root.dataset.chapterId="";
+  renderExistingLectureBatchWise();
+});
+$("lectureBatchWiseAll")?.addEventListener("click",function(){
+  const root=$("lectureBatchWiseList");root.dataset.mode="all";root.dataset.chapterId="";
+  $("lectureBatchWiseSelect").value="";renderExistingLectureBatchWise();
+});
+$("lectureBatchWiseList")?.addEventListener("click",function(event){
+  const button=event.target.closest("button[data-action]");
+  if(!button)return;
+  const root=$("lectureBatchWiseList");
+  if(button.dataset.action==="lecture-batch-wise-batch"){
+    $("lectureBatchWiseSelect").value=button.dataset.id;root.dataset.mode="chapters";root.dataset.chapterId="";renderExistingLectureBatchWise();
+  }else if(button.dataset.action==="lecture-batch-wise-chapter"){
+    root.dataset.mode="lectures";root.dataset.chapterId=button.dataset.id;renderExistingLectureBatchWise();
+  }
+});
+
 function refreshDropdowns(){
   fillSelect(
     "chapterBatch",
@@ -1314,6 +1457,7 @@ async function loadLists(){
 
    renderImportantNotificationReview();
    refreshDropdowns();
+   renderExistingLectureBatchWise();
   await loadBookAccess();
   await loadBatchAccess();
   await loadBatchRequests();
@@ -3083,7 +3227,11 @@ $("dashboard").addEventListener("click",async function(e){
   const type=button.dataset.type;
   const id=button.dataset.id;
 
-  if(action==="edit"){
+  if(action==="lecture-batch-wise-batch"){
+    const root=$("lectureBatchWiseList");root.dataset.mode="chapters";root.dataset.chapterId="";$("lectureBatchWiseSelect").value=id;renderExistingLectureBatchWise();
+  }else if(action==="lecture-batch-wise-chapter"){
+    const root=$("lectureBatchWiseList");root.dataset.mode="lectures";root.dataset.chapterId=id;renderExistingLectureBatchWise();
+  }else if(action==="edit"){
     editRecord(type,id);
   }else if(action==="delete"){
     await deleteRecord(type,id);
@@ -3416,7 +3564,7 @@ const managementSectionIds = [
   "dashboardOverview","adminErrorTracker","batchManager","batchSearchSettingsManager","bookManager","bookAccessManager",
   "batchAccessManager","studentManager","bannerManager","reportsManager","notificationManager","chapterManager",
   "chapterNotesManager","lectureNotesManager","lectureManager","requestManager","existingBatches","existingBooks",
-  "existingNotifications","expiredImportantNotifications","existingChapters","existingLectures","storageManager"
+  "existingNotifications","expiredImportantNotifications","existingChapters","existingLectures","existingLectureBatchWise","storageManager"
 ];
 const managementCategories = {
   dashboard: {title:"📊 Dashboard",description:"Dashboard overview aur admin-only diagnostics.",items:[
@@ -3433,7 +3581,7 @@ const managementCategories = {
     ["chapterManager","📖 Chapters"],["chapterNotesManager","📄 Chapter Notes"],["existingChapters","📚 Existing Chapters"]
   ]},
   lectures: {title:"▶️ Lectures",description:"Lectures aur lecture notes ke existing features.",items:[
-    ["lectureManager","▶️ Lectures"],["lectureNotesManager","📝 Lecture Notes"],["existingLectures","📋 Existing Lectures"]
+    ["lectureManager","▶️ Lectures"],["lectureNotesManager","📝 Lecture Notes"],["existingLectures","📋 Existing Lectures"],["existingLectureBatchWise","📚 Existing Lecture Batch Wise"]
   ]},
   notifications: {title:"🔔 Notifications",description:"Notification create/manage aur existing notifications.",items:[
     ["notificationManager","🔔 Notifications"],["existingNotifications","📋 Existing Notifications"],["expiredImportantNotifications","🕒 Expired Important Notifications"]
