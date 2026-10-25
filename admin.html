@@ -158,6 +158,13 @@ button:disabled{filter:none;transform:none}
 @media(min-width:900px){#managementHome,#managementCategoryHome{max-width:920px;margin:0 auto;width:100%}.management-nav{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 </style>
+<style>
+.notes-search-results{display:grid;gap:6px;margin:6px 0 12px}
+.notes-search-result{display:block;width:100%;padding:11px 12px;text-align:left;border:1px solid #d6deeb;border-radius:9px;background:#fff;color:#173b73;font:inherit;cursor:pointer}
+.notes-search-result:hover,.notes-search-result:focus{border-color:#315ea8;background:#f1f5ff;outline:2px solid transparent}
+.notes-search-result[aria-selected="true"]{border-color:#315ea8;background:#eaf1ff;font-weight:700}
+.notes-search-empty{padding:10px 12px;color:#64748b;font-size:13px;border:1px dashed #cbd5e1;border-radius:9px}
+</style>
 </head>
 
 <body>
@@ -615,11 +622,14 @@ button:disabled{filter:none;transform:none}
       <form id="notesForm">
         <input id="notesId" type="hidden">
         <div id="lectureNotesBatchFlow" class="hidden">
-          <label for="notesBatch">Select Batch *</label><input id="notesBatchSearch" type="search" placeholder="🔍 Search Batch..." autocomplete="off"><select id="notesBatch"><option value="">Select Batch</option></select>
-          <label for="notesChapterSearch">Search Chapter</label><input id="notesChapterSearch" type="search" placeholder="🔍 Search Chapter..." autocomplete="off">
+          <label for="notesBatchSearch">Search Batch *</label><input id="notesBatchSearch" type="search" placeholder="Batch ya teacher ka naam search karein..." autocomplete="off" aria-label="Search batches by batch or teacher">
+          <div id="notesBatchResults" class="notes-search-results" role="listbox" aria-label="Matching batches"></div>
+          <input id="notesBatch" type="hidden" value="">
+          <label for="notesChapterSearch">Search Chapter *</label><input id="notesChapterSearch" type="search" placeholder="Chapter ka naam search karein..." autocomplete="off" aria-label="Search chapters in selected batch">
+          <div id="notesChapterResults" class="notes-search-results" role="listbox" aria-label="Matching chapters"></div>
         </div>
         <label for="notesChapter">Select Chapter *</label><select id="notesChapter" required><option value="">Select Chapter</option></select>
-        <div id="lectureNotesSearchWrap" class="hidden"><label for="notesLectureSearch">Search Lecture</label><input id="notesLectureSearch" type="search" placeholder="🔍 Search Lecture..." autocomplete="off"></div>
+        <div id="lectureNotesSearchWrap" class="hidden"><label for="notesLectureSearch">Search Lecture *</label><input id="notesLectureSearch" type="search" placeholder="Lecture ka naam search karein..." autocomplete="off" aria-label="Search lectures in selected chapter"><div id="notesLectureResults" class="notes-search-results" role="listbox" aria-label="Matching lectures"></div></div>
         <label for="notesLecture">Notes location *</label><select id="notesLecture"><option value="">Chapter Notes (under chapter)</option></select><label for="notesEnabled">Do you want to add notes?</label><select id="notesEnabled" required><option value="yes">Yes, add notes</option><option value="no">No notes for this chapter/lecture</option></select>
         <div id="notesContentFields"><label for="notesTitle">Notes Title *</label><input id="notesTitle" maxlength="200" placeholder="Percentage PDF Notes">
         <label for="notesSource">Notes Source *</label><select id="notesSource" required><option value="drive">Google Drive Link</option><option value="external">External Website PDF Link</option><option value="storage">Upload from phone to private storage</option></select>
@@ -2745,37 +2755,51 @@ $("notesSource").addEventListener("change",function(){const source=$("notesSourc
 let lectureNotesFlowActive=false;
 const lectureNotesLectureCache=new Map();
 function notesSearchText(value){return String(value||"").trim().toLocaleLowerCase();}
-function setNotesSelectOptions(select,placeholder,rows,label,selectedId=""){
-  if(!select)return;
-  const previous=selectedId||select.value,query=notesSearchText(
-    select.id==="notesBatch"?$("notesBatchSearch")?.value:
-    select.id==="notesChapter"?$("notesChapterSearch")?.value:
-    select.id==="notesLecture"?$("notesLectureSearch")?.value:""
-  );
-  const matches=(rows||[]).filter(row=>!query||notesSearchText(label(row)).includes(query));
-  select.replaceChildren(new Option(placeholder,""));
-  matches.forEach(row=>select.add(new Option(label(row),row.id)));
-  if(query&&!matches.length){
-    const empty=new Option("Koi matching result nahi mila.","");
-    empty.disabled=true;select.add(empty);
+function renderNotesSearchResults(rootId,rows,label,onSelect,selectedId="",query=""){
+  const root=$(rootId);if(!root)return;
+  root.replaceChildren();
+  if(!query.trim()){root.classList.add("hidden");return;}
+  root.classList.remove("hidden");
+  if(!rows.length){
+    const empty=document.createElement("div");empty.className="notes-search-empty";empty.textContent="Koi matching result nahi mila. Search ka naam badal kar try karein.";root.append(empty);return;
   }
-  select.value=previous;
-  if(previous&&!matches.some(row=>String(row.id)===String(previous)))select.value="";
+  rows.forEach(row=>{
+    const button=document.createElement("button");button.type="button";button.className="notes-search-result";
+    button.setAttribute("role","option");button.setAttribute("aria-selected",String(String(row.id)===String(selectedId)));
+    button.textContent=label(row);button.addEventListener("click",()=>onSelect(row));root.append(button);
+  });
 }
 function populateLectureNotesBatches(selectedId=""){
   const select=$("notesBatch");if(!select)return;
-  setNotesSelectOptions(select,"Select Batch",cache.batches||[],row=>row.title||"Batch",selectedId);
+  const query=notesSearchText($("notesBatchSearch")?.value);
+  const rows=(cache.batches||[]).filter(row=>!query||notesSearchText(row.title).includes(query)||notesSearchText(row.platform_name).includes(query));
+  const current=selectedId||select.value;
+  select.value=current&&rows.some(row=>String(row.id)===String(current))?current:"";
+  renderNotesSearchResults("notesBatchResults",rows,row=>(row.title||"Untitled Batch")+(row.platform_name?" — "+row.platform_name:""),row=>{
+    select.value=row.id;
+    $("notesBatchSearch").value=row.title||"";
+    $("notesChapterSearch").value="";$("notesLectureSearch").value="";
+    $("notesChapter").replaceChildren(new Option("Select Chapter",""));
+    $("notesLecture").replaceChildren(new Option("Select Lecture",""));
+    populateLectureNotesBatches(row.id);
+    populateLectureNotesChapters();
+    renderNotesSearchResults("notesBatchResults",[],()=>"",()=>"",row.id,"");
+  },select.value,query);
 }
 function populateLectureNotesChapters(selectedId=""){
   const select=$("notesChapter");if(!select)return;
-  const batchId=$("notesBatch")?.value||"";
-  const rows=(cache.chapters||[]).filter(row=>String(row.batch_id)===String(batchId));
-  const previous=selectedId||select.value;
-  setNotesSelectOptions(select,"Select Chapter",rows,row=>row.title||"Chapter",selectedId);
-  if(previous&&select.value!==previous){
-    $("notesLecture")?.replaceChildren(new Option("Select Lecture",""));
-    if($("notesLectureSearch"))$("notesLectureSearch").value="";
-  }
+  const batchId=$("notesBatch")?.value||"",query=notesSearchText($("notesChapterSearch")?.value);
+  const rows=(cache.chapters||[]).filter(row=>String(row.batch_id)===String(batchId)&&(!query||notesSearchText(row.title).includes(query)));
+  const current=selectedId||select.value;
+  select.replaceChildren(new Option("Select Chapter",""));
+  rows.forEach(row=>select.add(new Option(row.title||"Chapter",row.id)));
+  select.value=current&&rows.some(row=>String(row.id)===String(current))?current:"";
+  renderNotesSearchResults("notesChapterResults",rows,row=>row.title||"Chapter",row=>{
+    select.value=row.id;$("notesChapterSearch").value=row.title||"";
+    $("notesLectureSearch").value="";$("notesLecture").replaceChildren(new Option("Select Lecture",""));
+    populateNotesLectureOptions(row.id);
+    renderNotesSearchResults("notesChapterResults",[],()=>"",()=>"",row.id,"");
+  },select.value,query);
 }
 const openLectureNotesBtn=$("openLectureNotesForm");
 if(openLectureNotesBtn)openLectureNotesBtn.addEventListener("click",function(){
@@ -2799,47 +2823,35 @@ if(openLectureNotesBtn)openLectureNotesBtn.addEventListener("click",function(){
   if(form)form.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
 });
 async function populateNotesLectureOptions(chapterId, selectedLectureId=""){
-  const select=$("notesLecture");
-  if(!select||!db)return;
+  const select=$("notesLecture");if(!select||!db)return;
   select.replaceChildren(new Option(lectureNotesFlowActive?"Select Lecture":"Chapter notes (not tied to one lecture)",""));
-  if(!chapterId){select.value="";return;}
+  if(!chapterId){select.value="";renderNotesSearchResults("notesLectureResults",[],()=>"",()=>"", "", $("notesLectureSearch")?.value||"");return;}
   let rows=lectureNotesLectureCache.get(String(chapterId));
   if(!rows){
     const {data,error}=await db.from("lectures").select("id,title,position").eq("chapter_id",chapterId).order("position",{ascending:true});
     if(error){message("Lecture list load nahi hui.",true);return;}
-    rows=data||[];
-    lectureNotesLectureCache.set(String(chapterId),rows);
+    rows=data||[];lectureNotesLectureCache.set(String(chapterId),rows);
   }
   const query=lectureNotesFlowActive?notesSearchText($("notesLectureSearch")?.value):"";
   const matches=rows.filter(item=>!query||notesSearchText(item.title).includes(query));
   select.replaceChildren(new Option(lectureNotesFlowActive?"Select Lecture":"Chapter notes (not tied to one lecture)",""));
   matches.forEach(item=>select.add(new Option(item.title||"Lecture",item.id)));
-  if(query&&!matches.length){const empty=new Option("Koi matching result nahi mila.","");empty.disabled=true;select.add(empty);}
-  select.value=selectedLectureId||"";
-  if(selectedLectureId&&select.value!==selectedLectureId)select.value="";
+  select.value=selectedLectureId&&matches.some(item=>String(item.id)===String(selectedLectureId))?selectedLectureId:"";
+  renderNotesSearchResults("notesLectureResults",matches,item=>item.title||"Lecture",item=>{
+    select.value=item.id;$("notesLectureSearch").value=item.title||"";
+    renderNotesSearchResults("notesLectureResults",[],()=>"",()=>"",item.id,"");
+  },select.value,query);
 }
-$("notesBatch")?.addEventListener("change",function(){
-  if($("notesChapterSearch"))$("notesChapterSearch").value="";
-  if($("notesLectureSearch"))$("notesLectureSearch").value="";
-  populateLectureNotesChapters();
-  $("notesLecture").replaceChildren(new Option("Select Lecture",""));
-});
 $("notesBatchSearch")?.addEventListener("input",function(){
-  const oldBatch=$("notesBatch").value;
-  populateLectureNotesBatches();
-  const newBatch=$("notesBatch").value;
-  if(oldBatch!==newBatch){
-    $("notesChapterSearch").value="";$("notesLectureSearch").value="";
-    populateLectureNotesChapters();$("notesLecture").replaceChildren(new Option("Select Lecture",""));
-  }else populateLectureNotesChapters();
+  $("notesBatch").value="";$("notesChapterSearch").value="";$("notesLectureSearch").value="";
+  $("notesChapter").replaceChildren(new Option("Select Chapter",""));
+  $("notesLecture").replaceChildren(new Option("Select Lecture",""));
+  populateLectureNotesBatches();populateLectureNotesChapters();
 });
 $("notesChapterSearch")?.addEventListener("input",function(){
-  const oldChapter=$("notesChapter").value;
+  $("notesChapter").value="";$("notesLectureSearch").value="";
+  $("notesLecture").replaceChildren(new Option("Select Lecture",""));
   populateLectureNotesChapters();
-  if(oldChapter!==$("notesChapter").value){
-    if($("notesLectureSearch"))$("notesLectureSearch").value="";
-    $("notesLecture").replaceChildren(new Option("Select Lecture",""));
-  }
 });
 $("notesLectureSearch")?.addEventListener("input",function(){
   const chapterId=$("notesChapter").value,selected=$("notesLecture").value;
