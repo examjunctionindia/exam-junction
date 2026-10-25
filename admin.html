@@ -2743,29 +2743,39 @@ $("notesLecture").addEventListener("change",function(){const v=$("notesLecture")
 $("notesEnabled").addEventListener("change",function(){const enabled=$("notesEnabled").value==="yes";$("notesContentFields").classList.toggle("hidden",!enabled);$("notesTitle").required=enabled;$("notesUrl").required=enabled&&$("notesSource").value!=="storage";$("notesSource").required=enabled;});
 $("notesSource").addEventListener("change",function(){const source=$("notesSource").value;const input=$("notesUrl");const help=$("notesSourceHelp");if(source==="storage"){input.required=false;input.placeholder="Private storage path upload ke baad set hoga";help.textContent="Phone se PDF upload karein. File private storage mein rahegi aur approved users ko hi signed link milega. File maximum 50 MB.";}else{input.required=$("notesEnabled").value==="yes";input.placeholder=source==="drive"?"https://drive.google.com/file/d/...":"https://example.com/file.pdf";help.textContent="External Google Drive/website links website login se private nahi bante. Restricted files ke liye phone se private upload prefer karein.";}});
 let lectureNotesFlowActive=false;
-function applyNotesSearch(selectId,searchId){
-  const select=$(selectId),search=$(searchId);if(!select||!search)return;
-  const query=search.value.trim().toLowerCase(),selected=select.value;
-  Array.from(select.options).forEach((option,index)=>{
-    if(index===0){option.hidden=false;return;}
-    option.hidden=!!query&&!option.textContent.toLowerCase().includes(query);
-  });
-  if(selected&&select.selectedOptions[0]?.hidden)select.value="";
+const lectureNotesLectureCache=new Map();
+function notesSearchText(value){return String(value||"").trim().toLocaleLowerCase();}
+function setNotesSelectOptions(select,placeholder,rows,label,selectedId=""){
+  if(!select)return;
+  const previous=selectedId||select.value,query=notesSearchText(
+    select.id==="notesBatch"?$("notesBatchSearch")?.value:
+    select.id==="notesChapter"?$("notesChapterSearch")?.value:
+    select.id==="notesLecture"?$("notesLectureSearch")?.value:""
+  );
+  const matches=(rows||[]).filter(row=>!query||notesSearchText(label(row)).includes(query));
+  select.replaceChildren(new Option(placeholder,""));
+  matches.forEach(row=>select.add(new Option(label(row),row.id)));
+  if(query&&!matches.length){
+    const empty=new Option("Koi matching result nahi mila.","");
+    empty.disabled=true;select.add(empty);
+  }
+  select.value=previous;
+  if(previous&&!matches.some(row=>String(row.id)===String(previous)))select.value="";
 }
 function populateLectureNotesBatches(selectedId=""){
   const select=$("notesBatch");if(!select)return;
-  const query=$("notesBatchSearch")?.value.trim().toLowerCase()||"",current=selectedId||select.value;
-  select.replaceChildren(new Option("Select Batch",""));
-  (cache.batches||[]).filter(row=>!query||(row.title||"").toLowerCase().includes(query)).forEach(row=>select.add(new Option(row.title||"Batch",row.id)));
-  select.value=current;
+  setNotesSelectOptions(select,"Select Batch",cache.batches||[],row=>row.title||"Batch",selectedId);
 }
 function populateLectureNotesChapters(selectedId=""){
   const select=$("notesChapter");if(!select)return;
-  const batchId=$("notesBatch")?.value||"",query=$("notesChapterSearch")?.value.trim().toLowerCase()||"",current=selectedId||select.value;
-  select.replaceChildren(new Option("Select Chapter",""));
-  (cache.chapters||[]).filter(row=>row.batch_id===batchId&&(!query||(row.title||"").toLowerCase().includes(query))).forEach(row=>select.add(new Option(row.title||"Chapter",row.id)));
-  select.value=current;
-  if(select.value!==current)populateNotesLectureOptions("");
+  const batchId=$("notesBatch")?.value||"";
+  const rows=(cache.chapters||[]).filter(row=>String(row.batch_id)===String(batchId));
+  const previous=selectedId||select.value;
+  setNotesSelectOptions(select,"Select Chapter",rows,row=>row.title||"Chapter",selectedId);
+  if(previous&&select.value!==previous){
+    $("notesLecture")?.replaceChildren(new Option("Select Lecture",""));
+    if($("notesLectureSearch"))$("notesLectureSearch").value="";
+  }
 }
 const openLectureNotesBtn=$("openLectureNotesForm");
 if(openLectureNotesBtn)openLectureNotesBtn.addEventListener("click",function(){
@@ -2793,18 +2803,44 @@ async function populateNotesLectureOptions(chapterId, selectedLectureId=""){
   if(!select||!db)return;
   select.replaceChildren(new Option(lectureNotesFlowActive?"Select Lecture":"Chapter notes (not tied to one lecture)",""));
   if(!chapterId){select.value="";return;}
-  const {data,error}=await db.from("lectures").select("id,title,position").eq("chapter_id",chapterId).order("position",{ascending:true});
-  if(error){message("Lecture list load nahi hui.",true);return;}
-  const query=lectureNotesFlowActive?($("notesLectureSearch")?.value.trim().toLowerCase()||""):"";
-  (data||[]).filter(item=>!query||(item.title||"").toLowerCase().includes(query)).forEach(item=>select.add(new Option(item.title||"Lecture",item.id)));
+  let rows=lectureNotesLectureCache.get(String(chapterId));
+  if(!rows){
+    const {data,error}=await db.from("lectures").select("id,title,position").eq("chapter_id",chapterId).order("position",{ascending:true});
+    if(error){message("Lecture list load nahi hui.",true);return;}
+    rows=data||[];
+    lectureNotesLectureCache.set(String(chapterId),rows);
+  }
+  const query=lectureNotesFlowActive?notesSearchText($("notesLectureSearch")?.value):"";
+  const matches=rows.filter(item=>!query||notesSearchText(item.title).includes(query));
+  select.replaceChildren(new Option(lectureNotesFlowActive?"Select Lecture":"Chapter notes (not tied to one lecture)",""));
+  matches.forEach(item=>select.add(new Option(item.title||"Lecture",item.id)));
+  if(query&&!matches.length){const empty=new Option("Koi matching result nahi mila.","");empty.disabled=true;select.add(empty);}
   select.value=selectedLectureId||"";
+  if(selectedLectureId&&select.value!==selectedLectureId)select.value="";
 }
 $("notesBatch")?.addEventListener("change",function(){
-  $("notesChapterSearch").value="";$("notesLectureSearch").value="";
-  populateLectureNotesChapters();$("notesLecture").replaceChildren(new Option("Select Lecture",""));
+  if($("notesChapterSearch"))$("notesChapterSearch").value="";
+  if($("notesLectureSearch"))$("notesLectureSearch").value="";
+  populateLectureNotesChapters();
+  $("notesLecture").replaceChildren(new Option("Select Lecture",""));
 });
-$("notesBatchSearch")?.addEventListener("input",function(){populateLectureNotesBatches();populateLectureNotesChapters();});
-$("notesChapterSearch")?.addEventListener("input",function(){populateLectureNotesChapters();});
+$("notesBatchSearch")?.addEventListener("input",function(){
+  const oldBatch=$("notesBatch").value;
+  populateLectureNotesBatches();
+  const newBatch=$("notesBatch").value;
+  if(oldBatch!==newBatch){
+    $("notesChapterSearch").value="";$("notesLectureSearch").value="";
+    populateLectureNotesChapters();$("notesLecture").replaceChildren(new Option("Select Lecture",""));
+  }else populateLectureNotesChapters();
+});
+$("notesChapterSearch")?.addEventListener("input",function(){
+  const oldChapter=$("notesChapter").value;
+  populateLectureNotesChapters();
+  if(oldChapter!==$("notesChapter").value){
+    if($("notesLectureSearch"))$("notesLectureSearch").value="";
+    $("notesLecture").replaceChildren(new Option("Select Lecture",""));
+  }
+});
 $("notesLectureSearch")?.addEventListener("input",function(){
   const chapterId=$("notesChapter").value,selected=$("notesLecture").value;
   populateNotesLectureOptions(chapterId,selected);
