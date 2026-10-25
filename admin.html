@@ -25,6 +25,13 @@ h2{font-size:18px;margin:0 0 15px}
 .lecture-batch-wise-list .lecture-browse-button strong{font-size:14px}
 .lecture-batch-wise-list .lecture-browse-button span{color:#536782;font-size:12px}
 .lecture-batch-wise-list .lecture-list-meta{font-size:12px;color:#52627a;margin:5px 0 10px;white-space:pre-line}
+.lecture-batch-summary{border:1px solid #dce5f2;border-radius:12px;padding:13px;margin:0 0 10px}
+.lecture-batch-summary h3{margin:0 0 10px;color:#173b73}
+.lecture-batch-counts{display:grid;grid-template-columns:1fr;gap:8px}
+.lecture-batch-counts .lecture-count-button{width:100%;text-align:left;min-height:42px;white-space:normal}
+.lecture-batch-wise-list>h3{margin:18px 0 8px}
+.lecture-batch-back{margin:0 0 12px}
+@media(min-width:600px){.lecture-batch-counts{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:480px){.lecture-batch-controls{grid-template-columns:minmax(0,1fr) auto;gap:7px}.lecture-batch-controls button{padding:10px 9px;font-size:12px}}
 
 h3{font-size:15px;margin:0 0 8px}
@@ -1226,6 +1233,36 @@ function renderExistingLectureBatchWise(){
     card.appendChild(actions);root.appendChild(card);
   }
 
+  function lectureIsPublished(lecture){
+    const status=String(lecture.publication_status||"").toLowerCase();
+    if(status)return status==="published";
+    return lecture.is_published===true;
+  }
+  function lecturesForBatch(batchId){
+    const ids=new Set(cache.chapters.filter(chapter=>String(chapter.batch_id)===String(batchId)).map(chapter=>String(chapter.id)));
+    return cache.lectures.filter(lecture=>ids.has(String(lecture.chapter_id)));
+  }
+  function addSectionHeading(title,description){
+    const heading=document.createElement("h3");heading.textContent=title;root.appendChild(heading);
+    if(description){const p=document.createElement("p");p.className="small";p.textContent=description;root.appendChild(p)}
+  }
+  function addBatchSummaryCard(batch){
+    const lectures=lecturesForBatch(batch.id);
+    const published=lectures.filter(lectureIsPublished).length;
+    const drafts=lectures.length-published;
+    const card=document.createElement("article");card.className="item lecture-batch-summary";
+    const heading=document.createElement("h3");heading.textContent="📁 "+(batch.title||"Untitled Batch");card.appendChild(heading);
+    const counts=document.createElement("div");counts.className="lecture-batch-counts";
+    [
+      ["🟢 Published Lectures: "+published,"published"],
+      ["🟡 Draft Lectures: "+drafts,"draft"],
+      ["📚 Total Lectures: "+lectures.length,"all"]
+    ].forEach(([label,status])=>{
+      const button=document.createElement("button");button.type="button";button.className="secondary lecture-count-button";
+      button.textContent=label;button.dataset.action="lecture-batch-wise-count";button.dataset.batchId=String(batch.id);button.dataset.statusFilter=status;counts.appendChild(button);
+    });
+    card.appendChild(counts);root.appendChild(card);
+  }
   if(mode==="all"){
     const matchingIds=new Set(matchingBatches.map(batch=>String(batch.id)));
     const chapterIds=new Set(cache.chapters.filter(chapter=>matchingIds.has(String(chapter.batch_id))).map(chapter=>String(chapter.id)));
@@ -1236,8 +1273,29 @@ function renderExistingLectureBatchWise(){
     });
     crumb.textContent="All Batches · "+lectures.length+" lectures";
     allButton.classList.add("active");
-    if(!lectures.length){root.textContent="Koi lecture nahi mila.";return}
-    lectures.forEach(addLectureCard);return;
+    addSectionHeading("① All Batch — All Lectures","Sabhi matching batches ke lectures ek list mein.");
+    if(!lectures.length){const empty=document.createElement("p");empty.className="small";empty.textContent="Koi lecture nahi mila.";root.appendChild(empty)}
+    else lectures.forEach(addLectureCard);
+    addSectionHeading("② Batch Wise — All Lectures","Har batch ka Published, Draft aur Total count. Count par tap karke lectures kholein.");
+    if(!matchingBatches.length){const empty=document.createElement("p");empty.className="small";empty.textContent="Koi matching batch nahi mila.";root.appendChild(empty)}
+    else matchingBatches.forEach(addBatchSummaryCard);
+    return;
+  }
+  if(mode==="batch-lectures"){
+    const batch=findById("batches",root.dataset.batchId||"");
+    if(!batch){root.dataset.mode="all";renderExistingLectureBatchWise();return}
+    addBackButton("Back to All Batches","lecture-batch-wise-back-all");
+    const statusFilter=root.dataset.statusFilter||"all";
+    const batchLectures=lecturesForBatch(batch.id).filter(lecture=>statusFilter==="published"?lectureIsPublished(lecture):statusFilter==="draft"?!lectureIsPublished(lecture):true).slice().sort((a,b)=>{
+      const ca=findById("chapters",a.chapter_id),cb=findById("chapters",b.chapter_id);
+      return String(ca?.title||"").localeCompare(String(cb?.title||""))||Number(a.position||0)-Number(b.position||0);
+    });
+    const label=statusFilter==="published"?"Published Lectures":statusFilter==="draft"?"Draft Lectures":"All Lectures";
+    crumb.textContent=(batch.title||"Batch")+" · "+label+" · "+batchLectures.length;
+    allButton.classList.remove("active");
+    addSectionHeading("📁 "+(batch.title||"Untitled Batch")+" — "+label);
+    if(!batchLectures.length){root.textContent="Is category mein koi lecture nahi mila.";return}
+    batchLectures.forEach(addLectureCard);return;
   }
   allButton.classList.remove("active");
 
@@ -1284,7 +1342,12 @@ $("lectureBatchWiseList")?.addEventListener("click",function(event){
   const button=event.target.closest("button[data-action]");
   if(!button)return;
   const root=$("lectureBatchWiseList");
-  if(button.dataset.action==="lecture-batch-wise-back-batches"){
+  if(button.dataset.action==="lecture-batch-wise-count"){
+    root.dataset.mode="batch-lectures";root.dataset.batchId=button.dataset.batchId;root.dataset.statusFilter=button.dataset.statusFilter;root.dataset.chapterId="";
+    $("lectureBatchWiseSelect").value=button.dataset.batchId;renderExistingLectureBatchWise();
+  }else if(button.dataset.action==="lecture-batch-wise-back-all"){
+    root.dataset.mode="all";root.dataset.batchId="";root.dataset.statusFilter="all";$("lectureBatchWiseSelect").value="";renderExistingLectureBatchWise();
+  }else if(button.dataset.action==="lecture-batch-wise-back-batches"){
     root.dataset.mode="batches";root.dataset.chapterId="";$("lectureBatchWiseSelect").value="";renderExistingLectureBatchWise();
   }else if(button.dataset.action==="lecture-batch-wise-back-chapters"){
     root.dataset.mode="chapters";root.dataset.chapterId="";renderExistingLectureBatchWise();
