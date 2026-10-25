@@ -826,6 +826,16 @@ button:disabled{filter:none;transform:none}
         <p class="small">Loading...</p>
       </div>
     </section>
+
+    <section class="card" id="existingLectureNotesBatchWise">
+      <h2>Existing Lecture Notes</h2>
+      <p class="small">Batch chunein, phir Chapters aur unke Lecture Notes dekhein.</p>
+      <label for="searchLectureNotesBatches">Search Batch</label>
+      <input id="searchLectureNotesBatches" type="search" placeholder="Batch ka naam likhein..." autocomplete="off">
+      <div class="lecture-batch-controls"><div><label for="lectureNotesBatchWiseSelect">Select Batch</label><select id="lectureNotesBatchWiseSelect"><option value="">Select Batch</option></select></div><button type="button" id="lectureNotesBatchWiseAll" class="secondary">All Batches</button></div>
+      <div id="lectureNotesBatchWiseBreadcrumb" class="small lecture-batch-breadcrumb" aria-live="polite">Batch chunein, ya All Batches dabayein.</div>
+      <div id="lectureNotesBatchWiseList" class="lecture-batch-wise-list"><p class="small">Loading...</p></div>
+    </section>
   </div>
 
   <p class="small">
@@ -1374,6 +1384,34 @@ $("lectureBatchWiseList")?.addEventListener("click",function(event){
   }
 });
 
+function renderExistingLectureNotesBatchWise(){
+ const root=$("lectureNotesBatchWiseList"),search=$("searchLectureNotesBatches"),select=$("lectureNotesBatchWiseSelect"),all=$("lectureNotesBatchWiseAll"),crumb=$("lectureNotesBatchWiseBreadcrumb");
+ if(!root||!search||!select||!all||!crumb)return;
+ const q=search.value.trim().toLowerCase(),batches=cache.batches.filter(b=>String(b.title||"").toLowerCase().includes(q)),mode=root.dataset.mode||"batches",selected=select.value;
+ if(Array.from(select.options).length!==batches.length+1||Array.from(select.options).slice(1).some((o,i)=>o.value!==String(batches[i]?.id))){const keep=selected;select.replaceChildren(new Option("Select Batch",""));batches.forEach(b=>select.add(new Option(b.title||"Untitled Batch",String(b.id))));select.value=batches.some(b=>String(b.id)===keep)?keep:"";}
+ root.replaceChildren();
+ const row=(title,subtitle,action,id)=>{const b=document.createElement("button");b.type="button";b.className="lecture-browse-button";b.dataset.action=action;b.dataset.id=String(id||"");const left=document.createElement("span"),strong=document.createElement("strong");strong.textContent=title;left.appendChild(strong);if(subtitle){const d=document.createElement("div");d.className="lecture-list-meta";d.textContent=subtitle;left.appendChild(d)}const arrow=document.createElement("span");arrow.textContent="›";b.append(left,arrow);root.appendChild(b)};
+ const back=(label,action)=>{const b=document.createElement("button");b.type="button";b.className="btn secondary lecture-batch-back";b.dataset.action=action;b.textContent="← "+label;root.appendChild(b)};
+ const chapterOf=n=>findById("chapters",n.chapter_id),batchOf=n=>{const c=chapterOf(n);return c?findById("batches",c.batch_id):null};
+ const inBatch=id=>{const ids=new Set(cache.chapters.filter(c=>String(c.batch_id)===String(id)).map(c=>String(c.id)));return cache.notes.filter(n=>ids.has(String(n.chapter_id)))};
+ const pub=n=>String(n.publication_status||"").toLowerCase()?String(n.publication_status).toLowerCase()==="published":n.is_published===true;
+ const draft=n=>String(n.publication_status||"").toLowerCase()?String(n.publication_status).toLowerCase()==="draft":n.is_published!==true;
+ const noteCard=n=>{const c=chapterOf(n),b=batchOf(n),l=n.lecture_id?findById("lectures",n.lecture_id):null,card=document.createElement("article");card.className="item";card.dataset.recordId=String(n.id);card.dataset.recordType="notes";const title=document.createElement("strong");title.textContent=n.title||"Untitled Notes";card.appendChild(title);const meta=document.createElement("div");meta.className="lecture-list-meta";meta.textContent="Batch: "+(b?.title||"Unknown batch")+"\nChapter: "+(c?.title||"Unknown chapter")+(n.lecture_id?"\nLecture: "+(l?.title||"Unknown lecture"):"\nLocation: Chapter Notes")+"\nPosition: "+(n.position??"—")+" · Status: "+(n.publication_status||(n.is_published?"Published":"Draft"));card.appendChild(meta);const actions=document.createElement("div");actions.className="actions";actions.appendChild(makeButton("Edit","edit","notes",n.id,"secondary"));actions.appendChild(makeButton("Delete","delete","notes",n.id,"danger"));card.appendChild(actions);root.appendChild(card)};
+ const batchCard=b=>{const ns=inBatch(b.id),card=document.createElement("article");card.className="item lecture-batch-summary";const h=document.createElement("h3");h.textContent="📁 "+(b.title||"Untitled Batch");card.appendChild(h);const counts=document.createElement("div");counts.className="lecture-batch-counts";[["🟢 Published Notes: "+ns.filter(pub).length,"published"],["🟡 Draft Notes: "+ns.filter(draft).length,"draft"],["📚 Total Notes: "+ns.length,"all"]].forEach(([label,status])=>{const x=document.createElement("button");x.type="button";x.className="secondary lecture-count-button";x.textContent=label;x.dataset.action="lecture-notes-count";x.dataset.batchId=String(b.id);x.dataset.statusFilter=status;counts.appendChild(x)});card.appendChild(counts);root.appendChild(card)};
+ if(mode==="all"){crumb.textContent="All Batches";all.classList.add("active");row("📋 All Batch — All Lecture Notes","","notes-open-all","");row("📊 Batch Wise — All Lecture Notes","","notes-open-batch-list","");return}
+ all.classList.remove("active");
+ if(mode==="all-notes"){back("Back to All Batches","notes-back-all");const ids=new Set(batches.map(b=>String(b.id))),cs=new Set(cache.chapters.filter(c=>ids.has(String(c.batch_id))).map(c=>String(c.id))),ns=cache.notes.filter(n=>cs.has(String(n.chapter_id))).slice().sort((a,b)=>String(batchOf(a)?.title||"").localeCompare(String(batchOf(b)?.title||""))||String(chapterOf(a)?.title||"").localeCompare(String(chapterOf(b)?.title||""))||Number(a.position||0)-Number(b.position||0));crumb.textContent="All Batch — All Lecture Notes · "+ns.length;if(!ns.length){root.textContent="Koi lecture note nahi mila.";return}ns.forEach(noteCard);return}
+ if(mode==="batch-list"){back("Back to All Batches","notes-back-all");crumb.textContent="Batch Wise — All Lecture Notes";if(!batches.length){root.textContent="Koi batch nahi mila.";return}batches.forEach(batchCard);return}
+ if(mode==="batch-notes"){const b=findById("batches",root.dataset.batchId||"");if(!b){root.dataset.mode="all";renderExistingLectureNotesBatchWise();return}back("Back to Batch Wise Notes","notes-back-list");const filter=root.dataset.statusFilter||"all",ns=inBatch(b.id).filter(n=>filter==="published"?pub(n):filter==="draft"?draft(n):true).slice().sort((a,b)=>String(chapterOf(a)?.title||"").localeCompare(String(chapterOf(b)?.title||""))||Number(a.position||0)-Number(b.position||0));crumb.textContent=(b.title||"Batch")+" · "+filter+" · "+ns.length;if(!ns.length){root.append("Is category mein koi lecture note nahi mila.");return}ns.forEach(noteCard);return}
+ if(mode==="chapters"&&selected){back("Back to Batches","notes-back-batches");const cs=cache.chapters.filter(c=>String(c.batch_id)===String(selected)).slice().sort((a,b)=>Number(a.position||0)-Number(b.position||0));crumb.textContent=(findById("batches",selected)?.title||"Batch")+" · Chapters";if(!cs.length){root.textContent="Abhi is batch mein koi chapter available nahi hai.";return}cs.forEach(c=>row(c.title||"Untitled Chapter","Position: "+(c.position??"—"),"notes-chapter",c.id));return}
+ if(mode==="notes"&&selected){back("Back to Chapters","notes-back-chapters");const cs=findById("chapters",root.dataset.chapterId||"");crumb.textContent=(findById("batches",selected)?.title||"Batch")+" · "+(cs?.title||"Chapter")+" · Lecture Notes";const ns=cache.notes.filter(n=>String(n.chapter_id)===String(cs?.id)).slice().sort((a,b)=>Number(a.position||0)-Number(b.position||0));if(!ns.length){root.textContent="Abhi is chapter mein koi lecture note available nahi hai.";return}ns.forEach(noteCard);return}
+ root.dataset.mode="batches";crumb.textContent="Batch chunein, phir Chapter aur Lecture Notes dekhein.";if(!batches.length){root.textContent="Koi matching batch nahi mila.";return}batches.forEach(b=>row(b.title||"Untitled Batch","Batch kholne ke liye tap karein","notes-batch",b.id));
+}
+$("searchLectureNotesBatches")?.addEventListener("input",()=>{const r=$("lectureNotesBatchWiseList");if(["chapters","notes"].includes(r.dataset.mode)){r.dataset.mode="batches";r.dataset.chapterId="";$("lectureNotesBatchWiseSelect").value=""}renderExistingLectureNotesBatchWise()});
+$("lectureNotesBatchWiseSelect")?.addEventListener("change",function(){const r=$("lectureNotesBatchWiseList");r.dataset.mode=this.value?"chapters":"batches";r.dataset.chapterId="";renderExistingLectureNotesBatchWise()});
+$("lectureNotesBatchWiseAll")?.addEventListener("click",()=>{const r=$("lectureNotesBatchWiseList");r.dataset.mode="all";r.dataset.chapterId="";r.dataset.batchId="";$("lectureNotesBatchWiseSelect").value="";renderExistingLectureNotesBatchWise()});
+$("lectureNotesBatchWiseList")?.addEventListener("click",e=>{const b=e.target.closest("button[data-action]");if(!b)return;const r=$("lectureNotesBatchWiseList"),a=b.dataset.action;if(a==="notes-open-all")r.dataset.mode="all-notes";else if(a==="notes-open-batch-list")r.dataset.mode="batch-list";else if(a==="lecture-notes-count"){r.dataset.mode="batch-notes";r.dataset.batchId=b.dataset.batchId;r.dataset.statusFilter=b.dataset.statusFilter;$("lectureNotesBatchWiseSelect").value=b.dataset.batchId}else if(a==="notes-back-all"){r.dataset.mode="all";r.dataset.batchId="";r.dataset.statusFilter="all";$("lectureNotesBatchWiseSelect").value=""}else if(a==="notes-back-list")r.dataset.mode="batch-list";else if(a==="notes-back-batches"){r.dataset.mode="batches";$("lectureNotesBatchWiseSelect").value="";r.dataset.chapterId=""}else if(a==="notes-back-chapters"){r.dataset.mode="chapters";r.dataset.chapterId=""}else if(a==="notes-batch"){r.dataset.mode="chapters";r.dataset.chapterId="";$("lectureNotesBatchWiseSelect").value=b.dataset.id}else if(a==="notes-chapter"){r.dataset.mode="notes";r.dataset.chapterId=b.dataset.id}renderExistingLectureNotesBatchWise()});
+
 function refreshDropdowns(){
   fillSelect(
     "chapterBatch",
@@ -1549,6 +1587,7 @@ async function loadLists(){
    renderImportantNotificationReview();
    refreshDropdowns();
    renderExistingLectureBatchWise();
+   renderExistingLectureNotesBatchWise();
   await loadBookAccess();
   await loadBatchAccess();
   await loadBatchRequests();
@@ -3655,7 +3694,7 @@ const managementSectionIds = [
   "dashboardOverview","adminErrorTracker","batchManager","batchSearchSettingsManager","bookManager","bookAccessManager",
   "batchAccessManager","studentManager","bannerManager","reportsManager","notificationManager","chapterManager",
   "chapterNotesManager","lectureNotesManager","lectureManager","requestManager","existingBatches","existingBooks",
-  "existingNotifications","expiredImportantNotifications","existingChapters","existingLectures","existingLectureBatchWise","storageManager"
+  "existingNotifications","expiredImportantNotifications","existingChapters","existingLectures","existingLectureBatchWise","existingLectureNotesBatchWise","storageManager"
 ];
 const managementCategories = {
   dashboard: {title:"📊 Dashboard",description:"Dashboard overview aur admin-only diagnostics.",items:[
@@ -3672,7 +3711,7 @@ const managementCategories = {
     ["chapterManager","📖 Chapters"],["chapterNotesManager","📄 Chapter Notes"],["existingChapters","📚 Existing Chapters"]
   ]},
   lectures: {title:"▶️ Lectures",description:"Lectures aur lecture notes ke existing features.",items:[
-    ["lectureManager","▶️ Lectures"],["lectureNotesManager","📝 Lecture Notes"],["existingLectures","📋 Existing Lectures"],["existingLectureBatchWise","📚 Existing Lecture Batch Wise"]
+    ["lectureManager","▶️ Lectures"],["lectureNotesManager","📝 Lecture Notes"],["existingLectures","📋 Existing Lectures"],["existingLectureBatchWise","📚 Existing Lecture Batch Wise"],["existingLectureNotesBatchWise","📄 Existing Lecture Notes"]
   ]},
   notifications: {title:"🔔 Notifications",description:"Notification create/manage aur existing notifications.",items:[
     ["notificationManager","🔔 Notifications"],["existingNotifications","📋 Existing Notifications"],["expiredImportantNotifications","🕒 Expired Important Notifications"]
