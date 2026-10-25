@@ -599,8 +599,9 @@ button:disabled{filter:none;transform:none}
       <h2>📝 Lecture Notes Management</h2>
       <p class="small">Har lecture ke neeche alag notes attach kar sakte hain. Chapter Notes aur Lecture Notes independent hain—ek add karne se doosra zaroori nahi hota. PDF Google Drive link se use hoti hai; Supabase Storage future option hai.</p>
       <ol class="small">
-        <li>“Open Lecture Notes Form” dabayein.</li>
-        <li>Chapter select karein, phir Notes location mein us lecture ko select karein.</li>
+        <li>Batch search karke Batch select karein.</li>
+        <li>Selected Batch ke Chapters search karke Chapter select karein.</li>
+        <li>Selected Chapter ke Lectures search karke Lecture select karein.</li>
         <li>“Yes, add notes” select karke title aur link save karein.</li>
       </ol>
       <button type="button" class="primary" id="openLectureNotesForm">➕ Add Lecture Notes</button>
@@ -613,7 +614,13 @@ button:disabled{filter:none;transform:none}
       <p class="small">Existing chapter_notes table ka use karke chapter ke saath notes link save karein. Yahan file upload nahi hota, link save hota hai.</p>
       <form id="notesForm">
         <input id="notesId" type="hidden">
-        <label for="notesChapter">Select Chapter *</label><select id="notesChapter" required><option value="">Select Chapter</option></select><label for="notesLecture">Notes location *</label><select id="notesLecture"><option value="">Chapter Notes (under chapter)</option></select><label for="notesEnabled">Do you want to add notes?</label><select id="notesEnabled" required><option value="yes">Yes, add notes</option><option value="no">No notes for this chapter/lecture</option></select>
+        <div id="lectureNotesBatchFlow" class="hidden">
+          <label for="notesBatch">Select Batch *</label><input id="notesBatchSearch" type="search" placeholder="🔍 Search Batch..." autocomplete="off"><select id="notesBatch"><option value="">Select Batch</option></select>
+          <label for="notesChapterSearch">Search Chapter</label><input id="notesChapterSearch" type="search" placeholder="🔍 Search Chapter..." autocomplete="off">
+        </div>
+        <label for="notesChapter">Select Chapter *</label><select id="notesChapter" required><option value="">Select Chapter</option></select>
+        <div id="lectureNotesSearchWrap" class="hidden"><label for="notesLectureSearch">Search Lecture</label><input id="notesLectureSearch" type="search" placeholder="🔍 Search Lecture..." autocomplete="off"></div>
+        <label for="notesLecture">Notes location *</label><select id="notesLecture"><option value="">Chapter Notes (under chapter)</option></select><label for="notesEnabled">Do you want to add notes?</label><select id="notesEnabled" required><option value="yes">Yes, add notes</option><option value="no">No notes for this chapter/lecture</option></select>
         <div id="notesContentFields"><label for="notesTitle">Notes Title *</label><input id="notesTitle" maxlength="200" placeholder="Percentage PDF Notes">
         <label for="notesSource">Notes Source *</label><select id="notesSource" required><option value="drive">Google Drive Link</option><option value="external">External Website PDF Link</option><option value="storage">Upload from phone to private storage</option></select>
         <label for="notesUrl">PDF / Notes URL (not needed for private upload)</label><input id="notesUrl" type="url" placeholder="https://...">
@@ -2735,34 +2742,80 @@ $("chapterForm").addEventListener("submit",async function(e){
 $("notesLecture").addEventListener("change",function(){const v=$("notesLecture").value;const title=$("notesTitle");if(v){title.placeholder="Lecture ke notes ka title";}else{title.placeholder="Chapter ke notes ka title";}});
 $("notesEnabled").addEventListener("change",function(){const enabled=$("notesEnabled").value==="yes";$("notesContentFields").classList.toggle("hidden",!enabled);$("notesTitle").required=enabled;$("notesUrl").required=enabled&&$("notesSource").value!=="storage";$("notesSource").required=enabled;});
 $("notesSource").addEventListener("change",function(){const source=$("notesSource").value;const input=$("notesUrl");const help=$("notesSourceHelp");if(source==="storage"){input.required=false;input.placeholder="Private storage path upload ke baad set hoga";help.textContent="Phone se PDF upload karein. File private storage mein rahegi aur approved users ko hi signed link milega. File maximum 50 MB.";}else{input.required=$("notesEnabled").value==="yes";input.placeholder=source==="drive"?"https://drive.google.com/file/d/...":"https://example.com/file.pdf";help.textContent="External Google Drive/website links website login se private nahi bante. Restricted files ke liye phone se private upload prefer karein.";}});
+let lectureNotesFlowActive=false;
+function applyNotesSearch(selectId,searchId){
+  const select=$(selectId),search=$(searchId);if(!select||!search)return;
+  const query=search.value.trim().toLowerCase(),selected=select.value;
+  Array.from(select.options).forEach((option,index)=>{
+    if(index===0){option.hidden=false;return;}
+    option.hidden=!!query&&!option.textContent.toLowerCase().includes(query);
+  });
+  if(selected&&select.selectedOptions[0]?.hidden)select.value="";
+}
+function populateLectureNotesBatches(selectedId=""){
+  const select=$("notesBatch");if(!select)return;
+  const query=$("notesBatchSearch")?.value.trim().toLowerCase()||"",current=selectedId||select.value;
+  select.replaceChildren(new Option("Select Batch",""));
+  (cache.batches||[]).filter(row=>!query||(row.title||"").toLowerCase().includes(query)).forEach(row=>select.add(new Option(row.title||"Batch",row.id)));
+  select.value=current;
+}
+function populateLectureNotesChapters(selectedId=""){
+  const select=$("notesChapter");if(!select)return;
+  const batchId=$("notesBatch")?.value||"",query=$("notesChapterSearch")?.value.trim().toLowerCase()||"",current=selectedId||select.value;
+  select.replaceChildren(new Option("Select Chapter",""));
+  (cache.chapters||[]).filter(row=>row.batch_id===batchId&&(!query||(row.title||"").toLowerCase().includes(query))).forEach(row=>select.add(new Option(row.title||"Chapter",row.id)));
+  select.value=current;
+  if(select.value!==current)populateNotesLectureOptions("");
+}
 const openLectureNotesBtn=$("openLectureNotesForm");
 if(openLectureNotesBtn)openLectureNotesBtn.addEventListener("click",function(){
-  // The form is inside Chapter Notes Management, which is hidden by the management navigator.
   if(typeof showManagementSection==="function"){
     const link=managementNav?.querySelector('a[href="#chapterNotesManager"]');
     showManagementSection("chapterNotesManager",link);
   }
   const form=$("notesForm");
   if(form){form.reset();resetEdit("notes");}
-  const location=$("notesLecture");
-  if(location){location.value="";location.dispatchEvent(new Event("change"));}
+  lectureNotesFlowActive=true;
+  $("lectureNotesBatchFlow")?.classList.remove("hidden");
+  $("lectureNotesSearchWrap")?.classList.remove("hidden");
+  populateLectureNotesBatches();
+  $("notesChapter").replaceChildren(new Option("Select Chapter",""));
+  $("notesLecture").replaceChildren(new Option("Select Lecture",""));
+  $("notesChapter").required=true;$("notesLecture").required=true;
   const enabled=$("notesEnabled");
   if(enabled){enabled.value="yes";enabled.dispatchEvent(new Event("change"));}
   const heading=$("notesHeading");
-  if(heading)heading.textContent="📝 Add Lecture Notes — select chapter and lecture";
+  if(heading)heading.textContent="📝 Add Lecture Notes — Batch → Chapter → Lecture";
   if(form)form.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
 });
 async function populateNotesLectureOptions(chapterId, selectedLectureId=""){
   const select=$("notesLecture");
   if(!select||!db)return;
-  select.replaceChildren(new Option("Chapter notes (not tied to one lecture)",""));
+  select.replaceChildren(new Option(lectureNotesFlowActive?"Select Lecture":"Chapter notes (not tied to one lecture)",""));
   if(!chapterId){select.value="";return;}
   const {data,error}=await db.from("lectures").select("id,title,position").eq("chapter_id",chapterId).order("position",{ascending:true});
   if(error){message("Lecture list load nahi hui.",true);return;}
-  (data||[]).forEach(item=>select.add(new Option(item.title||"Lecture",item.id)));
-  select.value=selectedLectureId || "";
+  const query=lectureNotesFlowActive?($("notesLectureSearch")?.value.trim().toLowerCase()||""):"";
+  (data||[]).filter(item=>!query||(item.title||"").toLowerCase().includes(query)).forEach(item=>select.add(new Option(item.title||"Lecture",item.id)));
+  select.value=selectedLectureId||"";
 }
-$("notesChapter").addEventListener("change",async function(){await populateNotesLectureOptions(this.value);});
+$("notesBatch")?.addEventListener("change",function(){
+  $("notesChapterSearch").value="";$("notesLectureSearch").value="";
+  populateLectureNotesChapters();$("notesLecture").replaceChildren(new Option("Select Lecture",""));
+});
+$("notesBatchSearch")?.addEventListener("input",function(){populateLectureNotesBatches();populateLectureNotesChapters();});
+$("notesChapterSearch")?.addEventListener("input",function(){populateLectureNotesChapters();});
+$("notesLectureSearch")?.addEventListener("input",function(){
+  const chapterId=$("notesChapter").value,selected=$("notesLecture").value;
+  populateNotesLectureOptions(chapterId,selected);
+});
+$("notesChapter").addEventListener("change",async function(){
+  if(lectureNotesFlowActive&&this.value){
+    const chapter=(cache.chapters||[]).find(row=>row.id===this.value);
+    if(!chapter||chapter.batch_id!==$("notesBatch").value){message("Selected Chapter chosen Batch ka nahi hai.",true);this.value="";return;}
+  }
+  await populateNotesLectureOptions(this.value);
+});
 
 $("notesForm").addEventListener("submit",async function(e){
   e.preventDefault();
@@ -2776,6 +2829,13 @@ $("notesForm").addEventListener("submit",async function(e){
     if(!/^https:\/\//i.test(url)){message("Notes link HTTPS se shuru hona chahiye.",true);return;}
     try{parsed=new URL(url)}catch(_){message("Valid HTTPS link paste karein.",true);return;}
     if(source==="drive" && !["drive.google.com","docs.google.com"].includes(parsed.hostname.toLowerCase())){message("Google Drive ya Google Docs link hi paste karein.",true);return;}
+  }
+  if(lectureNotesFlowActive){
+    if(!$("notesBatch").value){message("Pehle Batch select karein.",true);return;}
+    if(!$("notesChapter").value){message("Selected Batch ka Chapter select karein.",true);return;}
+    if(!$("notesLecture").value){message("Selected Chapter ka Lecture select karein.",true);return;}
+    const selectedChapter=(cache.chapters||[]).find(row=>row.id===$("notesChapter").value);
+    if(!selectedChapter||selectedChapter.batch_id!==$("notesBatch").value){message("Chapter selected Batch se match nahi karta.",true);return;}
   }
   if(!$("notesChapter").value){message("Notes ke liye chapter select karein.",true);return;}
   const chapterId=$("notesChapter").value;
