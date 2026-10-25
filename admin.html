@@ -1353,7 +1353,11 @@ $("lectureBatchWiseSelect")?.addEventListener("change",function(){
   renderExistingLectureBatchWise();
 });
 $("lectureBatchWiseAll")?.addEventListener("click",function(){
-  const root=$("lectureBatchWiseList");root.dataset.mode="all";root.dataset.chapterId="";
+  const root=$("lectureBatchWiseList");root.dataset.mode="all";root.dataset.chapterId="";root.dataset.batchId="";
+  $("lectureBatchWiseSelect").value="";renderExistingLectureBatchWise();
+});
+$("lectureBatchWiseByBatch")?.addEventListener("click",function(){
+  const root=$("lectureBatchWiseList");root.dataset.mode="batch-list";root.dataset.chapterId="";root.dataset.batchId="";
   $("lectureBatchWiseSelect").value="";renderExistingLectureBatchWise();
 });
 $("lectureBatchWiseList")?.addEventListener("click",function(event){
