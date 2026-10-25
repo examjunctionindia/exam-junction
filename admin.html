@@ -1206,6 +1206,12 @@ function renderExistingLectureBatchWise(){
     const arrow=document.createElement("span");arrow.textContent="›";arrow.setAttribute("aria-hidden","true");
     button.append(left,arrow);root.appendChild(button);
   }
+  function addBackButton(label,action){
+    const button=document.createElement("button");
+    button.type="button";button.className="btn secondary lecture-batch-back";
+    button.dataset.action=action;button.textContent="← "+label;
+    root.appendChild(button);
+  }
   function addLectureCard(lecture){
     const chapter=findById("chapters",lecture.chapter_id);
     const batch=chapter?findById("batches",chapter.batch_id):null;
@@ -1236,6 +1242,7 @@ function renderExistingLectureBatchWise(){
   allButton.classList.remove("active");
 
   if(mode==="chapters"&&selectedBatch){
+    addBackButton("Back to Batches","lecture-batch-wise-back-batches");
     crumb.textContent=(selectedBatch.title||"Batch")+" · Chapters";
     const chapters=cache.chapters.filter(chapter=>String(chapter.batch_id)===String(selectedBatch.id)).slice().sort((a,b)=>Number(a.position||0)-Number(b.position||0));
     if(!chapters.length){root.textContent="Abhi is batch mein koi chapter available nahi hai.";return}
@@ -1243,6 +1250,7 @@ function renderExistingLectureBatchWise(){
     return;
   }
   if(mode==="lectures"&&selectedBatch){
+    addBackButton("Back to Chapters","lecture-batch-wise-back-chapters");
     const chapter=findById("chapters",selectedChapterId);
     if(!chapter||String(chapter.batch_id)!==String(selectedBatch.id)){root.dataset.mode="chapters";renderExistingLectureBatchWise();return}
     crumb.textContent=(selectedBatch.title||"Batch")+" · "+(chapter.title||"Chapter")+" · Lectures";
@@ -1276,7 +1284,11 @@ $("lectureBatchWiseList")?.addEventListener("click",function(event){
   const button=event.target.closest("button[data-action]");
   if(!button)return;
   const root=$("lectureBatchWiseList");
-  if(button.dataset.action==="lecture-batch-wise-batch"){
+  if(button.dataset.action==="lecture-batch-wise-back-batches"){
+    root.dataset.mode="batches";root.dataset.chapterId="";$("lectureBatchWiseSelect").value="";renderExistingLectureBatchWise();
+  }else if(button.dataset.action==="lecture-batch-wise-back-chapters"){
+    root.dataset.mode="chapters";root.dataset.chapterId="";renderExistingLectureBatchWise();
+  }else if(button.dataset.action==="lecture-batch-wise-batch"){
     $("lectureBatchWiseSelect").value=button.dataset.id;root.dataset.mode="chapters";root.dataset.chapterId="";renderExistingLectureBatchWise();
   }else if(button.dataset.action==="lecture-batch-wise-chapter"){
     root.dataset.mode="lectures";root.dataset.chapterId=button.dataset.id;renderExistingLectureBatchWise();
