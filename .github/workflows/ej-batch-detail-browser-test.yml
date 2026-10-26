@@ -32,7 +32,7 @@ jobs:
       - name: Test live EXAM JUNCTION batch detail in a real browser
         env:
           SITE_URL: "https://exam-junction.pages.dev"
-          FREE_BATCH_ID: "c0ab40d6-0b01-47d4-9e3e-765f674fcbb5"
+          FREE_BATCH_ID: "030cbf50-674c-47c1-91b1-cc8323179c31"
         run: |
           cat > batch-detail-browser-test.cjs <<'EOF'
           const { chromium } = require('playwright');
