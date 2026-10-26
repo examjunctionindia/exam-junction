@@ -48,8 +48,8 @@ jobs:
             const httpErrors = [];
             let contentReadyMs = null;
             page.on('pageerror', error => pageErrors.push(String(error?.stack || error)));
-  page.on('requestfailed', req => { if (!req.url().includes('/rest/v1/')) failedResources.push({url:req.url(),failure:req.failure()?.errorText || 'request failed'}); });
-  page.on('response', response => {
+            page.on('requestfailed', req => { if (!req.url().includes('/rest/v1/')) failedResources.push({url:req.url(),failure:req.failure()?.errorText || 'request failed'}); });
+            page.on('response', response => {
               if (response.status() >= 400) {
                 response.text().then(body => httpErrors.push({ status: response.status(), url: response.url(), body: String(body || '').slice(0, 500) })).catch(() => httpErrors.push({ status: response.status(), url: response.url(), body: 'response body unavailable' }));
               }
@@ -81,9 +81,9 @@ jobs:
             const initialLoadMs = contentReadyMs;
             await page.waitForTimeout(500);
             const title = await page.locator('#title').textContent().catch(() => '');
-  const statusText = await page.locator('#status').textContent().catch(() => 'status element missing');
-  const domDiagnostic = await page.evaluate(() => ({readyState:document.readyState, scripts:[...document.scripts].map(s=>({src:s.src||'inline',loaded:!s.src||s.dataset.loaded==='true'})), configPresent:!!window.EXAM_JUNCTION_CONFIG, ejPresent:!!window.EXAM_JUNCTION, supabasePresent:!!window.supabase?.createClient}));
-  const inlineScriptSyntaxErrors = await page.evaluate(() => [...document.scripts].filter(s=>!s.src).map((s,i)=>{try{new Function(s.textContent);return null}catch(e){return {index:i,error:String(e)}}}).filter(Boolean));
+            const statusText = await page.locator('#status').textContent().catch(() => 'status element missing');
+            const domDiagnostic = await page.evaluate(() => ({readyState:document.readyState, scripts:[...document.scripts].map(s=>({src:s.src||'inline',loaded:!s.src||s.dataset.loaded==='true'})), configPresent:!!window.EXAM_JUNCTION_CONFIG, ejPresent:!!window.EXAM_JUNCTION, supabasePresent:!!window.supabase?.createClient}));
+            const inlineScriptSyntaxErrors = await page.evaluate(() => [...document.scripts].filter(s=>!s.src).map((s,i)=>{try{new Function(s.textContent);return null}catch(e){return {index:i,error:String(e)}}}).filter(Boolean));
             const chapterCount = await page.locator('#chapters > .chapter').count().catch(() => 0);
             const initialContentRequests = restRequests.filter(x => /\/rest\/v1\/(lectures|chapter_notes)\?/.test(x.url)).length;
             let openedChapter = false;
@@ -101,11 +101,11 @@ jobs:
               site: process.env.SITE_URL,
               pageStatus: response?.status() ?? null,
               title: (title || '').trim(),
-    statusText: (statusText || '').trim(),
-    domDiagnostic,
-    inlineScriptSyntaxErrors,
-    pageErrors: pageErrors.slice(0, 10),
-    failedResources: failedResources.slice(0, 10),
+              statusText: (statusText || '').trim(),
+              domDiagnostic,
+              inlineScriptSyntaxErrors,
+              pageErrors: pageErrors.slice(0, 10),
+              failedResources: failedResources.slice(0, 10),
               contentReadyMs,
               initialLoadMs,
               navigationTiming,
