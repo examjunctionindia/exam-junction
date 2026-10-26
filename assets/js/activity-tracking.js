@@ -6,6 +6,11 @@
 (function () {
     "use strict";
 
+    // Temporarily paused on request. This disables only activity tracking;
+    // login, batches, lectures, notes, and notifications remain unchanged.
+    const TRACKING_ENABLED = false;
+    if (!TRACKING_ENABLED) return;
+
     const TRACKER_KEY = "__EJ_ACTIVITY_TRACKER__";
 
     // Prevent duplicate initialization on the same page.
