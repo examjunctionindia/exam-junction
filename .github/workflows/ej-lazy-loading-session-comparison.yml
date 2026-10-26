@@ -1,0 +1,174 @@
+name: EXAM JUNCTION Full Session Lazy Loading Comparison
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ej-lazy-loading-session-comparison.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright
+          npx playwright install chromium
+      - name: Compare initial load plus opening three chapters and their first lecture
+        env:
+          SITE_URL: "https://exam-junction.pages.dev"
+          BATCH_ID: "030cbf50-674c-47c1-91b1-cc8323179c31"
+          BEFORE_COMMIT: "6ddd2be3265ed4a79caf128c8fd98ee89f036cc3"
+        run: |
+          git show "${BEFORE_COMMIT}:batch-detail.html" > batch-detail-before.html
+          node <<'NODE'
+          const fs = require('fs');
+          const { chromium } = require('playwright');
+
+          (async () => {
+            const browser = await chromium.launch({headless:true});
+            const oldHtml = fs.readFileSync('batch-detail-before.html','utf8');
+            const url = process.env.SITE_URL + '/batch-detail.html?id=' + encodeURIComponent(process.env.BATCH_ID);
+
+            async function settle(page) {
+              await page.waitForTimeout(900);
+            }
+
+            async function measure(label, interceptOld, iteration) {
+              const page = await browser.newPage({viewport:{width:390,height:844}});
+              const requests = [];
+              const byRequest = new Map();
+              const errors = [];
+              page.on('request', req => {
+                if (req.url().includes('/rest/v1/')) {
+                  const item={url:req.url(),method:req.method(),started:Date.now(),bytes:0,status:null,ms:null};
+                  requests.push(item); byRequest.set(req,item);
+                }
+              });
+              page.on('response', async response => {
+                const item=byRequest.get(response.request());
+                if(!item) return;
+                item.status=response.status();
+                try { item.bytes=(await response.body()).byteLength; }
+                catch(e) { item.bodyReadError=String(e); }
+              });
+              page.on('requestfinished', req => {
+                const item=byRequest.get(req);
+                if(item && item.ms===null)item.ms=Date.now()-item.started;
+              });
+              page.on('requestfailed', req => {
+                const item=byRequest.get(req);
+                if(item){item.ms=Date.now()-item.started;item.failed=req.failure()?.errorText||'failed';}
+                if(req.url().includes('/rest/v1/')) errors.push({url:req.url(),failure:req.failure()?.errorText||'failed'});
+              });
+              page.on('pageerror', e=>errors.push({pageError:String(e)}));
+              if(interceptOld) await page.route('**/batch-detail.html?id=*', route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:oldHtml}));
+              const started=Date.now();
+              const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:45000});
+              await page.locator('#title').waitFor({state:'attached',timeout:12000});
+              await page.waitForFunction(()=> {
+                const title=document.querySelector('#title')?.textContent?.trim();
+                const status=document.querySelector('#status');
+                return !!title && (!status || status.hidden || getComputedStyle(status).display==='none');
+              },null,{timeout:20000}).catch(()=>{});
+              await page.locator('#chapters > .chapter').first().waitFor({state:'attached',timeout:15000});
+              await settle(page);
+              const initialReadyMs=Date.now()-started;
+              const initialRequestCount=requests.length;
+              const initialBytes=requests.reduce((sum,x)=>sum+x.bytes,0);
+              const initialLectureNotesBytes=requests.filter(x=>/\/rest\/v1\/(lectures|chapter_notes)\?/.test(x.url)).reduce((sum,x)=>sum+x.bytes,0);
+
+              // Simulate a student browsing a subset: open the first three chapter panels,
+              // then expand the first lecture available in each opened chapter.
+              const chapterCount=await page.locator('#chapters > .chapter').count();
+              const chaptersToOpen=Math.min(3,chapterCount);
+              let chaptersOpened=0, lecturesExpanded=0;
+              for(let i=0;i<chaptersToOpen;i++) {
+                const section=page.locator('#chapters > .chapter').nth(i);
+                if(!(await section.getAttribute('open'))) await section.locator(':scope > summary').click().catch(()=>{});
+                await settle(page);
+                if(await section.getAttribute('open')) chaptersOpened++;
+                const lecture=section.locator('.lecture-accordion > summary').first();
+                if(await lecture.count()) {
+                  await lecture.click().catch(()=>{});
+                  await settle(page);
+                  lecturesExpanded++;
+                }
+              }
+              // Give any requests triggered by the final interaction a fixed settling window.
+              await page.waitForTimeout(1500);
+              const finalReport={
+                version:label,iteration,
+                pageStatus:response?.status()??null,
+                title:(await page.locator('#title').textContent().catch(()=>''))?.trim(),
+                chaptersAvailable:chapterCount,chaptersOpened,lecturesExpanded,
+                initialReadyMs,
+                initialSupabaseRequests:initialRequestCount,
+                initialSupabaseResponseBytes:initialBytes,
+                initialLectureNotesResponseBytes:initialLectureNotesBytes,
+                fullSessionSupabaseRequests:requests.length,
+                fullSessionLectureAndNotesRequests:requests.filter(x=>/\/rest\/v1\/(lectures|chapter_notes)\?/.test(x.url)).length,
+                fullSessionSupabaseResponseBytes:requests.reduce((sum,x)=>sum+x.bytes,0),
+                fullSessionLectureAndNotesResponseBytes:requests.filter(x=>/\/rest\/v1\/(lectures|chapter_notes)\?/.test(x.url)).reduce((sum,x)=>sum+x.bytes,0),
+                failedSupabaseRequests:requests.filter(x=>x.failed||x.status>=400).length,
+                errors:errors.slice(0,5)
+              };
+              await page.close();
+              return finalReport;
+            }
+
+            const runs=[];
+            for(let i=1;i<=3;i++) {
+              runs.push(await measure('BEFORE lazy-loading (historical HTML)',true,i));
+              await new Promise(r=>setTimeout(r,800));
+              runs.push(await measure('AFTER lazy-loading (live HTML)',false,i));
+              await new Promise(r=>setTimeout(r,800));
+            }
+            function summarize(prefix) {
+              const xs=runs.filter(x=>x.version.startsWith(prefix));
+              const avg=key=>Math.round(xs.reduce((sum,x)=>sum+x[key],0)/xs.length);
+              return {
+                version:prefix,runs:xs.length,
+                averageInitialReadyMs:avg('initialReadyMs'),
+                averageInitialRequests:avg('initialSupabaseRequests'),
+                averageInitialResponseBytes:avg('initialSupabaseResponseBytes'),
+                averageInitialLectureNotesBytes:avg('initialLectureNotesResponseBytes'),
+                averageFullSessionRequests:avg('fullSessionSupabaseRequests'),
+                averageFullSessionLectureNotesRequests:avg('fullSessionLectureAndNotesRequests'),
+                averageFullSessionResponseBytes:avg('fullSessionSupabaseResponseBytes'),
+                averageFullSessionLectureNotesBytes:avg('fullSessionLectureAndNotesResponseBytes'),
+                failures:xs.reduce((sum,x)=>sum+x.failedSupabaseRequests,0),
+                chaptersOpened:xs.map(x=>x.chaptersOpened),
+                lecturesExpanded:xs.map(x=>x.lecturesExpanded)
+              };
+            }
+            const before=summarize('BEFORE'), after=summarize('AFTER');
+            const pct=(a,b)=>a===0?null:Math.round((a-b)/a*1000)/10;
+            console.log('FULL_SESSION_LAZY_LOADING_COMPARISON='+JSON.stringify({
+              before,after,
+              savings:{
+                initialReadyTimePercent:pct(before.averageInitialReadyMs,after.averageInitialReadyMs),
+                initialResponseBytesPercent:pct(before.averageInitialResponseBytes,after.averageInitialResponseBytes),
+                initialLectureNotesBytesPercent:pct(before.averageInitialLectureNotesBytes,after.averageInitialLectureNotesBytes),
+                fullSessionResponseBytesPercent:pct(before.averageFullSessionResponseBytes,after.averageFullSessionResponseBytes),
+                fullSessionLectureNotesBytesPercent:pct(before.averageFullSessionLectureNotesBytes,after.averageFullSessionLectureNotesBytes),
+                fullSessionRequestCountDifference:before.averageFullSessionRequests-after.averageFullSessionRequests
+              },
+              runs,
+              note:'Three paired runs on the same public batch and live origin. Scenario opens up to three chapters and expands the first lecture in each. Response body bytes are browser-measured and not identical to provider-billed egress; results can vary with cache/network.'
+            },null,2));
+            await browser.close();
+            if(runs.some(x=>x.pageStatus!==200||x.failedSupabaseRequests>0||x.chaptersOpened<1))process.exitCode=1;
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
