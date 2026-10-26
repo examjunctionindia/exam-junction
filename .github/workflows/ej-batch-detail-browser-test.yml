@@ -1,0 +1,100 @@
+name: EXAM JUNCTION Batch Detail Browser Baseline
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "batch-detail.html"
+      - ".github/workflows/ej-batch-detail-browser-test.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  batch-detail-browser-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+
+      - name: Test live EXAM JUNCTION batch detail in a real browser
+        env:
+          SITE_URL: "https://exam-junction.pages.dev"
+          FREE_BATCH_ID: "c0ab40d6-0b01-47d4-9e3e-765f674fcbb5"
+        run: |
+          cat > batch-detail-browser-test.cjs <<'EOF'
+          const { chromium } = require('playwright');
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+            const started = Date.now();
+            const restRequests = [];
+            const consoleErrors = [];
+            page.on('request', req => {
+              if (req.url().includes('/rest/v1/')) {
+                restRequests.push({ url: req.url(), startedAt: Date.now(), method: req.method() });
+              }
+            });
+            page.on('requestfinished', req => {
+              const item = restRequests.findLast(x => x.url === req.url() && x.method === req.method() && x.durationMs == null);
+              if (item) item.durationMs = Date.now() - item.startedAt;
+            });
+            page.on('requestfailed', req => {
+              const item = restRequests.findLast(x => x.url === req.url() && x.method === req.method() && x.durationMs == null);
+              if (item) { item.durationMs = Date.now() - item.startedAt; item.failed = req.failure()?.errorText || 'request failed'; }
+            });
+            page.on('console', msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
+            const url = process.env.SITE_URL + '/batch-detail.html?id=' + encodeURIComponent(process.env.FREE_BATCH_ID);
+            const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+            await page.locator('#status').waitFor({ state: 'hidden', timeout: 45000 }).catch(() => {});
+            await page.waitForTimeout(2500);
+            const initialLoadMs = Date.now() - started;
+            const title = await page.locator('#title').textContent().catch(() => '');
+            const chapterCount = await page.locator('#chapters > .chapter').count().catch(() => 0);
+            const initialContentRequests = restRequests.filter(x => /\/rest\/v1\/(lectures|chapter_notes)\?/.test(x.url)).length;
+            let openedChapter = false;
+            if (chapterCount > 0) {
+              await page.locator('#chapters > .chapter > summary').first().click();
+              await page.waitForTimeout(2500);
+              openedChapter = true;
+            }
+            const finalContentRequests = restRequests.filter(x => /\/rest\/v1\/(lectures|chapter_notes)\?/.test(x.url)).length;
+            const failures = restRequests.filter(x => x.failed);
+            const report = {
+              test: 'live browser; public batch detail only; no login, writes, or media streaming',
+              site: process.env.SITE_URL,
+              pageStatus: response?.status() ?? null,
+              title: (title || '').trim(),
+              initialLoadMs,
+              chaptersRendered: chapterCount,
+              firstChapterOpened: openedChapter,
+              supabaseRestRequestsTotal: restRequests.length,
+              lectureAndChapterNoteRequestsBeforeOpeningChapter: initialContentRequests,
+              lectureAndChapterNoteRequestsAfterOpeningChapter: finalContentRequests,
+              supabaseRequestFailures: failures.length,
+              failedRequestDetails: failures.slice(0, 5),
+              browserConsoleErrors: consoleErrors.slice(0, 10)
+            };
+            console.log('BATCH_DETAIL_BROWSER_REPORT=' + JSON.stringify(report, null, 2));
+            await browser.close();
+            if (response?.status() !== 200) process.exitCode = 1;
+            if (!title || !title.trim()) process.exitCode = 1;
+            if (chapterCount < 1) process.exitCode = 1;
+            if (!openedChapter) process.exitCode = 1;
+            if (failures.length > 0) process.exitCode = 1;
+          })().catch(error => { console.error(error); process.exit(1); });
+          EOF
+          node batch-detail-browser-test.cjs
