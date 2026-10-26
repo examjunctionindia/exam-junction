@@ -27,7 +27,7 @@ jobs:
       - name: Install Playwright
         run: |
           npm install --no-save playwright
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
 
       - name: Test live EXAM JUNCTION batch detail in a real browser
         env:
@@ -81,7 +81,9 @@ jobs:
             const initialContentRequests = restRequests.filter(x => /\/rest\/v1\/(lectures|chapter_notes)\?/.test(x.url)).length;
             let openedChapter = false;
             if (chapterCount > 0) {
-              await page.locator('#chapters > .chapter > summary').first().click();
+              const targetChapter = page.locator('#chapters > .chapter > summary').nth(1);
+              if (await targetChapter.count()) await targetChapter.click();
+              else await page.locator('#chapters > .chapter > summary').first().click();
               await page.waitForTimeout(2500);
               openedChapter = true;
             }
@@ -96,7 +98,7 @@ jobs:
               initialLoadMs,
               navigationTiming,
               chaptersRendered: chapterCount,
-              firstChapterOpened: openedChapter,
+              chapterOpenTriggered: openedChapter,
               supabaseRestRequestsTotal: restRequests.length,
               lectureAndChapterNoteRequestsBeforeOpeningChapter: initialContentRequests,
               lectureAndChapterNoteRequestsAfterOpeningChapter: finalContentRequests,
