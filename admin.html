@@ -2298,8 +2298,7 @@ async function checkSession(){
 
   try {
     await loadLists({includeSecondary:false,includeDashboard:false});
-    message("Admin verified. Core content loaded. Open a section to load its data, or use Refresh Data for a full refresh.");
-    await runAdminHealthScan();
+    message("Admin verified. Core content loaded. Open a section to load its data, or use Refresh Data for a full refresh. Health scan is manual to reduce database requests.");
   } catch(error) {
     console.error("Admin data loading failed:", error);
     message(
