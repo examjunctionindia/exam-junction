@@ -110,7 +110,9 @@ jobs:
               lectureCountAfterSearch = await page.locator('#chapters .lecture-accordion').count();
               noteCountAfterSearch = await page.locator('#chapters [data-note-search]').count();
               navigationButtonCount = await page.locator('#chapters .lecture-navigation button').count();
-              const nextLecture = page.getByRole('button', { name: /Next Lecture|Next Chapter/ }).first();
+              const firstLectureSummary = page.locator('#chapters > .chapter').first().locator('.lecture-accordion > summary').first();
+              if (await firstLectureSummary.count()) await firstLectureSummary.click();
+              const nextLecture = page.locator('#chapters .lecture-navigation button').filter({ hasText: /Next Lecture|Next Chapter/ }).first();
               if (await nextLecture.count()) {
                 await nextLecture.click();
                 await page.waitForTimeout(700);
