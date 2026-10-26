@@ -1450,8 +1450,8 @@ function refreshDropdowns(){
 }
 
 async function loadLists(options={}){
-  const includeSecondary=options.includeSecondary!==false;
-  const includeDashboard=options.includeDashboard!==false;
+  const includeSecondary=options.includeSecondary===true;
+  const includeDashboard=options.includeDashboard===true;
   if(!db) return;
 
   const jobs = [
@@ -1630,7 +1630,7 @@ async function loadBatchSearchSettings(){
 }
 $("batchSearchSettingsFilter")?.addEventListener("input",fillBatchSearchSettings);
 $("batchSearchSettingsBatch")?.addEventListener("change",syncBatchSearchSettings);
-$("refreshBatchSearchSettings")?.addEventListener("click",async()=>{await loadLists();if($("batchSearchSettingsStatus"))$("batchSearchSettingsStatus").textContent="Batch settings refresh ho gayi."});
+$("refreshBatchSearchSettings")?.addEventListener("click",async()=>{await loadBatchSearchSettings();if($("batchSearchSettingsStatus"))$("batchSearchSettingsStatus").textContent="Batch settings refresh ho gayi."});
 $("saveBatchSearchSettings")?.addEventListener("click",async()=>{
   if(busy||!db)return;
   const id=$("batchSearchSettingsBatch").value;
@@ -1644,7 +1644,7 @@ $("saveBatchSearchSettings")?.addEventListener("click",async()=>{
     if(error)throw error;
     if(!data?.id)throw new Error("Update confirm nahi hua. Admin permission/RLS check karein.");
     message("Batch search settings save ho gayi.");
-    await loadLists();
+    await loadLists({includeSecondary:false,includeDashboard:false});
     syncBatchSearchSettings();
     $("batchSearchSettingsStatus").textContent="Settings successfully saved.";
   }catch(error){
