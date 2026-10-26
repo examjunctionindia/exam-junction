@@ -32,7 +32,7 @@ jobs:
       - name: Test live EXAM JUNCTION batch detail in a real browser
         env:
           SITE_URL: "https://exam-junction.pages.dev"
-          FREE_BATCH_ID: "030cbf50-674c-47c1-91b1-cc8323179c31"
+          FREE_BATCH_ID: "6847de07-0630-4975-bfb7-7e1ffbd5bca0"
         run: |
           cat > batch-detail-browser-test.cjs <<'EOF'
           const { chromium } = require('playwright');
@@ -161,6 +161,9 @@ jobs:
             if (chapterCount < 1) process.exitCode = 1;
             if (!openedChapter) process.exitCode = 1;
             if (failures.length > 0) process.exitCode = 1;
+            if (!chapterSearchPassed) process.exitCode = 1;
+            if (lectureCountAfterSearch < 1) process.exitCode = 1;
+            if (navigationButtonCount < 1 || !navigationClicked) process.exitCode = 1;
           })().catch(error => { console.error(error); process.exit(1); });
           EOF
           node batch-detail-browser-test.cjs
