@@ -1656,7 +1656,6 @@ $("saveBatchSearchSettings")?.addEventListener("click",async()=>{
     }
     message("Batch search settings save ho gayi.");
     syncBatchSearchSettings();
-    if(typeof managementSectionLoadState!=="undefined")managementSectionLoadState.delete("dashboardOverview");
     $("batchSearchSettingsStatus").textContent="Settings successfully saved.";
   }catch(error){
     console.error("Batch search settings save failed",error);
