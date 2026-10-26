@@ -2297,8 +2297,8 @@ async function checkSession(){
   message("Admin verified. Data load ho raha hai.");
 
   try {
-    await loadLists();
-    message("Admin verified. Data loading complete. Health scan is manual.");
+    await loadLists({includeSecondary:false,includeDashboard:false});
+    message("Admin verified. Core data loaded. Other management data loads on demand; Health scan is manual.");
   } catch(error) {
     console.error("Admin data loading failed:", error);
     message(
@@ -3810,7 +3810,7 @@ async function loadManagementSectionData(id){
   };
   const task=tasks[id];
   if(!task)return;
-  if(managementSectionLoadState.get(id)==="loading")return;
+  if(managementSectionLoadState.get(id)==="loaded"||managementSectionLoadState.get(id)==="loading")return;
   managementSectionLoadState.set(id,"loading");
   try{await task();managementSectionLoadState.set(id,"loaded");}
   catch(error){managementSectionLoadState.delete(id);throw error;}
@@ -3820,6 +3820,10 @@ function showManagementSection(id) {
   setManagementVisibility(id);
   addManagementBackButton($(id));
   scrollManagementTop();
+  loadManagementSectionData(id).catch(function(error) {
+    console.error("Admin section lazy-load failed:",id,error);
+    message("Section data load nahi hua. Connection check karein ya Refresh Data dabayein.",true);
+  });
 }
 if (managementNav) {
   managementNav.addEventListener("click",function(event) {
