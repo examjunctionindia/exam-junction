@@ -218,7 +218,7 @@ async function loadChapterContent(chapterIndex){
    fetchAllRows(()=>db.from("lectures").select("id,chapter_id,title,youtube_url,position,teacher_name,download_url,download_allowed,download_permission_mode,original_link_allowed,is_published,published_at,created_at").eq("chapter_id",chapter.id).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true})),
    fetchAllRows(()=>db.from("chapter_notes").select("id,chapter_id,lecture_id,title,storage_path,storage_bucket,download_url,download_allowed,download_permission_mode,original_link_allowed,position,is_published,created_at").eq("chapter_id",chapter.id).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true}))
   ]);
-  sortContentRows(lectures);sortContentRows(notes);const chapterNotes=notes.filter(n=>!n.lecture_id);heading.textContent="Chapter "+chapterNumber+" — "+(chapter.title||"Chapter")+(chapterNotes.length?" · Notes available":"")+(batch.show_content_counts===true?" ("+lectures.length+" lectures)":"");inner.replaceChildren();
+  sortContentRows(lectures);sortContentRows(notes);inner.replaceChildren();
  const chapterNotes=notes.filter(n=>!n.lecture_id);
  heading.textContent="Chapter "+chapterNumber+" — "+(chapter.title||"Chapter")+(chapterNotes.length?" · Notes available":"")+(batch.show_content_counts===true?" ("+lectures.length+" lectures)":"");
  if(!lectures.length){const p=document.createElement("p");p.className="muted";p.textContent="Abhi published lectures available nahi hain.";inner.append(p)}
