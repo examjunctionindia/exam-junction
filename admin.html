@@ -2397,7 +2397,10 @@ async function saveRecord(formId,buttonId,table,type,payload){
     // Refresh only the list affected by this save. Keep secondary data and dashboard counts deferred.
     const refreshKey=type==="notes"?"notes":type;
     await loadLists({onlyTables:[refreshKey],includeSecondary:false,includeDashboard:false});
-    if(typeof managementSectionLoadState!=="undefined")managementSectionLoadState.delete("dashboardOverview");
+    if(typeof managementSectionLoadState!=="undefined"){
+      managementSectionLoadState.delete("dashboardOverview");
+      if(type==="batches")managementSectionLoadState.delete("batchSearchSettingsManager");
+    }
   }catch(error){
     console.error(error);
     message("Connection error. Internet check karke try karein.",true);
