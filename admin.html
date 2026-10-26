@@ -1452,6 +1452,9 @@ function refreshDropdowns(){
 async function loadLists(options={}){
   const includeSecondary=options.includeSecondary!==false;
   const includeDashboard=options.includeDashboard!==false;
+  const onlyTables=Array.isArray(options.onlyTables)&&options.onlyTables.length
+    ? new Set(options.onlyTables)
+    : null;
   if(!db) return;
 
   const jobs = [
@@ -1549,6 +1552,7 @@ async function loadLists(options={}){
   ];
 
   for(const job of jobs){
+    if(onlyTables && !onlyTables.has(job.key)) continue;
     let listQuery = db.from(job.table)
       .select("*")
       .order(job.order,{ascending:true});
@@ -1637,15 +1641,22 @@ $("saveBatchSearchSettings")?.addEventListener("click",async()=>{
   if(!id){message("Pehle batch select karein.",true);return;}
   busy=true;const button=$("saveBatchSearchSettings"),old=button.textContent;button.disabled=true;button.textContent="Saving...";
   try{
+    const chapterSearchEnabled=$("batchSearchSettingsChapter").value==="true";
+    const announcementSearchEnabled=$("batchSearchSettingsAnnouncements").value==="true";
     const {data,error}=await db.from("batches").update({
-      chapter_search_enabled:$("batchSearchSettingsChapter").value==="true",
-      announcement_search_enabled:$("batchSearchSettingsAnnouncements").value==="true"
+      chapter_search_enabled:chapterSearchEnabled,
+      announcement_search_enabled:announcementSearchEnabled
     }).eq("id",id).select("id").maybeSingle();
     if(error)throw error;
     if(!data?.id)throw new Error("Update confirm nahi hua. Admin permission/RLS check karein.");
+    const cachedBatch=(cache.batches||[]).find(item=>String(item.id)===String(id));
+    if(cachedBatch){
+      cachedBatch.chapter_search_enabled=chapterSearchEnabled;
+      cachedBatch.announcement_search_enabled=announcementSearchEnabled;
+    }
     message("Batch search settings save ho gayi.");
-    await loadLists();
     syncBatchSearchSettings();
+    if(typeof managementSectionLoadState!=="undefined")managementSectionLoadState.delete("dashboardOverview");
     $("batchSearchSettingsStatus").textContent="Settings successfully saved.";
   }catch(error){
     console.error("Batch search settings save failed",error);
@@ -2383,7 +2394,10 @@ async function saveRecord(formId,buttonId,table,type,payload){
 
     message(id ? "Changes successfully updated." : "Successfully saved.");
 
-    await loadLists();
+    // Refresh only the list affected by this save. Keep secondary data and dashboard counts deferred.
+    const refreshKey=type==="notes"?"notes":type;
+    await loadLists({onlyTables:[refreshKey],includeSecondary:false,includeDashboard:false});
+    if(typeof managementSectionLoadState!=="undefined")managementSectionLoadState.delete("dashboardOverview");
   }catch(error){
     console.error(error);
     message("Connection error. Internet check karke try karein.",true);
