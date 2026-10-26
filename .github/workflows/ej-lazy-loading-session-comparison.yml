@@ -25,7 +25,7 @@ jobs:
         run: |
           npm install --no-save playwright
           npx playwright install chromium
-      - name: Compare initial load plus opening three chapters and their first lecture
+      - name: Compare full batch by opening every chapter and its first lecture
         env:
           SITE_URL: "https://exam-junction.pages.dev"
           BATCH_ID: "030cbf50-674c-47c1-91b1-cc8323179c31"
@@ -89,12 +89,10 @@ jobs:
               const initialBytes=requests.reduce((sum,x)=>sum+x.bytes,0);
               const initialLectureNotesBytes=requests.filter(x=>/\/rest\/v1\/(lectures|chapter_notes)\?/.test(x.url)).reduce((sum,x)=>sum+x.bytes,0);
 
-              // Simulate a student browsing a subset: open the first three chapter panels,
-              // then expand the first lecture available in each opened chapter.
+              // Simulate a full-batch student session: open every chapter and expand its first lecture where available.
               const chapterCount=await page.locator('#chapters > .chapter').count();
-              const chaptersToOpen=Math.min(3,chapterCount);
               let chaptersOpened=0, lecturesExpanded=0;
-              for(let i=0;i<chaptersToOpen;i++) {
+              for(let i=0;i<chapterCount;i++) {
                 const section=page.locator('#chapters > .chapter').nth(i);
                 const isOpen=await section.evaluate(el=>el.tagName.toLowerCase()==='details' ? el.open : true).catch(()=>false);
                 if(!isOpen) await section.locator('summary').first().click().catch(()=>{});
@@ -168,9 +166,9 @@ jobs:
                 fullSessionRequestCountDifference:before.averageFullSessionRequests-after.averageFullSessionRequests
               },
               runs,
-              note:'Three paired runs on the same public batch and live origin. Scenario opens up to three chapters and expands the first lecture in each. Response body bytes are browser-measured and not identical to provider-billed egress; results can vary with cache/network.'
+              note:'Three paired runs on the same public batch and live origin. Scenario opens every chapter and expands the first lecture in each where available. Response body bytes are browser-measured and not identical to provider-billed egress; results can vary with cache/network.'
             },null,2));
             await browser.close();
-            if(runs.some(x=>x.pageStatus!==200||x.failedSupabaseRequests>0||x.chaptersOpened<1))process.exitCode=1;
+            if(runs.some(x=>x.pageStatus!==200||x.failedSupabaseRequests>0||x.chaptersOpened<1||x.chaptersOpened<x.chaptersAvailable))process.exitCode=1;
           })().catch(e=>{console.error(e);process.exit(1)});
           NODE
