@@ -43,6 +43,8 @@ jobs:
             const started = Date.now();
             const restRequests = [];
             const consoleErrors = [];
+            const pageErrors = [];
+            const failedResources = [];
             const httpErrors = [];
             let contentReadyMs = null;
             page.on('pageerror', error => pageErrors.push(String(error?.stack || error)));
