@@ -65,6 +65,8 @@ jobs:
             const url = process.env.SITE_URL + '/batch-detail.html?id=' + encodeURIComponent(process.env.FREE_BATCH_ID);
             const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
             await page.locator('#status').waitFor({ state: 'hidden', timeout: 45000 }).catch(() => {});
+            // The status banner hides before chapter data finishes loading; wait for actual chapter DOM.
+            await page.locator('#chapters > .chapter').first().waitFor({ state: 'attached', timeout: 45000 }).catch(() => {});
             contentReadyMs = Date.now() - started;
             const navigationTiming = await page.evaluate(() => {
               const n = performance.getEntriesByType('navigation')[0];
