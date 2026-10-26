@@ -1450,8 +1450,8 @@ function refreshDropdowns(){
 }
 
 async function loadLists(options={}){
-  const includeSecondary=options.includeSecondary===true;
-  const includeDashboard=options.includeDashboard===true;
+  const includeSecondary=options.includeSecondary!==false;
+  const includeDashboard=options.includeDashboard!==false;
   if(!db) return;
 
   const jobs = [
@@ -1644,7 +1644,7 @@ $("saveBatchSearchSettings")?.addEventListener("click",async()=>{
     if(error)throw error;
     if(!data?.id)throw new Error("Update confirm nahi hua. Admin permission/RLS check karein.");
     message("Batch search settings save ho gayi.");
-    await loadLists({includeSecondary:false,includeDashboard:false});
+    await loadLists();
     syncBatchSearchSettings();
     $("batchSearchSettingsStatus").textContent="Settings successfully saved.";
   }catch(error){
@@ -2297,8 +2297,8 @@ async function checkSession(){
   message("Admin verified. Data load ho raha hai.");
 
   try {
-    await loadLists({includeSecondary:false,includeDashboard:false});
-    message("Admin verified. Core content loaded. Open a section to load its data, or use Refresh Data for a full refresh. Health scan is manual to reduce database requests.");
+    await loadLists();
+    message("Admin verified. Data loading complete. Health scan is manual.");
   } catch(error) {
     console.error("Admin data loading failed:", error);
     message(
@@ -2383,7 +2383,7 @@ async function saveRecord(formId,buttonId,table,type,payload){
 
     message(id ? "Changes successfully updated." : "Successfully saved.");
 
-    await loadLists({includeSecondary:false,includeDashboard:false});
+    await loadLists();
   }catch(error){
     console.error(error);
     message("Connection error. Internet check karke try karein.",true);
@@ -2633,7 +2633,7 @@ async function deleteRecord(type,id){
     }
 
     message("Record successfully deleted.");
-    await loadLists({includeSecondary:false,includeDashboard:false});
+    await loadLists();
   }catch(error){
     console.error(error);
     message("Delete ke dauran connection error hua.",true);
@@ -3819,10 +3819,6 @@ function showManagementSection(id) {
   if (!managementSectionIds.includes(id)) return;
   setManagementVisibility(id);
   addManagementBackButton($(id));
-  loadManagementSectionData(id).catch(error=>{
-    console.error("Admin section data load failed:",id,error);
-    message("Section data load nahi hua. Us section ka refresh button use karein.",true);
-  });
   scrollManagementTop();
 }
 if (managementNav) {
