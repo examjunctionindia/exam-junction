@@ -101,6 +101,7 @@ jobs:
             let noteCountAfterSearch = 0;
             let navigationButtonCount = 0;
             let navigationClicked = false;
+            let previousChapterNavigationPassed = false;
             if (await search.count()) {
               await search.fill('chapter 02');
               await page.waitForTimeout(1500);
@@ -118,7 +119,6 @@ jobs:
                 await page.waitForTimeout(700);
                 navigationClicked = true;
               }
-              let previousChapterNavigationPassed = false;
               const secondChapterFirstLecture = page.locator('#chapters > .chapter').nth(1).locator('.lecture-accordion > summary').first();
               if (await secondChapterFirstLecture.count()) {
                 await secondChapterFirstLecture.click();
