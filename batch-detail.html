@@ -189,50 +189,36 @@ if(batch.show_content_counts===true){
  }
 }
 if(!chapters.length){const p=document.createElement("p");p.className="notice";p.textContent="Abhi published chapters available nahi hain.";chaptersRoot.append(p);return}
-// Load published lectures and chapter notes in chapter-ID batches instead of
-// making two sequentially awaited database queries for every chapter.
-const contentByChapter=new Map(chapters.map(ch=>[ch.id,{lectures:[],notes:[]}]));
-try{
- const chapterIdChunks=[];
- for(let i=0;i<chapters.length;i+=100)chapterIdChunks.push(chapters.slice(i,i+100).map(ch=>ch.id));
- // Bound the number of simultaneous database query groups. With a very
- // large batch, an unbounded Promise.all can burst dozens/hundreds of queries
- // at once for every visitor.
- const groupedResults=new Array(chapterIdChunks.length);
- let nextChunk=0;
- const workerCount=Math.min(3,chapterIdChunks.length);
- await Promise.all(Array.from({length:workerCount},async()=>{
-  while(true){
-   const chunkIndex=nextChunk++;
-   if(chunkIndex>=chapterIdChunks.length)return;
-   const ids=chapterIdChunks[chunkIndex];
-   const [lectures,notes]=await Promise.all([
-    fetchAllRows(()=>db.from("lectures").select("id,chapter_id,title,youtube_url,position,teacher_name,download_url,download_allowed,download_permission_mode,original_link_allowed,is_published,published_at,created_at").in("chapter_id",ids).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true})),
-    fetchAllRows(()=>db.from("chapter_notes").select("id,chapter_id,lecture_id,title,storage_path,storage_bucket,download_url,download_allowed,download_permission_mode,original_link_allowed,position,is_published,created_at").in("chapter_id",ids).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true}))
-   ]);
-   groupedResults[chunkIndex]={lectures,notes};
-  }
- }));
- for(const group of groupedResults){
-  for(const lecture of group.lectures){const target=contentByChapter.get(lecture.chapter_id);if(target)target.lectures.push(lecture)}
-  for(const note of group.notes){const target=contentByChapter.get(note.chapter_id);if(target)target.notes.push(note)}
- }
-}catch(error){
- const p=document.createElement("p");p.className="notice";p.textContent="Batch content load nahi ho paya. Dobara refresh karein.";chaptersRoot.append(p);console.error("Batch content pagination error",error);return;
-}
-for(const group of contentByChapter.values()){
- group.lectures.sort((a,b)=>(Number(a.position)||0)-(Number(b.position)||0)||String(a.created_at||"").localeCompare(String(b.created_at||""))||String(a.id).localeCompare(String(b.id)));
- group.notes.sort((a,b)=>(Number(a.position)||0)-(Number(b.position)||0)||String(a.created_at||"").localeCompare(String(b.created_at||""))||String(a.id).localeCompare(String(b.id)));
-}
-
-const allLectures=[];
+// Lazy-load chapter lectures and notes only when a chapter is opened.
+const allLectures=[],chapterElements=new Map(),chapterLoadState=new Map();
 for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
- const chapter=chapters[chapterIndex];
- const chapterNumber=String(chapterIndex+1).padStart(2,"0");const section=document.createElement("details");section.className="chapter";section.dataset.chapterSearch=("chapter "+chapterNumber+" "+(chapter.title||"")).toLowerCase();section.open=chapterIndex===0;
- const heading=document.createElement("summary");heading.textContent=chapter.title||"Chapter";section.append(heading);
- const inner=document.createElement("div");inner.className="chapter-inner";section.append(inner);chaptersRoot.append(section);
- const chapterContent=contentByChapter.get(chapter.id)||{lectures:[],notes:[]};
- const lectures=chapterContent.lectures,notes=chapterContent.notes;
+ const chapter=chapters[chapterIndex],chapterNumber=String(chapterIndex+1).padStart(2,"0");
+ const section=document.createElement("details");section.className="chapter";section.dataset.chapterId=chapter.id;section.dataset.chapterSearch=("chapter "+chapterNumber+" "+(chapter.title||"")).toLowerCase();section.open=chapterIndex===0;
+ const heading=document.createElement("summary");heading.textContent="Chapter "+chapterNumber+" — "+(chapter.title||"Chapter");section.append(heading);
+ const inner=document.createElement("div");inner.className="chapter-inner";section.append(inner);chaptersRoot.append(section);chapterElements.set(chapter.id,section);
+ section.addEventListener("toggle",()=>{if(section.open)loadChapterContent(chapterIndex)});
+}
+function sortContentRows(rows){return rows.sort((a,b)=>(Number(a.position)||0)-(Number(b.position)||0)||String(a.created_at||"").localeCompare(String(b.created_at||""))||String(a.id).localeCompare(String(b.id)))}
+function rebuildLectureNavigation(){
+ allLectures.sort((a,b)=>a.chapterIndex-b.chapterIndex||a.lectureIndex-b.lectureIndex);
+ allLectures.forEach((item,index)=>{const body=item.row.querySelector(".lecture-content");body.querySelectorAll(".lecture-navigation").forEach(el=>el.remove());const nav=document.createElement("div");nav.className="media-actions lecture-navigation";
+ if(index>0){const prev=document.createElement("button");prev.className="btn";prev.type="button";prev.textContent="← Previous Lecture";prev.addEventListener("click",()=>{if(index>0)focusLecture(index-1)});nav.append(prev)}
+ if(index<allLectures.length-1){const next=document.createElement("button");next.className="btn";next.type="button";next.textContent=allLectures[index+1].chapterId!==item.chapterId?"Next Chapter →":"Next Lecture →";next.addEventListener("click",()=>focusLecture(index+1));nav.append(next)}
+ else if(item.chapterIndex<chapters.length-1){const next=document.createElement("button");next.className="btn";next.type="button";next.textContent="Next Chapter →";next.addEventListener("click",async()=>{await loadChapterContent(item.chapterIndex+1);const first=allLectures.findIndex(x=>x.chapterIndex===item.chapterIndex+1);if(first>=0)focusLecture(first)});nav.append(next)}
+ if(index===0&&item.chapterIndex>0){const prev=document.createElement("button");prev.className="btn";prev.type="button";prev.textContent="← Previous Chapter";prev.addEventListener("click",async()=>{await loadChapterContent(item.chapterIndex-1);const previous=allLectures.reduce((found,x,i)=>x.chapterIndex===item.chapterIndex-1?i:found,-1);if(previous>=0)focusLecture(previous)});nav.prepend(prev)}
+ if(nav.childElementCount)body.append(nav)});
+}
+async function loadChapterContent(chapterIndex){
+ const chapter=chapters[chapterIndex];if(!chapter)return;
+ const state=chapterLoadState.get(chapter.id);if(state==="loaded")return;if(state&&typeof state.then==="function")return state;
+ const section=chapterElements.get(chapter.id),inner=section.querySelector(".chapter-inner"),heading=section.querySelector("summary"),chapterNumber=String(chapterIndex+1).padStart(2,"0");
+ const task=(async()=>{inner.replaceChildren();const loading=document.createElement("p");loading.className="muted";loading.textContent="Lectures aur notes load ho rahe hain…";inner.append(loading);
+ try{
+  const [lectures,notes]=await Promise.all([
+   fetchAllRows(()=>db.from("lectures").select("id,chapter_id,title,youtube_url,position,teacher_name,download_url,download_allowed,download_permission_mode,original_link_allowed,is_published,published_at,created_at").eq("chapter_id",chapter.id).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true})),
+   fetchAllRows(()=>db.from("chapter_notes").select("id,chapter_id,lecture_id,title,storage_path,storage_bucket,download_url,download_allowed,download_permission_mode,original_link_allowed,position,is_published,created_at").eq("chapter_id",chapter.id).eq("is_published",true).order("position",{ascending:true}).order("created_at",{ascending:true}).order("id",{ascending:true}))
+  ]);
+  sortContentRows(lectures);sortContentRows(notes);const chapterNotes=notes.filter(n=>!n.lecture_id);heading.textContent="Chapter "+chapterNumber+" — "+(chapter.title||"Chapter")+(chapterNotes.length?" · Notes available":"")+(batch.show_content_counts===true?" ("+lectures.length+" lectures)":"");inner.replaceChildren();
  const chapterNotes=notes.filter(n=>!n.lecture_id);
  heading.textContent="Chapter "+chapterNumber+" — "+(chapter.title||"Chapter")+(chapterNotes.length?" · Notes available":"")+(batch.show_content_counts===true?" ("+lectures.length+" lectures)":"");
  if(!lectures.length){const p=document.createElement("p");p.className="muted";p.textContent="Abhi published lectures available nahi hain.";inner.append(p)}
@@ -336,22 +322,31 @@ for(let chapterIndex=0;chapterIndex<chapters.length;chapterIndex++){
   if(lecture.teacher_name){const teacher=document.createElement("p");teacher.className="muted";teacher.textContent="Teacher: "+lecture.teacher_name;body.append(teacher)}
   const lectureNotes=notes.filter(n=>n.lecture_id===lecture.id);
   if(lectureNotes.length){const ln=document.createElement("div");ln.className="chapter-notes";const lh=document.createElement("h4");lh.textContent="Lecture Notes";ln.append(lh);lectureNotes.forEach(n=>ln.append(makeNoteRow(n)));body.append(ln)}
-  inner.append(row);allLectures.push({row,chapterSection:section,chapterId:chapter.id,chapterTitle:chapter.title||"Chapter",title:lecture.title||"Lecture"});
+  inner.append(row);allLectures.push({row,chapterSection:section,chapterId:chapter.id,chapterIndex,lectureIndex,chapterTitle:chapter.title||"Chapter",title:lecture.title||"Lecture"});
  }
  if(chapterNotes.length){const noteBox=document.createElement("div");noteBox.className="chapter-notes";const nh=document.createElement("h3");nh.textContent="Chapter Notes";noteBox.append(nh);chapterNotes.forEach(n=>noteBox.append(makeNoteRow(n)));inner.append(noteBox)}
+  chapterLoadState.set(chapter.id,"loaded");rebuildLectureNavigation();applyChapterSearch();
+ }catch(error){chapterLoadState.delete(chapter.id);inner.replaceChildren();const p=document.createElement("p");p.className="notice";p.textContent="Lectures aur notes load nahi ho paaye.";const retry=document.createElement("button");retry.className="btn";retry.type="button";retry.textContent="↻ Retry";retry.addEventListener("click",()=>loadChapterContent(chapterIndex));inner.append(p,retry);console.error("Lazy chapter content load failed",chapter.id,error)}
+ })();chapterLoadState.set(chapter.id,task);return task;
 }
 function focusLecture(index){
  const target=allLectures[index];if(!target)return;
- allLectures.forEach((item,i)=>{if(i!==index)item.row.open=false});
- target.chapterSection.open=true;target.row.open=true;target.row.scrollIntoView({behavior:"smooth",block:"start"});
+ if(chapterLoadState.get(target.chapterId)!=="loaded"){const targetIndex=chapters.findIndex(ch=>ch.id===target.chapterId);loadChapterContent(targetIndex).then(()=>focusLecture(index));return}
+ allLectures.forEach((item,i)=>{if(i!==index)item.row.open=false});target.chapterSection.open=true;target.row.open=true;target.row.scrollIntoView({behavior:"smooth",block:"start"});
 }
-allLectures.forEach((item,index)=>{
- const nav=document.createElement("div");nav.className="media-actions";
- if(index>0){const prev=document.createElement("button");prev.className="btn";prev.type="button";prev.textContent="← Previous Lecture";prev.addEventListener("click",()=>focusLecture(index-1));nav.append(prev)}
- if(index<allLectures.length-1){const next=document.createElement("button");next.className="btn";next.type="button";next.textContent=allLectures[index+1].chapterId!==item.chapterId?"Next Chapter →":"Next Lecture →";next.addEventListener("click",()=>focusLecture(index+1));nav.append(next)}
- if(nav.childElementCount)item.row.querySelector(".lecture-content").append(nav);
-});
-if(chapterSearch)chapterSearch.addEventListener("input",()=>{const q=chapterSearch.value.trim().toLowerCase();Array.from(chaptersRoot.querySelectorAll(":scope > .chapter")).forEach(section=>{const chapterMatch=!q||section.dataset.chapterSearch.includes(q);const chapterNoteBox=section.querySelector(":scope > .chapter-inner > .chapter-notes");const chapterNoteMatch=!!chapterNoteBox&&Array.from(chapterNoteBox.querySelectorAll("[data-note-search]")).some(note=>note.dataset.noteSearch.includes(q));const lectureRows=Array.from(section.querySelectorAll(".lecture-accordion"));const matchingLectures=lectureRows.filter(row=>!q||row.dataset.lectureSearch.includes(q)||Array.from(row.querySelectorAll("[data-note-search]")).some(note=>note.dataset.noteSearch.includes(q)));section.hidden=!!q&&!chapterMatch&&!chapterNoteMatch&&matchingLectures.length===0;lectureRows.forEach(row=>{const lectureMatch=!q||chapterMatch||row.dataset.lectureSearch.includes(q)||Array.from(row.querySelectorAll("[data-note-search]")).some(note=>note.dataset.noteSearch.includes(q));row.hidden=!lectureMatch});if(chapterNoteBox)chapterNoteBox.hidden=!!q&&!chapterMatch&&!chapterNoteMatch})});
+function applyChapterSearch(){
+ if(!chapterSearch)return;const q=chapterSearch.value.trim().toLowerCase();
+ Array.from(chaptersRoot.querySelectorAll(":scope > .chapter")).forEach(section=>{
+  const chapterMatch=!q||section.dataset.chapterSearch.includes(q),chapterNoteBox=section.querySelector(":scope > .chapter-inner > .chapter-notes");
+  const chapterNoteMatch=!!chapterNoteBox&&Array.from(chapterNoteBox.querySelectorAll("[data-note-search]")).some(note=>note.dataset.noteSearch.includes(q));
+  const lectureRows=Array.from(section.querySelectorAll(".lecture-accordion")),matchingLectures=lectureRows.filter(row=>!q||row.dataset.lectureSearch.includes(q)||Array.from(row.querySelectorAll("[data-note-search]")).some(note=>note.dataset.noteSearch.includes(q)));
+  section.hidden=!!q&&!chapterMatch&&!chapterNoteMatch&&matchingLectures.length===0;
+  lectureRows.forEach(row=>{const match=!q||chapterMatch||row.dataset.lectureSearch.includes(q)||Array.from(row.querySelectorAll("[data-note-search]")).some(note=>note.dataset.noteSearch.includes(q));row.hidden=!match});
+  if(chapterNoteBox)chapterNoteBox.hidden=!!q&&!chapterMatch&&!chapterNoteMatch;
+ });
+}
+if(chapterSearch)chapterSearch.addEventListener("input",async()=>{const q=chapterSearch.value.trim();if(q){for(let i=0;i<chapters.length;i++)await loadChapterContent(i)}applyChapterSearch()});
+if(chapters.length)loadChapterContent(0);
 })();
 </script>
 </body></html>
