@@ -96,9 +96,11 @@ jobs:
               let chaptersOpened=0, lecturesExpanded=0;
               for(let i=0;i<chaptersToOpen;i++) {
                 const section=page.locator('#chapters > .chapter').nth(i);
-                if(!(await section.getAttribute('open'))) await section.locator(':scope > summary').click().catch(()=>{});
+                const isOpen=await section.evaluate(el=>el.tagName.toLowerCase()==='details' ? el.open : true).catch(()=>false);
+                if(!isOpen) await section.locator('summary').first().click().catch(()=>{});
                 await settle(page);
-                if(await section.getAttribute('open')) chaptersOpened++;
+                const nowOpen=await section.evaluate(el=>el.tagName.toLowerCase()==='details' ? el.open : true).catch(()=>false);
+                if(nowOpen) chaptersOpened++;
                 const lecture=section.locator('.lecture-accordion > summary').first();
                 if(await lecture.count()) {
                   await lecture.click().catch(()=>{});
