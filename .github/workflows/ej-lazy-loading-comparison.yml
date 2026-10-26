@@ -28,7 +28,7 @@ jobs:
       - name: Measure request counts, response bytes and loading time over three runs
         env:
           SITE_URL: "https://exam-junction.pages.dev"
-          FREE_BATCH_ID: "6847de07-0630-4975-bfb7-7e1ffbd5bca0"
+          FREE_BATCH_ID: "030cbf50-674c-47c1-91b1-cc8323179c31"
           BEFORE_COMMIT: "6ddd2be3265ed4a79caf128c8fd98ee89f036cc3"
         run: |
           git show "${BEFORE_COMMIT}:batch-detail.html" > batch-detail-before.html
