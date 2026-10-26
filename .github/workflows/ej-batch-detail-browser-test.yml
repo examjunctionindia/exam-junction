@@ -46,7 +46,9 @@ jobs:
             const httpErrors = [];
             let contentReadyMs = null;
             page.on('response', response => {
-              if (response.status() >= 400) httpErrors.push({ status: response.status(), url: response.url() });
+              if (response.status() >= 400) {
+                response.text().then(body => httpErrors.push({ status: response.status(), url: response.url(), body: String(body || '').slice(0, 500) })).catch(() => httpErrors.push({ status: response.status(), url: response.url(), body: 'response body unavailable' }));
+              }
             });
             page.on('request', req => {
               if (req.url().includes('/rest/v1/')) {
