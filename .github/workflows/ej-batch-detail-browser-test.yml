@@ -118,6 +118,17 @@ jobs:
                 await page.waitForTimeout(700);
                 navigationClicked = true;
               }
+              let previousChapterNavigationPassed = false;
+              const secondChapterFirstLecture = page.locator('#chapters > .chapter').nth(1).locator('.lecture-accordion > summary').first();
+              if (await secondChapterFirstLecture.count()) {
+                await secondChapterFirstLecture.click();
+                const previousChapterButton = page.locator('#chapters > .chapter').nth(1).locator('.lecture-navigation button').filter({ hasText: /Previous Chapter/ }).first();
+                if (await previousChapterButton.count()) {
+                  await previousChapterButton.click();
+                  await page.waitForTimeout(500);
+                  previousChapterNavigationPassed = await page.locator('#chapters > .chapter').first().isVisible().catch(() => false);
+                }
+              }
               const noteTitle = await page.locator('#chapters [data-note-search]').first().getAttribute('data-note-search').catch(() => null);
               if (noteTitle) {
                 await search.fill(noteTitle.slice(0, 20));
@@ -148,6 +159,7 @@ jobs:
               noteCountAfterSearch,
               navigationButtonCount,
               navigationClicked,
+              previousChapterNavigationPassed,
               supabaseRestRequestsTotal: restRequests.length,
               lectureAndChapterNoteRequestsBeforeOpeningChapter: initialContentRequests,
               lectureAndChapterNoteRequestsAfterOpeningChapter: finalContentRequests,
@@ -166,6 +178,7 @@ jobs:
             if (!chapterSearchPassed) process.exitCode = 1;
             if (lectureCountAfterSearch < 1) process.exitCode = 1;
             if (navigationButtonCount < 1 || !navigationClicked) process.exitCode = 1;
+            if (!previousChapterNavigationPassed) process.exitCode = 1;
           })().catch(error => { console.error(error); process.exit(1); });
           EOF
           node batch-detail-browser-test.cjs
