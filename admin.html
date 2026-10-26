@@ -1449,7 +1449,9 @@ function refreshDropdowns(){
   );
 }
 
-async function loadLists(){
+async function loadLists(options={}){
+  const includeSecondary=options.includeSecondary!==false;
+  const includeDashboard=options.includeDashboard!==false;
   if(!db) return;
 
   const jobs = [
@@ -1588,13 +1590,15 @@ async function loadLists(){
    refreshDropdowns();
    renderExistingLectureBatchWise();
    renderExistingLectureNotesBatchWise();
-  await loadBookAccess();
-  await loadBatchAccess();
-  await loadBatchRequests();
-  await loadProblemReports();
-  await loadStudentActivityAndDirectory();
-  await loadBatchSearchSettings();
-  await updateDashboardCounts();
+  if(includeSecondary){
+    await loadBookAccess();
+    await loadBatchAccess();
+    await loadBatchRequests();
+    await loadProblemReports();
+    await loadStudentActivityAndDirectory();
+    await loadBatchSearchSettings();
+  }
+  if(includeDashboard) await updateDashboardCounts();
   applyBatchFilters();
 }
 /* PER-BATCH SEARCH SETTINGS */
@@ -2293,8 +2297,8 @@ async function checkSession(){
   message("Admin verified. Data load ho raha hai.");
 
   try {
-    await loadLists();
-    message("Admin verified. Data loading complete. Agar kisi section mein error hai, usi section mein dikhaya gaya hai.");
+    await loadLists({includeSecondary:false,includeDashboard:false});
+    message("Admin verified. Core content loaded. Open a section to load its data, or use Refresh Data for a full refresh.");
     await runAdminHealthScan();
   } catch(error) {
     console.error("Admin data loading failed:", error);
@@ -2380,7 +2384,7 @@ async function saveRecord(formId,buttonId,table,type,payload){
 
     message(id ? "Changes successfully updated." : "Successfully saved.");
 
-    await loadLists();
+    await loadLists({includeSecondary:false,includeDashboard:false});
   }catch(error){
     console.error(error);
     message("Connection error. Internet check karke try karein.",true);
@@ -2630,7 +2634,7 @@ async function deleteRecord(type,id){
     }
 
     message("Record successfully deleted.");
-    await loadLists();
+    await loadLists({includeSecondary:false,includeDashboard:false});
   }catch(error){
     console.error(error);
     message("Delete ke dauran connection error hua.",true);
@@ -3661,8 +3665,9 @@ $("refreshButton").addEventListener("click",async function(){
   button.disabled=true;
   button.textContent="Refreshing...";
   try{
-    await loadLists();
-    message("Refresh complete. Har section ka status aur count verify karein.");
+    managementSectionLoadState.clear();
+    await loadLists({includeSecondary:true,includeDashboard:true});
+    message("Refresh complete. All admin section data and dashboard counts refreshed.");
   }catch(error){
     console.error("Admin refresh error:",error);
     message("Refresh poora nahi hua. Connection aur section errors check karein.",true);
@@ -3792,10 +3797,33 @@ function addManagementBackButton(section) {
   });
   section.insertBefore(back, section.firstChild);
 }
+const managementSectionLoadState = new Map();
+async function loadManagementSectionData(id){
+  if(!db)return;
+  const tasks={
+    dashboardOverview:()=>updateDashboardCounts(),
+    batchAccessManager:()=>loadBatchAccess(),
+    bookAccessManager:()=>loadBookAccess(),
+    requestManager:()=>loadBatchRequests(),
+    reportsManager:()=>loadProblemReports(),
+    studentManager:()=>loadStudentActivityAndDirectory(),
+    batchSearchSettingsManager:()=>loadBatchSearchSettings()
+  };
+  const task=tasks[id];
+  if(!task)return;
+  if(managementSectionLoadState.get(id)==="loading")return;
+  managementSectionLoadState.set(id,"loading");
+  try{await task();managementSectionLoadState.set(id,"loaded");}
+  catch(error){managementSectionLoadState.delete(id);throw error;}
+}
 function showManagementSection(id) {
   if (!managementSectionIds.includes(id)) return;
   setManagementVisibility(id);
   addManagementBackButton($(id));
+  loadManagementSectionData(id).catch(error=>{
+    console.error("Admin section data load failed:",id,error);
+    message("Section data load nahi hua. Us section ka refresh button use karein.",true);
+  });
   scrollManagementTop();
 }
 if (managementNav) {
